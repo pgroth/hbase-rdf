@@ -13,9 +13,10 @@ import java.util.Iterator;
 public class RetrieveURI {
 	
 	public static void retrieveURI(String URI, String table, BufferedWriter out) {
-		
 		try {
-			ArrayList<ArrayList<String>> triples = HBaseUtil.getRow(URI, table);
+			HBaseUtil util = new HBaseUtil(null);
+			
+			ArrayList<ArrayList<String>> triples = util.getRow(URI, table);
 			
 			for (Iterator<ArrayList<String>> it = triples.iterator(); it.hasNext();) {
 				ArrayList<String> triple = (ArrayList<String>)it.next();
@@ -28,7 +29,7 @@ public class RetrieveURI {
 					index++;
 					
 					if (index == 1) {
-						res = HBaseUtil.getPredicate(res);
+						res = util.getPredicate(res);
 					}
 					
 					if (index < 2) {
@@ -49,7 +50,9 @@ public class RetrieveURI {
 	
 	public static void printURIInfo(String URI, String table) {
 		try {
-			ArrayList<ArrayList<String>> triples = HBaseUtil.getRow(URI, table);
+			HBaseUtil util = new HBaseUtil(null);
+			
+			ArrayList<ArrayList<String>> triples = util.getRow(URI, table);
 			
 			for (Iterator<ArrayList<String>> it = triples.iterator(); it.hasNext();) {
 				ArrayList<String> triple = (ArrayList<String>)it.next();
@@ -62,7 +65,7 @@ public class RetrieveURI {
 					index++;
 					
 					if (index == 1) {
-						res = HBaseUtil.getPredicate(res);
+						res = util.getPredicate(res);
 					}
 					
 					if (index < 2) {
