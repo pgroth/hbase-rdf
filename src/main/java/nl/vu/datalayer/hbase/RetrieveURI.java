@@ -13,6 +13,7 @@ import java.util.Iterator;
 public class RetrieveURI {
 	
 	public static void retrieveURI(String URI, String table, BufferedWriter out) {
+		
 		try {
 			ArrayList<ArrayList<String>> triples = HBaseUtil.getRow(URI, table);
 			

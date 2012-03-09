@@ -39,7 +39,6 @@ public class HBaseUtil {
 	    }
 		else {
 			System.out.println("Yeah!!!");
-		
 			
 		}
 		
