@@ -83,7 +83,7 @@ public class NTripleParser {
 	
 	public static void main(String[] args) {
 		try {
-			parse("tbl-card.nt", "/Users/pgroth/.whirr/hbase/hbase-site.xml");
+			parse("tbl-card.nt", null);
 			//parse(args[0]);
 		}
 		catch (Exception e) {

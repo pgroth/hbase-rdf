@@ -39,8 +39,8 @@ public class HBaseUtil {
 	    }
 		else {
 			System.out.println("Yeah!!!");
-			conf.set(HConstants.ZOOKEEPER_QUORUM, "ec2-50-16-110-118.compute-1.amazonaws.com");
-			conf.set("hbase.master", "ec2-50-16-110-118.compute-1.amazonaws.com:2181");
+			conf.set(HConstants.ZOOKEEPER_QUORUM, "");
+			conf.set("hbase.master", "");
 			conf.set(HConstants.ZOOKEEPER_CLIENT_PORT, "2181");
 			conf.set("hadoop.socks.server", "localhost:6666");
 			conf.set("hadoop.rpc.socket.factory.class.default", "org.apache.hadoop.net.SocksSocketFactory");
