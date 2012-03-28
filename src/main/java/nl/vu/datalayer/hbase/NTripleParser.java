@@ -83,8 +83,8 @@ public class NTripleParser {
 	
 	public static void main(String[] args) {
 		try {
-			parse("tbl-card.nt", null);
-			//parse(args[0]);
+			//parse("tbl-card.nt", null);
+			parse(args[0], null);
 		}
 		catch (Exception e) {
 		}

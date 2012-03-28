@@ -29,13 +29,15 @@ public class HBaseUtil {
 	public static HBaseAdmin hbase = null;
 	public static Configuration conf = null;
 	
+	public static final String ZOOKEEPER_QUORUM = "das3001.cm.cluster,das3002.cm.cluster,das3003.cm.cluster,das3004.cm.cluster,das3005.cm.cluster";
+			
 	public HBaseUtil(String configFilePath) throws Exception
 	{
 		conf = HBaseConfiguration.create();
 	    
 		if (configFilePath == null) {
-			System.out.println("got here");
-			conf.set("hbase.master","localhost:60000");
+			//conf.set("hbase.master","fs0.cm.cluster:60000");
+			conf.set("hbase.zookeeper.quorum", ZOOKEEPER_QUORUM);
 	    }
 		else {
 			System.out.println("Yeah!!!");
