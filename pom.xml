@@ -10,7 +10,7 @@
 	 <name>Aduna Open Source - Maven releases</name>
 	 <url>http://repo.aduna-software.org/maven2/releases</url>
     </repository>
- </repositories>
+  </repositories>
  <build>
  <plugins>
     <plugin>
@@ -54,5 +54,10 @@
   		<artifactId>hadoop-core</artifactId>
   		<version>0.20.203.0</version>
   	</dependency>
+  	<dependency>
+		<groupId>log4j</groupId>
+		<artifactId>log4j</artifactId>
+		<version>1.2.16</version>
+	</dependency>        
   </dependencies>
 </project>
