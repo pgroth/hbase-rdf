@@ -1,17 +1,9 @@
 package nl.vu.datalayer.hbase;
 
-
-
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Iterator;
 
-import org.apache.commons.io.FilenameUtils;
-
-import org.openrdf.model.Resource;
-import org.openrdf.model.Literal;
-import org.openrdf.model.URI;
 import org.openrdf.model.Statement;
 import org.openrdf.rio.RDFHandlerException;
 import org.openrdf.rio.RDFParseException;
@@ -19,15 +11,13 @@ import org.openrdf.rio.RDFParser;
 import org.openrdf.rio.helpers.StatementCollector;
 import org.openrdf.rio.turtle.TurtleParser;
 
-import java.io.IOException;
-
 
 public class NTripleParser {
 	
-	public static void parse(String file, String confPath) throws IOException {
+	public static void parse(String file, String schemaName) throws IOException {
 		
 		try {
-			HBaseUtil util = new HBaseUtil(confPath);
+			//HBaseUtil util = new HBaseUtil(confPath);
 			FileInputStream is = new FileInputStream(file);
 			RDFParser rdfParser = new TurtleParser();
 			
@@ -40,40 +30,26 @@ public class NTripleParser {
 			} 
 			catch (IOException e) {
 			  // handle IO problems (e.g. the file could not be read)
+				e.printStackTrace();
 			}
 			catch (RDFParseException e) {
 			  // handle unrecoverable parse error
+				e.printStackTrace();
 			}
 			catch (RDFHandlerException e) {
 			  // handle a problem encountered by the RDFHandler
+				e.printStackTrace();
 			}
-			
-			String tableName = FilenameUtils.removeExtension(FilenameUtils.getName(file));
-			
-			// create table column families
-			ArrayList<String> predicates = new ArrayList<String>();
-			for (Iterator<Statement> iter = myList.iterator(); iter.hasNext();) {
-				Statement s = iter.next();
-				if (s.getObject() instanceof Resource) {
-					predicates.add(s.getPredicate().stringValue());
-				}
-				else {
-					// predicates.add("literal:" + s.getPredicate().stringValue());
-				}
-			}
-			util.createTableStruct(tableName, predicates);
-			util.cachePredicates();
+
+			//connect to HBase
+			HBaseConnection con = new HBaseConnection();
+			HBaseClientSolution sol = HBaseFactory.getHBaseSolution(schemaName, con, myList);
+			sol.schema.create();
 			
 			// populate table
-			for (Iterator<Statement> iter = myList.iterator(); iter.hasNext();) {
-				Statement s = iter.next();
-				if (s.getObject() instanceof Resource){
-					util.addRow(tableName, s.getSubject().toString(), s.getPredicate().toString(), "", s.getObject().toString());
-				}
-				else {
-					util.addRow(tableName, s.getSubject().toString(), "literal", s.getPredicate().toString(), s.getObject().toString());
-				}
-			}
+			sol.util.populateTables(myList);
+			
+			con.close();
 		}
 		catch (Exception e) {
 			e.printStackTrace();
@@ -84,7 +60,12 @@ public class NTripleParser {
 	public static void main(String[] args) {
 		try {
 			//parse("tbl-card.nt", null);
-			parse(args[0], null);
+			if (args.length != 2){
+				System.out.println("Usage: NTripleParser <inputFile> <schemaName>");
+				System.out.println("Schema names: predicate-cf, hexastore");
+				return;
+			}
+			parse(args[0], args[1]);
 		}
 		catch (Exception e) {
 		}

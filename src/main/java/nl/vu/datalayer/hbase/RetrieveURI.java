@@ -9,14 +9,21 @@ import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.Iterator;
 
+import nl.vu.datalayer.hbase.schema.HBasePredicateCFSchema;
+import nl.vu.datalayer.hbase.schema.IHBaseSchema;
+import nl.vu.datalayer.hbase.util.HBasePredicateCFUtil;
+
 
 public class RetrieveURI {
 	
-	public static void retrieveURI(String URI, String table, BufferedWriter out) {
+	public static void retrieveURI(String URI, BufferedWriter out) {
 		try {
-			HBaseUtil util = new HBaseUtil(null);
+			HBaseConnection con = new HBaseConnection();
+			IHBaseSchema schema  = new HBasePredicateCFSchema(con, null);
+			HBasePredicateCFUtil util = new HBasePredicateCFUtil(con, schema);
 			
-			ArrayList<ArrayList<String>> triples = util.getRow(URI, table);
+			String []triplet = {URI, null, null};
+			ArrayList<ArrayList<String>> triples = util.getRow(triplet);
 			
 			for (Iterator<ArrayList<String>> it = triples.iterator(); it.hasNext();) {
 				ArrayList<String> triple = (ArrayList<String>)it.next();
@@ -48,11 +55,14 @@ public class RetrieveURI {
 		}
 	}
 	
-	public static void printURIInfo(String URI, String table) {
+	public static void printURIInfo(String URI) {
 		try {
-			HBaseUtil util = new HBaseUtil(null);
+			HBaseConnection con = new HBaseConnection();
+			IHBaseSchema schema  = new HBasePredicateCFSchema(con, null);
+			HBasePredicateCFUtil util = new HBasePredicateCFUtil(con, schema);
 			
-			ArrayList<ArrayList<String>> triples = util.getRow(URI, table);
+			String []triplet = {URI, null, null};
+			ArrayList<ArrayList<String>> triples = util.getRow(triplet);
 			
 			for (Iterator<ArrayList<String>> it = triples.iterator(); it.hasNext();) {
 				ArrayList<String> triple = (ArrayList<String>)it.next();
@@ -94,7 +104,7 @@ public class RetrieveURI {
 			  
 			  String strLine;
 			  while ((strLine = br.readLine()) != null)   {
-				  retrieveURI(strLine, table, out);
+				  retrieveURI(strLine, out);
 			  }
 			  
 			  in.close();
@@ -106,7 +116,7 @@ public class RetrieveURI {
 	}
 	
 	public static void main(String[] args) {
-		printURIInfo("http://www.w3.org/data#W3C", "tbl-card");
+		printURIInfo("http://www.w3.org/data#W3C");
 		//retrieveFile("/home/anca/Documents/OPS/trials/URIlist", "/home/anca/Documents/OPS/trials/out.ttl", "excerpt");
 	}
 }
