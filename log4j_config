@@ -1,0 +1,6 @@
+log4j.rootLogger=debug,R
+
+log4j.appender.R=org.apache.log4j.FileAppender
+log4j.appender.R.File=log
+
+log4j.appender.R.layout=org.apache.log4j.SimpleLayout

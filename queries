@@ -1,0 +1,8 @@
+? ? http://www.dbpedia.org/resource/Nav1.1
+? http://www.w3.org/2004/02/skos/core#exactMatch ?
+http://www4.wiwiss.fu-berlin.de/diseasome/resource/genes/NDUFS3 ? ?
+http://www4.wiwiss.fu-berlin.de/diseasome/resource/diseasome/classDegree http://www.w3.org/1999/02/22-rdf-syntax-ns#type ?
+? http://www4.wiwiss.fu-berlin.de/diseasome/resource/diseasome/name "Wilms tumor, type 1, 194070"
+http://www4.wiwiss.fu-berlin.de/diseasome/resource/diseases/4184 ? "Wolcott-Rallison syndrome, 226980"
+? http://www.w3.org/1999/02/22-rdf-syntax-ns#type ?
+http://www4.wiwiss.fu-berlin.de/diseasome/resource/diseasome/classDegree ? http://www.w3.org/1999/02/22-rdf-syntax-ns#Property
