@@ -21,7 +21,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.HConstants;
 
-import com.sun.appserv.util.cache.Constants;
+//import com.sun.appserv.util.cache.Constants;
 
 
 public class HBaseUtil {	

@@ -1,4 +1,4 @@
-package nl.vu.datalayer.sail;
+package nl.vu.datalayer.hbase.sail;
 
 import nl.vu.datalayer.hbase.NTripleParser;
 import nl.vu.datalayer.hbase.RetrieveURI;
@@ -6,9 +6,11 @@ import nl.vu.datalayer.hbase.RetrieveURI;
 
 import info.aduna.iteration.Iteration;
 
+import java.io.BufferedWriter;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStreamWriter;
 import java.io.Reader;
 import java.net.URL;
 import java.util.ArrayList;
@@ -24,8 +26,14 @@ import org.openrdf.query.BooleanQuery;
 import org.openrdf.query.GraphQuery;
 import org.openrdf.query.MalformedQueryException;
 import org.openrdf.query.Query;
+import org.openrdf.query.QueryEvaluationException;
 import org.openrdf.query.QueryLanguage;
 import org.openrdf.query.TupleQuery;
+import org.openrdf.query.TupleQueryResult;
+import org.openrdf.query.TupleQueryResultHandler;
+import org.openrdf.query.impl.TupleQueryResultBuilder;
+import org.openrdf.query.parser.ParsedTupleQuery;
+import org.openrdf.query.parser.QueryParserUtil;
 import org.openrdf.repository.Repository;
 import org.openrdf.repository.RepositoryConnection;
 import org.openrdf.repository.RepositoryException;
@@ -41,34 +49,90 @@ import org.openrdf.rio.RDFHandler;
 import org.openrdf.rio.RDFHandlerException;
 import org.openrdf.rio.RDFParseException;
 import org.openrdf.sail.SailConnection;
+import org.openrdf.sail.SailException;
 
 public class HBaseRepositoryConnection extends SailRepositoryConnection {
 	
-	HBaseRepository hbaseRepo;
-	HBaseConnection hbaseConn;
 
-	protected HBaseRepositoryConnection(HBaseRepository repository,
-			HBaseConnection sailConnection) {
-		super(repository, sailConnection);
-		// TODO Auto-generated constructor stub
-		
-		hbaseRepo = repository;
-		hbaseConn = sailConnection;
+	protected HBaseRepositoryConnection(HBaseSailRepository repository) throws SailException {
+		super(repository, repository.getHBaseSail().getConnection());
+	}
+	
+	private HBaseSailConnection getHBaseSailConnection() {
+		return (HBaseSailConnection) getSailConnection();
 	}
 
 	@Override
-	public void add(Statement arg0, Resource... arg1)
-			throws RepositoryException {
+	public TupleQuery prepareTupleQuery(QueryLanguage lang, String query)
+			throws RepositoryException, MalformedQueryException {
+		return prepareTupleQuery(lang, query, "http://hbase.sail.vu.nl");
+	}
+
+	@Override
+	public SailTupleQuery prepareTupleQuery(QueryLanguage lang, String query, String baseURI) 
+			throws MalformedQueryException {
+		ParsedTupleQuery parsedQuery = QueryParserUtil.parseTupleQuery(lang, query, baseURI);
+		return new HBaseSailTupleQuery(parsedQuery, this);
+	}
+
+	@Override
+	public GraphQuery prepareGraphQuery(QueryLanguage lang, String query)
+			throws RepositoryException, MalformedQueryException {
+		return prepareGraphQuery(lang, query, "http://hbase.sail.vu.nl");
+	}
+
+	@Override
+	public SailGraphQuery prepareGraphQuery(QueryLanguage lang, String query, String baseURI) 
+			throws MalformedQueryException {
+		return null;//new HBaseSailGraphQuery(parsedQuery, this);
+	}
+
+	@Override
+	public BooleanQuery prepareBooleanQuery(QueryLanguage arg0, String arg1)
+			throws RepositoryException, MalformedQueryException {
 		// TODO Auto-generated method stub
+		return null;
+	}
+
+	@Override
+	public SailBooleanQuery prepareBooleanQuery(QueryLanguage arg0, String arg1,
+			String arg2) throws MalformedQueryException {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	@Override
+	public Query prepareQuery(QueryLanguage arg0, String arg1)
+			throws RepositoryException, MalformedQueryException {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	@Override
+	public SailQuery prepareQuery(QueryLanguage arg0, String arg1, String arg2)
+			throws MalformedQueryException {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	@Override
+	public void add(Statement stmt, Resource... contexts)
+			throws RepositoryException {
+		try {
+			getSailConnection().addStatement(stmt.getSubject(), stmt.getPredicate(), stmt.getObject(), contexts);
+		} catch (SailException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
 		
 	}
 
 	@Override
-	public void add(File arg0, String arg1, RDFFormat arg2, Resource... arg3)
+	public void add(File file, String baseURI, RDFFormat format, Resource... contexts)
 			throws IOException, RDFParseException, RepositoryException {
-		if (arg2 == RDFFormat.NTRIPLES) {
-			NTripleParser ntp = new NTripleParser(arg0.getAbsolutePath(), null);
-			ntp.parse();
+		if (format == RDFFormat.NTRIPLES) {
+			getHBaseSailConnection().add(file, baseURI, format, contexts);
+			
 		}
 		else {
 			RDFParseException e = new RDFParseException("Unsupported RDF Format");
@@ -78,10 +142,13 @@ public class HBaseRepositoryConnection extends SailRepositoryConnection {
 	}
 
 	@Override
-	public void add(Resource arg0, URI arg1, Value arg2, Resource... arg3)
+	public void add(Resource s, URI p, Value o, Resource... contexts)
 			throws RepositoryException {
-		// TODO Auto-generated method stub
-		
+		try {
+			getSailConnection().addStatement(s, p, o, contexts);
+		} catch (SailException e) {
+			e.printStackTrace();
+		}
 	}
 
 	@Override
@@ -120,8 +187,8 @@ public class HBaseRepositoryConnection extends SailRepositoryConnection {
 			boolean arg3, RDFHandler arg4, Resource... arg5)
 			throws RepositoryException, RDFHandlerException {
 		if (arg0 != null && arg5.length == 1) {
-			RetrieveURI ruri = new RetrieveURI(arg5[0].stringValue());
-			ruri.printURIInfo(arg0.stringValue());
+			RetrieveURI.retrieveURI(arg5[0].stringValue(), new BufferedWriter(new OutputStreamWriter(System.out)));
+			RetrieveURI.printURIInfo(arg0.stringValue());
 		}
 		
 	}
@@ -144,11 +211,6 @@ public class HBaseRepositoryConnection extends SailRepositoryConnection {
 			throws RepositoryException {
 		// TODO Auto-generated method stub
 		return null;
-	}
-
-	@Override
-	public Repository getRepository() {
-		return hbaseRepo;
 	}
 
 	@Override
@@ -175,8 +237,8 @@ public class HBaseRepositoryConnection extends SailRepositoryConnection {
 	@Override
 	public boolean hasStatement(Resource arg0, URI arg1, Value arg2,
 			boolean arg3, Resource... arg4) throws RepositoryException {
-		if (arg0 != null && arg4.length == 1) {
-			RetrieveURI ruri = new RetrieveURI(arg4[0].stringValue());
+		/*if (arg0 != null && arg4.length == 1) {
+			RetrieveURI.retrieveURI(arg4[0].stringValue(),new BufferedWriter(new OutputStreamWriter(System.out)));
 			ArrayList<Statement> list = ruri.retrieveSubject(arg0.stringValue());
 			
 			Iterator it = list.iterator();
@@ -187,7 +249,7 @@ public class HBaseRepositoryConnection extends SailRepositoryConnection {
 				}
 			}
 			return false;
-		}
+		}*/
 		return false;
 	}
 
@@ -207,62 +269,6 @@ public class HBaseRepositoryConnection extends SailRepositoryConnection {
 	public boolean isOpen() throws RepositoryException {
 		// TODO Auto-generated method stub
 		return false;
-	}
-
-	@Override
-	public BooleanQuery prepareBooleanQuery(QueryLanguage arg0, String arg1)
-			throws RepositoryException, MalformedQueryException {
-		// TODO Auto-generated method stub
-		return null;
-	}
-
-	@Override
-	public SailBooleanQuery prepareBooleanQuery(QueryLanguage arg0, String arg1,
-			String arg2) throws MalformedQueryException {
-		// TODO Auto-generated method stub
-		return null;
-	}
-
-	@Override
-	public GraphQuery prepareGraphQuery(QueryLanguage arg0, String arg1)
-			throws RepositoryException, MalformedQueryException {
-		// TODO Auto-generated method stub
-		return null;
-	}
-
-	@Override
-	public SailGraphQuery prepareGraphQuery(QueryLanguage arg0, String arg1,
-			String arg2) throws MalformedQueryException {
-		// TODO Auto-generated method stub
-		return null;
-	}
-
-	@Override
-	public Query prepareQuery(QueryLanguage arg0, String arg1)
-			throws RepositoryException, MalformedQueryException {
-		// TODO Auto-generated method stub
-		return null;
-	}
-
-	@Override
-	public SailQuery prepareQuery(QueryLanguage arg0, String arg1, String arg2)
-			throws MalformedQueryException {
-		// TODO Auto-generated method stub
-		return null;
-	}
-
-	@Override
-	public TupleQuery prepareTupleQuery(QueryLanguage arg0, String arg1)
-			throws RepositoryException, MalformedQueryException {
-		// TODO Auto-generated method stub
-		return null;
-	}
-
-	@Override
-	public SailTupleQuery prepareTupleQuery(QueryLanguage arg0, String arg1,
-			String arg2) throws MalformedQueryException {
-		// TODO Auto-generated method stub
-		return null;
 	}
 
 	@Override
@@ -325,4 +331,36 @@ public class HBaseRepositoryConnection extends SailRepositoryConnection {
 		return 0;
 	}
 
+	private static class HBaseSailTupleQuery extends SailTupleQuery {
+
+		protected HBaseSailTupleQuery(final ParsedTupleQuery parsedTupleQuery, final HBaseRepositoryConnection HBaseRepositoryConnection) {
+			super(parsedTupleQuery, HBaseRepositoryConnection);
+		}
+
+		@Override
+		public TupleQueryResult evaluate() throws QueryEvaluationException {
+			TupleQueryResultBuilder aBuilder = new TupleQueryResultBuilder();
+
+			evaluate(aBuilder);
+
+			return aBuilder.getQueryResult();
+		}
+
+		@Override
+		public void evaluate(TupleQueryResultHandler handler) throws QueryEvaluationException {
+			try {
+				TupleQueryResult result = ((HBaseRepositoryConnection)this.getConnection()).getHBaseSailConnection().query(getParsedQuery());
+
+				handler.startQueryResult(result.getBindingNames());
+				while (result.hasNext()) {
+					handler.handleSolution(result.next());
+				}
+				handler.endQueryResult();
+			}
+			catch (Exception e) {
+				throw new QueryEvaluationException(e);
+			}
+		}
+	}
+	
 }
