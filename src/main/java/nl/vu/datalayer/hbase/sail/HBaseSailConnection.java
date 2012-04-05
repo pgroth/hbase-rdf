@@ -1,7 +1,15 @@
 package nl.vu.datalayer.hbase.sail;
 
+import java.io.BufferedWriter;
+import java.io.FileWriter;
+import java.io.IOException;
+
+import nl.vu.datalayer.hbase.NTripleParser;
+import nl.vu.datalayer.hbase.RetrieveURI;
+
 import info.aduna.iteration.CloseableIteration;
 
+import org.openrdf.model.Literal;
 import org.openrdf.model.Namespace;
 import org.openrdf.model.Resource;
 import org.openrdf.model.Statement;
@@ -25,7 +33,31 @@ public class HBaseSailConnection extends NotifyingSailConnectionBase {
 	@Override
 	protected void addStatementInternal(Resource arg0, URI arg1, Value arg2,
 			Resource... arg3) throws SailException {
-		// TODO Auto-generated method stub
+		if (arg3.length == 1) {
+			try {
+				FileWriter fstream = new FileWriter("data/buff.txt");
+				BufferedWriter out = new BufferedWriter(fstream);
+				
+				out.write("<" + arg0.stringValue() + "> <" + arg1.stringValue() + "> ");
+				if (arg2 instanceof Literal) {
+					out.write("\"" + arg2.stringValue() + "\" .");
+				}
+				else {
+					out.write("<" + arg2.stringValue() +">");
+				}
+				out.close();
+				
+				NTripleParser ntp = new NTripleParser("data/buff.txt", null);
+				ntp.parse();
+			}
+			catch (IOException e) {
+				e.printStackTrace();
+			}
+		}
+		else {
+			SailException e = new SailException();
+			throw e;
+		}
 
 	}
 
@@ -85,7 +117,10 @@ public class HBaseSailConnection extends NotifyingSailConnectionBase {
 	protected CloseableIteration<? extends Statement, SailException> getStatementsInternal(
 			Resource arg0, URI arg1, Value arg2, boolean arg3, Resource... arg4)
 			throws SailException {
-		// TODO Auto-generated method stub
+		if (arg0 != null && arg4.length == 1) {
+			RetrieveURI ruri = new RetrieveURI(arg4[0].stringValue());
+			return ruri.retreieveSubject(arg0.stringValue());
+		}
 		return null;
 	}
 
