@@ -19,7 +19,8 @@ public class HBaseSailRepository extends SailRepository {
 		} catch (SailException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
-		} 
+			return null;
+		}
 	}
 	
 	protected HBaseSail getHBaseSail() {

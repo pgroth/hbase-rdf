@@ -349,7 +349,7 @@ public class HBaseRepositoryConnection extends SailRepositoryConnection {
 		@Override
 		public void evaluate(TupleQueryResultHandler handler) throws QueryEvaluationException {
 			try {
-				TupleQueryResult result = ((HBaseRepositoryConnection)this.getConnection()).getHBaseSailConnection().query(getParsedQuery());
+				TupleQueryResult result = ((HBaseRepositoryConnection)this.getConnection()).getHBaseSailConnection().evaluate(getParsedQuery().getTupleExpr(), getDataset(), getBindings(), getIncludeInferred());
 
 				handler.startQueryResult(result.getBindingNames());
 				while (result.hasNext()) {

@@ -20,7 +20,7 @@ public class HBaseSailTest {
 		// TODO Auto-generated method stub
 		HBaseSail mySail = new HBaseSail();
 		mySail.initialize();
-		HBaseSailRepository myRepo = new HBaseSailRepository(mySail, null);
+		HBaseSailRepository myRepo = new HBaseSailRepository(mySail);
 		HBaseRepositoryConnection conn = myRepo.getConnection();
 		
 	}
