@@ -15,6 +15,8 @@ import java.io.Reader;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.Iterator;
+import java.util.List;
+import java.util.Set;
 
 import org.openrdf.model.Namespace;
 import org.openrdf.model.Resource;
@@ -32,6 +34,7 @@ import org.openrdf.query.TupleQuery;
 import org.openrdf.query.TupleQueryResult;
 import org.openrdf.query.TupleQueryResultHandler;
 import org.openrdf.query.impl.TupleQueryResultBuilder;
+import org.openrdf.query.impl.TupleQueryResultImpl;
 import org.openrdf.query.parser.ParsedTupleQuery;
 import org.openrdf.query.parser.QueryParserUtil;
 import org.openrdf.repository.Repository;
@@ -72,7 +75,7 @@ public class HBaseRepositoryConnection extends SailRepositoryConnection {
 	public SailTupleQuery prepareTupleQuery(QueryLanguage lang, String query, String baseURI) 
 			throws MalformedQueryException {
 		ParsedTupleQuery parsedQuery = QueryParserUtil.parseTupleQuery(lang, query, baseURI);
-		return new HBaseSailTupleQuery(parsedQuery, this);
+		return new HBaseSailTupleQuery(query, parsedQuery, this);
 	}
 
 	@Override
@@ -131,7 +134,7 @@ public class HBaseRepositoryConnection extends SailRepositoryConnection {
 	public void add(File file, String baseURI, RDFFormat format, Resource... contexts)
 			throws IOException, RDFParseException, RepositoryException {
 		if (format == RDFFormat.NTRIPLES) {
-			getHBaseSailConnection().add(file, baseURI, format, contexts);
+//			getHBaseSailConnection().add(file, baseURI, format, contexts);
 			
 		}
 		else {
@@ -332,9 +335,12 @@ public class HBaseRepositoryConnection extends SailRepositoryConnection {
 	}
 
 	private static class HBaseSailTupleQuery extends SailTupleQuery {
+		
+		String queryString;
 
-		protected HBaseSailTupleQuery(final ParsedTupleQuery parsedTupleQuery, final HBaseRepositoryConnection HBaseRepositoryConnection) {
+		protected HBaseSailTupleQuery(String qs, final ParsedTupleQuery parsedTupleQuery, final HBaseRepositoryConnection HBaseRepositoryConnection) {
 			super(parsedTupleQuery, HBaseRepositoryConnection);
+			queryString = qs;
 		}
 
 		@Override
@@ -349,12 +355,23 @@ public class HBaseRepositoryConnection extends SailRepositoryConnection {
 		@Override
 		public void evaluate(TupleQueryResultHandler handler) throws QueryEvaluationException {
 			try {
-				TupleQueryResult result = ((HBaseRepositoryConnection)this.getConnection()).getHBaseSailConnection().evaluate(getParsedQuery().getTupleExpr(), getDataset(), getBindings(), getIncludeInferred());
+				Set<String> bindingSet = getBindings().getBindingNames();
+				List<String> bindingList = new ArrayList<String>(bindingSet);
+				
+				TupleQueryResult result = new TupleQueryResultImpl(bindingList,
+						((HBaseRepositoryConnection)this.getConnection()).getHBaseSailConnection().query(getParsedQuery().getTupleExpr(), getDataset(), getBindings(), getIncludeInferred()));
+				
+//				Get all triples from HBase, without evaluating them against the
+//				memory triple store.
+//				
+//				TupleQueryResult result = new TupleQueryResultImpl(bindingList, 
+//						((HBaseRepositoryConnection)this.getConnection()).getHBaseSailConnection().evaluateInternal(getParsedQuery().getTupleExpr(), getDataset(), getBindings(), getIncludeInferred()));
 
 				handler.startQueryResult(result.getBindingNames());
 				while (result.hasNext()) {
 					handler.handleSolution(result.next());
 				}
+				
 				handler.endQueryResult();
 			}
 			catch (Exception e) {
