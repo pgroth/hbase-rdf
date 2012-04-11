@@ -76,7 +76,7 @@ public class HBaseSailConnection extends NotifyingSailConnectionBase {
 
 	public HBaseSailConnection(SailBase sailBase) {
 		super(sailBase);
-		System.out.println("SailConnection created");
+//		System.out.println("SailConnection created");
 		con = ((HBaseSail)sailBase).getHBaseConnection();
 
 		memStore = new MemoryStore();
@@ -185,13 +185,13 @@ public class HBaseSailConnection extends NotifyingSailConnectionBase {
 				
 				String []triple = {s, p, o};
 				String triples = sol.util.getRawCellValue(triple[0], triple[1], triple[2]);
-				System.out.println("Raw triples: " + triples);
+//				System.out.println("Raw triples: " + triples);
 				
 
 				ArrayList<Statement> myList = reconstructTriples(triples, triple);
 				
-				System.out.println("Triples retrieved:");
-				System.out.println(myList.toString());
+//				System.out.println("Triples retrieved:");
+//				System.out.println(myList.toString());
 				
 				Iterator it = myList.iterator();
 				CloseableIteration<Statement, SailException> ci = new CloseableIteratorIteration<Statement, SailException>(it);
@@ -260,15 +260,15 @@ public class HBaseSailConnection extends NotifyingSailConnectionBase {
 	
 	Value constructNode(String s) {
 		if (s.startsWith("http") | s.startsWith("file")) {
-			System.out.println("Resource: " + s);
+//			System.out.println("Resource: " + s);
 			return new URIImpl(s);
 		}
 		else if (s.startsWith("_")) {
-			System.out.println("BNode: " + s);
+//			System.out.println("BNode: " + s);
 			return new BNodeImpl(s.substring(2));
 		}
 		else {
-			System.out.println("Literal: " + s);
+//			System.out.println("Literal: " + s);
 			return new LiteralImpl(s);
 		}
 	}
@@ -324,7 +324,7 @@ public class HBaseSailConnection extends NotifyingSailConnectionBase {
 		
 		try {
 			ArrayList<ArrayList<Var>> statements = HBaseQueryVisitor.convertToStatements(arg0, null, null);
-			System.out.println("StatementPatterns: " + statements.size());
+//			System.out.println("StatementPatterns: " + statements.size());
 			
 			Iterator it = statements.iterator();
 			while (it.hasNext()) {
@@ -472,12 +472,11 @@ public class HBaseSailConnection extends NotifyingSailConnectionBase {
 	 * @throws SailException
 	 */
 	public TupleQueryResult query(TupleExpr tupleExpr, Dataset dataset, BindingSet bindings, boolean includeInferred) throws SailException {
-		System.out.println("Evaluating query");
+//		System.out.println("Evaluating query");
 		try {
 			ArrayList<Statement> statements = evaluateInternal(tupleExpr);
-			System.out.println("Statements retrieved: " + statements.size());
-
-			System.out.println("Created memory store");
+//			System.out.println("Statements retrieved: " + statements.size());
+			
 			Iterator it = statements.iterator();
 			while (it.hasNext()) {
 				Statement statement = (Statement)it.next();
@@ -500,12 +499,12 @@ public class HBaseSailConnection extends NotifyingSailConnectionBase {
 					String binding = (String)jt.next();
 					if (bindingList.contains(binding) == false) {
 						bindingList.add(binding);
-						System.out.println("Added binding: " + binding);
+//						System.out.println("Added binding: " + binding);
 					}
 				}
 			}
-			System.out.println("Results retrieved from memory store: " + index);
-			System.out.println("Bindings retrieved from memory store: " + bindingList.size());
+//			System.out.println("Results retrieved from memory store: " + index);
+//			System.out.println("Bindings retrieved from memory store: " + bindingList.size());
 			
 			
 			TupleQueryResult result = new TupleQueryResultImpl(bindingList, cj);
