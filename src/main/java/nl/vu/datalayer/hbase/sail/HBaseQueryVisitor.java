@@ -423,19 +423,20 @@ public class HBaseQueryVisitor implements QueryModelVisitor<QueryExpansionExcept
 	@Override
 	public void meet(Projection arg0) throws QueryExpansionException {
 		// TODO Auto-generated method stub
-		
+		System.out.println("FOUND Projection");
 	}
 
 	@Override
 	public void meet(ProjectionElemList arg0) throws QueryExpansionException {
 		// TODO Auto-generated method stub
+		System.out.println("FOUND ProjectionElemList");
 		
 	}
 
 	@Override
 	public void meet(ProjectionElem arg0) throws QueryExpansionException {
 		// TODO Auto-generated method stub
-		
+		System.out.println("FOUND ProjectionElem");
 	}
 
 	@Override
