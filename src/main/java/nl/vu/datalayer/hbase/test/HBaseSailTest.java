@@ -49,6 +49,8 @@ public class HBaseSailTest {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
+		
+		conn.close();
 	}
 
 }

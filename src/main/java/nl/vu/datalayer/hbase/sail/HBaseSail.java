@@ -1,11 +1,13 @@
 package nl.vu.datalayer.hbase.sail;
 
 import java.io.IOException;
+import java.util.ArrayList;
 
 import nl.vu.datalayer.hbase.HBaseClientSolution;
 import nl.vu.datalayer.hbase.HBaseConnection;
 import nl.vu.datalayer.hbase.HBaseFactory;
 
+import org.openrdf.model.Statement;
 import org.openrdf.model.ValueFactory;
 import org.openrdf.model.impl.ValueFactoryImpl;
 import org.openrdf.sail.NotifyingSailConnection;
@@ -22,7 +24,7 @@ public class HBaseSail extends NotifyingSailBase {
 	public HBaseSail() {
 		try {
 			HBaseConnection con = new HBaseConnection();
-			hbase = HBaseFactory.getHBaseSolution("hexastore", con, null);
+			hbase = HBaseFactory.getHBaseSolution("hexastore", con, new ArrayList<Statement>());
 		}
 		catch (Exception e) {
 			e.printStackTrace();

@@ -168,7 +168,11 @@ public class HBaseRepositoryConnection extends SailRepositoryConnection {
 
 	@Override
 	public void close() throws RepositoryException {
-		// TODO Auto-generated method stub
+		try {
+			this.getSailConnection().close();
+		} catch (SailException e) {
+			throw new RepositoryException(e);
+		}
 		
 	}
 
