@@ -474,6 +474,13 @@ public class HBaseSailConnection extends NotifyingSailConnectionBase {
 			}
 			
 			CloseableIteration<? extends BindingSet, QueryEvaluationException> ci = con.evaluate(tupleExpr, dataset, bindings, includeInferred);
+			
+			int index = 0;
+			while (ci.hasNext()) {
+				index++;
+				ci.next();
+			}
+			
 			con.close();
 			
 			return ci;
@@ -481,6 +488,9 @@ public class HBaseSailConnection extends NotifyingSailConnectionBase {
 		} catch (SailException e) {
 			e.printStackTrace();
 			throw e;
+		} catch (QueryEvaluationException e) {
+			// TODO Auto-generated catch block
+			throw new SailException(e);
 		}
 	}
 
