@@ -41,6 +41,10 @@ public class HBaseSail extends NotifyingSailBase {
 		return hbase;
 	}
 
+	HBaseConnection getHBaseConnection() {
+		return con;
+	}
+
 	@Override
 	public boolean isWritable() throws SailException {
 		return true;

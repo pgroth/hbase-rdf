@@ -70,12 +70,8 @@ public class HBaseSailConnection extends NotifyingSailConnectionBase {
 
 	public HBaseSailConnection(SailBase sailBase) {
 		super(sailBase);
-		try {
-			con = new HBaseConnection();
-		} catch (Exception e) {
-			e.printStackTrace();
-			// TODO error handling
-		}
+		System.out.println("SailConnection created");
+		con = (HBaseSail)sailBase.getHBaseConnection();
 	}
 
 	@Override
