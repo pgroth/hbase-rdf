@@ -387,10 +387,15 @@ public class HBaseRepositoryConnection extends SailRepositoryConnection {
 //				TupleQueryResult result = new TupleQueryResultImpl(bindingList, 
 //						((HBaseRepositoryConnection)this.getConnection()).getHBaseSailConnection().evaluateInternal(getParsedQuery().getTupleExpr(), getDataset(), getBindings(), getIncludeInferred()));
 
+				int ressize = 0;
 				handler.startQueryResult(result.getBindingNames());
 				while (result.hasNext()) {
-					handler.handleSolution(result.next());
+					BindingSet binding = result.next();
+					System.out.println("x = " + binding.getValue("x").stringValue());
+					handler.handleSolution(binding);
+					ressize += 1;
 				}
+				System.out.println("TupleQueryResult size: " + ressize);
 				
 				handler.endQueryResult();
 			}
