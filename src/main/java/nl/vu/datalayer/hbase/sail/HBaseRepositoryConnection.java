@@ -25,6 +25,7 @@ import org.openrdf.model.URI;
 import org.openrdf.model.Value;
 import org.openrdf.model.ValueFactory;
 import org.openrdf.query.BooleanQuery;
+import org.openrdf.query.Dataset;
 import org.openrdf.query.GraphQuery;
 import org.openrdf.query.MalformedQueryException;
 import org.openrdf.query.Query;
@@ -33,6 +34,7 @@ import org.openrdf.query.QueryLanguage;
 import org.openrdf.query.TupleQuery;
 import org.openrdf.query.TupleQueryResult;
 import org.openrdf.query.TupleQueryResultHandler;
+import org.openrdf.query.algebra.TupleExpr;
 import org.openrdf.query.impl.TupleQueryResultBuilder;
 import org.openrdf.query.impl.TupleQueryResultImpl;
 import org.openrdf.query.parser.ParsedTupleQuery;
@@ -371,8 +373,13 @@ public class HBaseRepositoryConnection extends SailRepositoryConnection {
 				
 				HBaseSailConnection connection = ((HBaseRepositoryConnection)this.getConnection()).getHBaseSailConnection();
 				System.out.println("Connection retrieved");
+				TupleExpr te = getParsedQuery().getTupleExpr();
+				System.out.println("TupleExpr retrieved");
+				Dataset dataset = getDataset();
+				System.out.println("Dataset retrieved");
+				
 				TupleQueryResult result = new TupleQueryResultImpl(bindingList,
-						connection.query(getParsedQuery().getTupleExpr(), getDataset(), getBindings(), getIncludeInferred()));
+						connection.query(te, dataset, getBindings(), getIncludeInferred()));
 				
 //				Get all triples from HBase, without evaluating them against the
 //				memory triple store.
