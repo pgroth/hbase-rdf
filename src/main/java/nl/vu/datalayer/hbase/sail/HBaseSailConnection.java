@@ -106,13 +106,6 @@ public class HBaseSailConnection extends NotifyingSailConnectionBase {
 
 	@Override
 	protected void closeInternal() throws SailException {
-		try {
-			con.close();
-		}
-		catch (Exception e) {
-			e.printStackTrace();
-			//TODO: error handling
-		}
 	}
 
 	@Override
@@ -267,6 +260,7 @@ public class HBaseSailConnection extends NotifyingSailConnectionBase {
 		
 		try {
 			ArrayList<ArrayList<Var>> statements = HBaseQueryVisitor.convertToStatements(arg0, null, null);
+			System.out.println("StatementPatterns: " + statements.size());
 			
 			Iterator it = statements.iterator();
 			while (it.hasNext()) {
@@ -421,9 +415,13 @@ public class HBaseSailConnection extends NotifyingSailConnectionBase {
 	 * @throws SailException
 	 */
 	public CloseableIteration<? extends BindingSet,QueryEvaluationException> query(TupleExpr tupleExpr, Dataset dataset, BindingSet bindings, boolean includeInferred) throws SailException {
+		System.out.println("Evaluating query");
 		try {
 			ArrayList<Statement> statements = evaluateInternal(tupleExpr);
+			System.out.println("Statements retrieved: " + statements.size());
+
 			MemoryStore memStore = new MemoryStore();
+			memStore.initialize();
 			NotifyingSailConnection con = memStore.getConnection();
 			System.out.println("Created memory store");
 			Iterator it = statements.iterator();

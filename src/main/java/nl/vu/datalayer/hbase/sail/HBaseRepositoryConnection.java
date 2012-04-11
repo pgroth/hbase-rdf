@@ -377,6 +377,10 @@ public class HBaseRepositoryConnection extends SailRepositoryConnection {
 				System.out.println("TupleExpr retrieved");
 				Dataset dataset = getDataset();
 				System.out.println("Dataset retrieved");
+
+				if (connection == null ) {
+					System.out.println("SailConnection is null");
+				}
 				
 				TupleQueryResult result = new TupleQueryResultImpl(bindingList,
 						connection.query(te, dataset, getBindings(), getIncludeInferred()));

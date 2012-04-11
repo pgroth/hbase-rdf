@@ -359,6 +359,7 @@ public class HBaseQueryVisitor implements QueryModelVisitor<QueryExpansionExcept
      * @throws QueryExpansionException 
      */
     public void meet(LeftJoin lj) throws QueryExpansionException {
+	System.out.println("Found left join");
         //The leftArg is the stuff outside of the optional.
         //May be a SingletonSet in which case nothing is written
         lj.getLeftArg().visit(this);
@@ -475,6 +476,7 @@ public class HBaseQueryVisitor implements QueryModelVisitor<QueryExpansionExcept
 	
     //@Override
     public void meet(StatementPattern sp) throws QueryExpansionException  {
+	System.out.println("Found StatementPattern");
     	ArrayList<Var> statement = new ArrayList();
     	
     	statement.add(sp.getSubjectVar());
@@ -535,6 +537,8 @@ public class HBaseQueryVisitor implements QueryModelVisitor<QueryExpansionExcept
     }
     
     public static ArrayList<ArrayList<Var>> convertToStatements(TupleExpr tupleExpr, Dataset dataSet, List<String> requiredAttributes) throws QueryExpansionException  {
+	System.out.println("Evaluating TupleExpr:" + tupleExpr.toString());
+	
     	ArrayList<Var> contexts = ContextListerVisitor.getContexts(tupleExpr);
         
         HBaseQueryVisitor writer = new HBaseQueryVisitor(dataSet, requiredAttributes, contexts);
