@@ -56,13 +56,20 @@ import org.openrdf.sail.SailException;
 
 public class HBaseRepositoryConnection extends SailRepositoryConnection {
 	
+	HBaseSailConnection conn;
 
 	protected HBaseRepositoryConnection(HBaseSailRepository repository) throws SailException {
 		super(repository, repository.getHBaseSail().getConnection());
+		conn = new HBaseSailConnection(repository.getHBaseSail());
 	}
 	
 	private HBaseSailConnection getHBaseSailConnection() {
 		return (HBaseSailConnection) getSailConnection();
+	}
+	
+	@Override
+	public SailConnection getSailConnection() {
+		return conn;
 	}
 
 	@Override
