@@ -9,6 +9,7 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
+import java.util.StringTokenizer;
 
 import nl.vu.datalayer.hbase.HBaseClientSolution;
 import nl.vu.datalayer.hbase.HBaseConnection;
@@ -168,31 +169,17 @@ public class HBaseSailConnection extends NotifyingSailConnectionBase {
 				}
 				
 				String []triple = {s, p, o};
-				ArrayList<ArrayList<String>> triples = sol.util.getRow(triples);
+				String triples = sol.util.getRawCellValue(triple[0], triple[1], triple[2]);
+				
+
+				ArrayList<Statement> myList = reconstructTriples(triples, triple);
+				
 				System.out.println("Triples retrieved:");
-				System.out.println(triples.toString());
+				System.out.println(myList.toString());
 				
-				InputStream is = new ByteArrayInputStream(triples.getBytes());
-				RDFParser rdfParser = new TurtleParser();
-				ArrayList<Statement> myList = new ArrayList<Statement>();
-				StatementCollector collector = new StatementCollector(myList);
-				rdfParser.setRDFHandler(collector);
-				
-				try {
-				   rdfParser.parse(is, "");
-				   Iterator it = myList.iterator();
-				   CloseableIteration<Statement, SailException> ci = new CloseableIteratorIteration<Statement, SailException>(it);
-				   return ci;
-				}
-				catch (Exception e) {
-					Exception ex = new SailException("HBase output format error: " + e.getMessage());
-					try {
-						throw ex;
-					} catch (Exception e1) {
-						// TODO Auto-generated catch block
-						e1.printStackTrace();
-					}
-				}
+				Iterator it = myList.iterator();
+				CloseableIteration<Statement, SailException> ci = new CloseableIteratorIteration<Statement, SailException>(it);
+				return ci;
 			}
 			else {
 				Exception e = new SailException("Context information is not supported");
@@ -209,6 +196,62 @@ public class HBaseSailConnection extends NotifyingSailConnectionBase {
 			}
 		}
 		return null;
+	}
+	
+	protected ArrayList<Statement> reconstructTriples(String data, String[] triple) throws SailException {
+		ArrayList<Statement> list = new ArrayList();
+		
+		StringTokenizer st1 = new StringTokenizer(data, "\n");
+		while (st1.hasMoreTokens()) {
+			String line = st1.nextToken();
+			int index = 0;
+			
+			Resource s = null;
+			URI p = null;
+			Value o = null;
+			StringTokenizer st2 = new StringTokenizer(line);
+			for (int i = 0; i < 3; i++) {
+				if (triple[i] != null) {
+					if (i == 0) {
+						s = (Resource)constructNode(triple[i]);
+					} else if (i == 1) {
+						p = (URI)constructNode(triple[i]);
+					} else {
+						o = (Value)constructNode(triple[i]);
+					}
+				}
+				else {
+					try {
+						String token = st2.nextToken();
+						if (i == 0) {
+							s = (Resource)constructNode(token);
+						} else if (i == 1) {
+							p = (URI)constructNode(token);
+						} else {
+							o = (Value)constructNode(token);
+						}
+					} catch (Exception e) {
+						throw new SailException(e);
+					}
+				}
+			}
+			Statement st = new StatementImpl(s, p, o);
+			list.add(st);
+		}
+		
+		return list;
+	}
+	
+	Value constructNode(String s) {
+		if (s.startsWith("http")) {
+			return new URIImpl(s);
+		}
+		else if (s.startsWith("_")) {
+			return new BNodeImpl(s);
+		}
+		else {
+			return new LiteralImpl(s);
+		}
 	}
 
 	@Override
@@ -279,23 +322,23 @@ public class HBaseSailConnection extends NotifyingSailConnectionBase {
 					
 					if (index == 0) {
 						if (var.hasValue()) {
-				            subj = new URIImpl(var.getValue().stringValue());
+				            subj = (Resource)constructNode(var.getValue().stringValue());
 				        } else if (var.isAnonymous()) {
-				        	subj = new BNodeImpl(var.getName()); 
+				        	subj = (Resource)constructNode(var.getName()); 
 				        	
 				        }
 					}
 					else if (index == 1) {
 						if (var.hasValue()) {
-				            pred = new URIImpl(var.getValue().stringValue());
+				            pred = (URI)constructNode(var.getValue().stringValue());
 				        }
 						
 					}
 					else {
 						if (var.hasValue()) {
-				            obj = new LiteralImpl(var.getValue().stringValue());
+				            obj = (Value)constructNode(var.getValue().stringValue());
 				        } else if (var.isAnonymous()) {
-				        	obj = new BNodeImpl(var.getName());
+				        	obj = (Value)constructNode(var.getName());
 				        }
 					}
 					index += 1;
@@ -349,30 +392,23 @@ public class HBaseSailConnection extends NotifyingSailConnectionBase {
 					
 					if (index == 0) {
 						if (var.hasValue()) {
-				            subj = new URIImpl(var.getValue().stringValue());
+				            subj = (Resource)constructNode(var.getValue().stringValue());
 				        } else if (var.isAnonymous()) {
-				        	subj = new BNodeImpl(var.getName()); 
+				        	subj = (Resource)constructNode(var.getName()); 
 				        	
-				        } else {
-				        	variables[index] = var.getName();
 				        }
 					}
 					else if (index == 1) {
 						if (var.hasValue()) {
-				            pred = new URIImpl(var.getValue().stringValue());
-				        } else {
-				        	variables[index] = var.getName();
+				            pred = (URI)constructNode(var.getValue().stringValue());
 				        }
 						
 					}
 					else {
 						if (var.hasValue()) {
-				            obj = new LiteralImpl(var.getValue().stringValue());
+				            obj = (Value)constructNode(var.getValue().stringValue());
 				        } else if (var.isAnonymous()) {
-				        	obj = new BNodeImpl(var.getName()); 
-				        	
-				        } else {
-				        	variables[index] = var.getName();
+				        	obj = (Value)constructNode(var.getName());
 				        }
 					}
 					index += 1;
