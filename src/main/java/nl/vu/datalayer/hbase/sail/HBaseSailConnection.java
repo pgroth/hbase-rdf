@@ -480,6 +480,7 @@ public class HBaseSailConnection extends NotifyingSailConnectionBase {
 				index++;
 				ci.next();
 			}
+			System.out.println("Results retrieved from memory store: " + index);
 			
 			con.close();
 			
