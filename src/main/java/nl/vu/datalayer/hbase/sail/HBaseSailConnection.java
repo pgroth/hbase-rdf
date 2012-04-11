@@ -65,6 +65,8 @@ import org.openrdf.query.parser.ParsedTupleQuery;
 public class HBaseSailConnection extends NotifyingSailConnectionBase {
 
 	HBaseConnection con;
+	MemoryStore memStore;
+	NotifyingSailConnection memStoreCon;
 	
     //Builder to write the query to bit by bit
     StringBuilder queryString = new StringBuilder();
@@ -74,6 +76,15 @@ public class HBaseSailConnection extends NotifyingSailConnectionBase {
 		super(sailBase);
 		System.out.println("SailConnection created");
 		con = ((HBaseSail)sailBase).getHBaseConnection();
+
+		memStore = new MemoryStore();
+		try {
+			memStore.initialize();
+			memStoreCon = memStore.getConnection();
+		} catch (SailException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
 	}
 
 	@Override
@@ -108,6 +119,7 @@ public class HBaseSailConnection extends NotifyingSailConnectionBase {
 
 	@Override
 	protected void closeInternal() throws SailException {
+		memStoreCon.close();
 	}
 
 	@Override
@@ -463,18 +475,15 @@ public class HBaseSailConnection extends NotifyingSailConnectionBase {
 			ArrayList<Statement> statements = evaluateInternal(tupleExpr);
 			System.out.println("Statements retrieved: " + statements.size());
 
-			MemoryStore memStore = new MemoryStore();
-			memStore.initialize();
-			NotifyingSailConnection con = memStore.getConnection();
 			System.out.println("Created memory store");
 			Iterator it = statements.iterator();
 			while (it.hasNext()) {
 				Statement statement = (Statement)it.next();
 				Resource[] context = {new URIImpl("http://hbase.sail.vu.nl")};
-				con.addStatement(statement.getSubject(), statement.getPredicate(), statement.getObject(), context);
+				memStoreCon.addStatement(statement.getSubject(), statement.getPredicate(), statement.getObject(), context);
 			}
 			
-			CloseableIteration<? extends BindingSet, QueryEvaluationException> ci = con.evaluate(tupleExpr, dataset, bindings, includeInferred);
+			CloseableIteration<? extends BindingSet, QueryEvaluationException> ci = memStoreCon.evaluate(tupleExpr, dataset, bindings, includeInferred);
 			
 			List<String> bindingList = new ArrayList<String>();
 			int index = 0;
@@ -497,7 +506,6 @@ public class HBaseSailConnection extends NotifyingSailConnectionBase {
 			
 			TupleQueryResult result = new TupleQueryResultImpl(bindingList, ci);
 			
-			con.close();
 			
 			return result;
 			
