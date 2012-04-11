@@ -482,8 +482,15 @@ public class HBaseSailConnection extends NotifyingSailConnectionBase {
 				index++;
 				BindingSet bs = (BindingSet)ci.next();
 //                System.out.println("Binding size(" + index + "): " + bs.getBindingNames().size());
-				bindingList.addAll(bs.getBindingNames());
-
+				Set<String> localBindings = bs.getBindingNames();
+				Iterator jt = localBindings.iterator();
+				while (jt.hasNext()) {
+					String binding = (String)jt.next();
+					if (bindingList.contains(binding) == false) {
+						bindingList.add(binding);
+						System.out.println("Added binding: " + binding);
+					}
+				}
 			}
 			System.out.println("Results retrieved from memory store: " + index);
 			System.out.println("Bindings retrieved from memory store: " + bindingList.size());
