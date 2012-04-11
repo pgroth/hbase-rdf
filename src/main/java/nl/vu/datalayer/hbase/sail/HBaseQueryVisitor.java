@@ -420,11 +420,35 @@ public class HBaseQueryVisitor implements QueryModelVisitor<QueryExpansionExcept
 		
 	}
 
-	@Override
-	public void meet(Projection arg0) throws QueryExpansionException {
-		// TODO Auto-generated method stub
-		System.out.println("FOUND Projection");
-	}
+	public void meet(Projection prjctn) throws QueryExpansionException {
+        meet (prjctn, "");
+    }
+
+    /**
+     * Used by sub classes to add expaned list if required.
+     * 
+     * Currently not used but left in if required again.
+     */
+    void addExpanded(Projection prjctn) throws QueryExpansionException{
+    }
+    
+    public void meet(Projection prjctn, String modifier) throws QueryExpansionException {
+        queryString.append("SELECT ");
+        queryString.append(modifier);
+        addExpanded(prjctn);
+        if (this.requiredAttributes != null){
+            for (String requiredAttribute:requiredAttributes){
+                queryString.append(" ?");
+                queryString.append(requiredAttribute);
+            }
+        }
+        //Call the ProjectionElementList even if there are requiredAttributes as this sets eliminatedAttributes
+        prjctn.getProjectionElemList().visit(this);
+        newLine();
+        queryString.append("WHERE {");
+        prjctn.getArg().visit(this);
+//        closeProjectionUnlessOrderHas(prjctn.getArg());
+    }
 
 	@Override
 	public void meet(ProjectionElemList arg0) throws QueryExpansionException {
