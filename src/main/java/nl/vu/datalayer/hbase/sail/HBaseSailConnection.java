@@ -170,6 +170,7 @@ public class HBaseSailConnection extends NotifyingSailConnectionBase {
 				
 				String []triple = {s, p, o};
 				String triples = sol.util.getRawCellValue(triple[0], triple[1], triple[2]);
+				System.out.println("Raw triples: " + triples);
 				
 
 				ArrayList<Statement> myList = reconstructTriples(triples, triple);
@@ -211,7 +212,7 @@ public class HBaseSailConnection extends NotifyingSailConnectionBase {
 			Value o = null;
 			StringTokenizer st2 = new StringTokenizer(line);
 			for (int i = 0; i < 3; i++) {
-				if (triple[i] != null) {
+				if (triple[i].compareTo("?") != 0) {
 					if (i == 0) {
 						s = (Resource)constructNode(triple[i]);
 					} else if (i == 1) {
@@ -243,13 +244,16 @@ public class HBaseSailConnection extends NotifyingSailConnectionBase {
 	}
 	
 	Value constructNode(String s) {
-		if (s.startsWith("http")) {
+		if (s.startsWith("http") | s.startsWith("file")) {
+			System.out.println("Resource: " + s);
 			return new URIImpl(s);
 		}
 		else if (s.startsWith("_")) {
-			return new BNodeImpl(s);
+			System.out.println("BNode: " + s);
+			return new BNodeImpl(s.substring(2));
 		}
 		else {
+			System.out.println("Literal: " + s);
 			return new LiteralImpl(s);
 		}
 	}
