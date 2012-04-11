@@ -168,7 +168,9 @@ public class HBaseSailConnection extends NotifyingSailConnectionBase {
 				}
 				
 				String []triple = {s, p, o};
-				String triples = sol.util.getRawCellValue(triple[0], triple[1], triple[2]);
+				ArrayList<ArrayList<String>> triples = sol.util.getRow(triples);
+				System.out.println("Triples retrieved:");
+				System.out.println(triples.toString());
 				
 				InputStream is = new ByteArrayInputStream(triples.getBytes());
 				RDFParser rdfParser = new TurtleParser();
