@@ -377,16 +377,7 @@ public class HBaseRepositoryConnection extends SailRepositoryConnection {
 				TupleExpr te = getParsedQuery().getTupleExpr();
 				Dataset dataset = getDataset();
 				
-				CloseableIteration<? extends BindingSet, QueryEvaluationException> ci = connection.query(te, dataset, getBindings(), getIncludeInferred());
-				int index = 0;
-				while (ci.hasNext()) {
-					index++;
-					BindingSet bs = (BindingSet)ci.next();
-					bindingList.addAll(bs.getBindingNames());
-					System.out.println("Binding size(" + index + "): " + bs.getBindingNames().size());
-				}
-				TupleQueryResult result = new TupleQueryResultImpl(bindingList,
-						ci);
+				TupleQueryResult result = connection.query(te, dataset, getBindings(), getIncludeInferred());
 				
 				System.out.println("TupleQueryResult:" + bindingList.size());
 				

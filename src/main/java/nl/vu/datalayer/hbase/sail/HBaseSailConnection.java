@@ -58,6 +58,7 @@ import org.openrdf.query.algebra.QueryModelNode;
 import org.openrdf.query.algebra.QueryModelVisitor;
 import org.openrdf.query.algebra.Var;
 import org.openrdf.query.impl.MapBindingSet;
+import org.openrdf.query.impl.TupleQueryResultImpl;
 import org.openrdf.query.parser.ParsedTupleQuery;
 
 
@@ -456,7 +457,7 @@ public class HBaseSailConnection extends NotifyingSailConnectionBase {
 	 * @return
 	 * @throws SailException
 	 */
-	public CloseableIteration<? extends BindingSet,QueryEvaluationException> query(TupleExpr tupleExpr, Dataset dataset, BindingSet bindings, boolean includeInferred) throws SailException {
+	public TupleQueryResult query(TupleExpr tupleExpr, Dataset dataset, BindingSet bindings, boolean includeInferred) throws SailException {
 		System.out.println("Evaluating query");
 		try {
 			ArrayList<Statement> statements = evaluateInternal(tupleExpr);
@@ -475,18 +476,23 @@ public class HBaseSailConnection extends NotifyingSailConnectionBase {
 			
 			CloseableIteration<? extends BindingSet, QueryEvaluationException> ci = con.evaluate(tupleExpr, dataset, bindings, includeInferred);
 			
+			List<String> bindingList = new ArrayList<String>();
 			int index = 0;
 			while (ci.hasNext()) {
 				index++;
 				BindingSet bs = (BindingSet)ci.next();
-                                System.out.println("Binding size(" + index + "): " + bs.getBindingNames().size());
+//                System.out.println("Binding size(" + index + "): " + bs.getBindingNames().size());
+				bindingList.addAll(bs.getBindingNames());
 
 			}
 			System.out.println("Results retrieved from memory store: " + index);
+			System.out.println("Bindings retrieved from memory store: " + bindingList.size());
+			
+			TupleQueryResult result = new TupleQueryResultImpl(bindingList, ci);
 			
 			con.close();
 			
-			return ci;
+			return result;
 			
 		} catch (SailException e) {
 			e.printStackTrace();
