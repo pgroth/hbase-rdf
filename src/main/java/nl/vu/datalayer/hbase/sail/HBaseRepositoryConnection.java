@@ -369,8 +369,10 @@ public class HBaseRepositoryConnection extends SailRepositoryConnection {
 				Set<String> bindingSet = getBindings().getBindingNames();
 				List<String> bindingList = new ArrayList<String>(bindingSet);
 				
+				HBaseSailConnection connection = ((HBaseRepositoryConnection)this.getConnection()).getHBaseSailConnection();
+				System.out.println("Connection retrieved");
 				TupleQueryResult result = new TupleQueryResultImpl(bindingList,
-						((HBaseRepositoryConnection)this.getConnection()).getHBaseSailConnection().query(getParsedQuery().getTupleExpr(), getDataset(), getBindings(), getIncludeInferred()));
+						connection.query(getParsedQuery().getTupleExpr(), getDataset(), getBindings(), getIncludeInferred()));
 				
 //				Get all triples from HBase, without evaluating them against the
 //				memory triple store.

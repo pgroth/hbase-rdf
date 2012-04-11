@@ -429,7 +429,7 @@ public class HBaseSailConnection extends NotifyingSailConnectionBase {
 			ArrayList<Statement> statements = evaluateInternal(tupleExpr);
 			MemoryStore memStore = new MemoryStore();
 			NotifyingSailConnection con = memStore.getConnection();
-			
+			System.out.println("Created memory store");
 			Iterator it = statements.iterator();
 			while (it.hasNext()) {
 				Statement statement = (Statement)it.next();
