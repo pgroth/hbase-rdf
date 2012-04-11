@@ -526,9 +526,6 @@ public class HBaseSailConnection extends NotifyingSailConnectionBase {
 		} catch (QueryEvaluationException e) {
 			// TODO Auto-generated catch block
 			throw new SailException(e);
-		} catch (TupleQueryResultHandlerException e) {
-			// TODO Auto-generated catch block
-			throw new SailException(e);
 		}
 	}
 
