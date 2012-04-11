@@ -30,7 +30,7 @@ public class HBaseSailTest {
 		HBaseSailRepository myRepo = new HBaseSailRepository(mySail);
 		HBaseRepositoryConnection conn = myRepo.getConnection();
 		
-		String queryString = "SELECT ?x WHERE { ?x <http://xmlns.com/foaf/0.1/knows> ?o . }";
+		String queryString = "SELECT ?x WHERE { ?s <http://xmlns.com/foaf/0.1/knows> ?x . }";
 		System.out.println(queryString);
 		
 		try {
