@@ -506,6 +506,13 @@ public class HBaseSailConnection extends NotifyingSailConnectionBase {
 			
 			TupleQueryResult result = new TupleQueryResultImpl(bindingList, ci);
 			
+			int ressize = 0;
+			while (result.hasNext()) {
+				BindingSet binding = result.next();
+				System.out.println("x = " + binding.getValue("x").stringValue());
+				ressize += 1;
+			}
+			System.out.println("TupleQueryResult size: " + ressize);
 			
 			return result;
 			

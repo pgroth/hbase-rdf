@@ -395,7 +395,6 @@ public class HBaseRepositoryConnection extends SailRepositoryConnection {
 					handler.handleSolution(binding);
 					ressize += 1;
 				}
-				System.out.println("TupleQueryResult size: " + ressize);
 				
 				handler.endQueryResult();
 			}
