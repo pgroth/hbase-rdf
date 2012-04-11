@@ -4,6 +4,7 @@ import nl.vu.datalayer.hbase.NTripleParser;
 import nl.vu.datalayer.hbase.RetrieveURI;
 
 
+import info.aduna.iteration.CloseableIteration;
 import info.aduna.iteration.Iteration;
 
 import java.io.BufferedWriter;
@@ -24,6 +25,7 @@ import org.openrdf.model.Statement;
 import org.openrdf.model.URI;
 import org.openrdf.model.Value;
 import org.openrdf.model.ValueFactory;
+import org.openrdf.query.BindingSet;
 import org.openrdf.query.BooleanQuery;
 import org.openrdf.query.Dataset;
 import org.openrdf.query.GraphQuery;
@@ -368,22 +370,23 @@ public class HBaseRepositoryConnection extends SailRepositoryConnection {
 		@Override
 		public void evaluate(TupleQueryResultHandler handler) throws QueryEvaluationException {
 			try {
-				Set<String> bindingSet = getBindings().getBindingNames();
-				List<String> bindingList = new ArrayList<String>(bindingSet);
+//				Set<String> bindingSet = getBindings().getBindingNames();
+				List<String> bindingList = new ArrayList<String>();
 				
 				HBaseSailConnection connection = ((HBaseRepositoryConnection)this.getConnection()).getHBaseSailConnection();
-				System.out.println("Connection retrieved");
 				TupleExpr te = getParsedQuery().getTupleExpr();
-				System.out.println("TupleExpr retrieved");
 				Dataset dataset = getDataset();
-				System.out.println("Dataset retrieved");
-
-				if (connection == null ) {
-					System.out.println("SailConnection is null");
-				}
 				
+				CloseableIteration<? extends BindingSet, QueryEvaluationException> ci = connection.query(te, dataset, getBindings(), getIncludeInferred());
+				int index = 0;
+				while (ci.hasNext()) {
+					index++;
+					BindingSet bs = (BindingSet)ci.next();
+					bindingList.addAll(bs.getBindingNames());
+				}
 				TupleQueryResult result = new TupleQueryResultImpl(bindingList,
-						connection.query(te, dataset, getBindings(), getIncludeInferred()));
+						ci);
+				
 				System.out.println("TupleQueryResult:" + getBindings().getBindingNames().toString());
 				
 //				Get all triples from HBase, without evaluating them against the
