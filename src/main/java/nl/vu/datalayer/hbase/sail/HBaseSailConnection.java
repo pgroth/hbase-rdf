@@ -478,7 +478,9 @@ public class HBaseSailConnection extends NotifyingSailConnectionBase {
 			int index = 0;
 			while (ci.hasNext()) {
 				index++;
-				ci.next();
+				BindingSet bs = (BindingSet)ci.next();
+                                System.out.println("Binding size(" + index + "): " + bs.getBindingNames().size());
+
 			}
 			System.out.println("Results retrieved from memory store: " + index);
 			

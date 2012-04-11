@@ -383,11 +383,12 @@ public class HBaseRepositoryConnection extends SailRepositoryConnection {
 					index++;
 					BindingSet bs = (BindingSet)ci.next();
 					bindingList.addAll(bs.getBindingNames());
+					System.out.println("Binding size(" + index + "): " + bs.getBindingNames().size());
 				}
 				TupleQueryResult result = new TupleQueryResultImpl(bindingList,
 						ci);
 				
-				System.out.println("TupleQueryResult:" + getBindings().getBindingNames().toString());
+				System.out.println("TupleQueryResult:" + bindingList.size());
 				
 //				Get all triples from HBase, without evaluating them against the
 //				memory triple store.
