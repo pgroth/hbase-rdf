@@ -41,6 +41,7 @@ import org.openrdf.query.QueryEvaluationException;
 import org.openrdf.query.QueryLanguage;
 import org.openrdf.query.TupleQuery;
 import org.openrdf.query.TupleQueryResult;
+import org.openrdf.query.TupleQueryResultHandlerException;
 import org.openrdf.query.algebra.TupleExpr;
 import org.openrdf.repository.RepositoryConnection;
 import org.openrdf.repository.sail.SailQuery;
@@ -58,6 +59,7 @@ import org.openrdf.query.algebra.QueryModelNode;
 import org.openrdf.query.algebra.QueryModelVisitor;
 import org.openrdf.query.algebra.Var;
 import org.openrdf.query.impl.MapBindingSet;
+import org.openrdf.query.impl.TupleQueryResultBuilder;
 import org.openrdf.query.impl.TupleQueryResultImpl;
 import org.openrdf.query.parser.ParsedTupleQuery;
 
@@ -484,6 +486,7 @@ public class HBaseSailConnection extends NotifyingSailConnectionBase {
 			}
 			
 			CloseableIteration<? extends BindingSet, QueryEvaluationException> ci = memStoreCon.evaluate(tupleExpr, dataset, bindings, includeInferred);
+			CloseableIteration<? extends BindingSet, QueryEvaluationException> cj = memStoreCon.evaluate(tupleExpr, dataset, bindings, includeInferred);
 			
 			List<String> bindingList = new ArrayList<String>();
 			int index = 0;
@@ -504,7 +507,8 @@ public class HBaseSailConnection extends NotifyingSailConnectionBase {
 			System.out.println("Results retrieved from memory store: " + index);
 			System.out.println("Bindings retrieved from memory store: " + bindingList.size());
 			
-			TupleQueryResult result = new TupleQueryResultImpl(bindingList, ci);
+			
+			TupleQueryResult result = new TupleQueryResultImpl(bindingList, cj);
 			
 			int ressize = 0;
 			while (result.hasNext()) {
@@ -520,6 +524,9 @@ public class HBaseSailConnection extends NotifyingSailConnectionBase {
 			e.printStackTrace();
 			throw e;
 		} catch (QueryEvaluationException e) {
+			// TODO Auto-generated catch block
+			throw new SailException(e);
+		} catch (TupleQueryResultHandlerException e) {
 			// TODO Auto-generated catch block
 			throw new SailException(e);
 		}
