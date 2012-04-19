@@ -203,20 +203,14 @@ public class HBaseSailConnection extends NotifyingSailConnectionBase {
 			}
 		}
 		catch (Exception e) {
-			Exception ex = new SailException("HBase connection error: " + e.getMessage());
-			try {
-				throw ex;
-			} catch (Exception e1) {
-				// TODO Auto-generated catch block
-				e1.printStackTrace();
-			}
+			throw new SailException(e);
 		}
-		return null;
 	}
 	
 	protected ArrayList<Statement> reconstructTriples(String data, String[] triple) throws SailException {
 		ArrayList<Statement> list = new ArrayList();
 		
+		if (data != null) {
 		StringTokenizer st1 = new StringTokenizer(data, "\n");
 		while (st1.hasMoreTokens()) {
 			String line = st1.nextToken();
@@ -253,6 +247,7 @@ public class HBaseSailConnection extends NotifyingSailConnectionBase {
 			}
 			Statement st = new StatementImpl(s, p, o);
 			list.add(st);
+		}
 		}
 		
 		return list;
@@ -488,23 +483,25 @@ public class HBaseSailConnection extends NotifyingSailConnectionBase {
 			CloseableIteration<? extends BindingSet, QueryEvaluationException> cj = memStoreCon.evaluate(tupleExpr, dataset, bindings, includeInferred);
 			
 			List<String> bindingList = new ArrayList<String>();
+
+			System.out.println("NEW BINDING SET SIZE:" + bindings.getBindingNames().size());
 			int index = 0;
 			while (ci.hasNext()) {
 				index++;
 				BindingSet bs = (BindingSet)ci.next();
-//                System.out.println("Binding size(" + index + "): " + bs.getBindingNames().size());
+                System.out.println("Binding size(" + index + "): " + bs.getBindingNames().size());
 				Set<String> localBindings = bs.getBindingNames();
 				Iterator jt = localBindings.iterator();
 				while (jt.hasNext()) {
 					String binding = (String)jt.next();
 					if (bindingList.contains(binding) == false) {
 						bindingList.add(binding);
-//						System.out.println("Added binding: " + binding);
+						System.out.println("Added binding: " + binding);
 					}
 				}
 			}
-//			System.out.println("Results retrieved from memory store: " + index);
-//			System.out.println("Bindings retrieved from memory store: " + bindingList.size());
+			System.out.println("Results retrieved from memory store: " + index);
+			System.out.println("Bindings retrieved from memory store: " + bindingList.size());
 			
 			
 			TupleQueryResult result = new TupleQueryResultImpl(bindingList, cj);

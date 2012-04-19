@@ -282,6 +282,9 @@ public class HBaseQueryVisitor implements QueryModelVisitor<QueryExpansionExcept
 	@Override
 	public void meet(Join arg0) throws QueryExpansionException {
 		// TODO Auto-generated method stub
+		System.out.println("FOUND Join");
+		arg0.getLeftArg().visit(this);
+	        arg0.getRightArg().visit(this);
 		
 	}
 
@@ -363,6 +366,7 @@ public class HBaseQueryVisitor implements QueryModelVisitor<QueryExpansionExcept
         //The leftArg is the stuff outside of the optional.
         //May be a SingletonSet in which case nothing is written
         lj.getLeftArg().visit(this);
+	lj.getRightArg().visit(this);
     }  
     
     /**
@@ -454,6 +458,10 @@ public class HBaseQueryVisitor implements QueryModelVisitor<QueryExpansionExcept
 	public void meet(ProjectionElemList arg0) throws QueryExpansionException {
 		// TODO Auto-generated method stub
 		System.out.println("FOUND ProjectionElemList");
+		List<ProjectionElem> elements = arg0.getElements();
+        	for (ProjectionElem element:elements){
+            		element.visit(this);
+        	}
 		
 	}
 
