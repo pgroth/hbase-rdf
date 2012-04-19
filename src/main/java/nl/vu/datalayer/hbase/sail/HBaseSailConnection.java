@@ -521,9 +521,6 @@ public class HBaseSailConnection extends NotifyingSailConnectionBase {
 		} catch (SailException e) {
 			e.printStackTrace();
 			throw e;
-		} catch (QueryEvaluationException e) {
-			// TODO Auto-generated catch block
-			throw new SailException(e);
 		}
 	}
 
