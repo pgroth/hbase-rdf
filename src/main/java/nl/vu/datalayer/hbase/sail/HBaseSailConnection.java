@@ -217,7 +217,9 @@ public class HBaseSailConnection extends NotifyingSailConnectionBase {
 		if (data != null) {
 		StringTokenizer st1 = new StringTokenizer(data, "\n");
 		while (st1.hasMoreTokens()) {
+			
 			String line = st1.nextToken();
+			System.out.println("FOUND TRIPLE PATTERN: " + line);
 			int index = 0;
 			
 			Resource s = null;
