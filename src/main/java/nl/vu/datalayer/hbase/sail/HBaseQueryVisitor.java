@@ -90,6 +90,8 @@ public class HBaseQueryVisitor implements QueryModelVisitor<QueryExpansionExcept
     //     so can only handle queries where each attribute comes from exactly one statement.
     private List<String>  requiredAttributes;
     
+    private List<String> bindingNames;
+    
     //List of attributes to be removed. See requiredAttributes warning!
     private Set<String> eliminatedAttributes;
     
@@ -120,6 +122,7 @@ public class HBaseQueryVisitor implements QueryModelVisitor<QueryExpansionExcept
         this.contexts = contexts;
         
         statements = new ArrayList();
+        bindingNames = new ArrayList();
     }
 
    /**
@@ -469,6 +472,7 @@ public class HBaseQueryVisitor implements QueryModelVisitor<QueryExpansionExcept
 	public void meet(ProjectionElem arg0) throws QueryExpansionException {
 		// TODO Auto-generated method stub
 		System.out.println("FOUND ProjectionElem");
+		bindingNames.add(arg0.getSourceName());
 	}
 
 	@Override
@@ -569,14 +573,17 @@ public class HBaseQueryVisitor implements QueryModelVisitor<QueryExpansionExcept
     	return statements;
     }
     
-    public static ArrayList<ArrayList<Var>> convertToStatements(TupleExpr tupleExpr, Dataset dataSet, List<String> requiredAttributes) throws QueryExpansionException  {
-	System.out.println("Evaluating TupleExpr:" + tupleExpr.toString());
-	
+    public List<String> getBindingNames() {
+    	return bindingNames;
+    }
+    
+    public ArrayList<ArrayList<Var>> convertToStatements(TupleExpr tupleExpr) throws QueryExpansionException  {
+    	System.out.println("Evaluating TupleExpr:" + tupleExpr.toString());
     	ArrayList<Var> contexts = ContextListerVisitor.getContexts(tupleExpr);
         
-        HBaseQueryVisitor writer = new HBaseQueryVisitor(dataSet, requiredAttributes, contexts);
-        tupleExpr.visit(writer);
-        return writer.getStatements();
+        tupleExpr.visit(this);
+        
+        return getStatements();
     }
 
 }

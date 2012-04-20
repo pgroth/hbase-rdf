@@ -69,6 +69,8 @@ public class HBaseSailConnection extends NotifyingSailConnectionBase {
 	HBaseConnection con;
 	MemoryStore memStore;
 	NotifyingSailConnection memStoreCon;
+	List<String> bindingNames;
+	
 	
     //Builder to write the query to bit by bit
     StringBuilder queryString = new StringBuilder();
@@ -78,6 +80,8 @@ public class HBaseSailConnection extends NotifyingSailConnectionBase {
 		super(sailBase);
 //		System.out.println("SailConnection created");
 		con = ((HBaseSail)sailBase).getHBaseConnection();
+		
+		bindingNames = new ArrayList();
 
 		memStore = new MemoryStore();
 		try {
@@ -318,7 +322,12 @@ public class HBaseSailConnection extends NotifyingSailConnectionBase {
 		ArrayList<Statement> result = new ArrayList();
 		
 		try {
-			ArrayList<ArrayList<Var>> statements = HBaseQueryVisitor.convertToStatements(arg0, null, null);
+			HBaseQueryVisitor queryParser = new HBaseQueryVisitor(null, null, null);
+			
+			ArrayList<ArrayList<Var>> statements = queryParser.convertToStatements(arg0);
+			bindingNames = queryParser.getBindingNames();
+			
+			
 //			System.out.println("StatementPatterns: " + statements.size());
 			
 			Iterator it = statements.iterator();
@@ -386,7 +395,10 @@ public class HBaseSailConnection extends NotifyingSailConnectionBase {
 		Set<String> bindingSet = arg2.getBindingNames();
 		
 		try {
-			ArrayList<ArrayList<Var>> statements = HBaseQueryVisitor.convertToStatements(arg0, null, null);
+			HBaseQueryVisitor queryParser = new HBaseQueryVisitor(null, null, null);
+			
+			ArrayList<ArrayList<Var>> statements = queryParser.convertToStatements(arg0);
+			bindingNames = queryParser.getBindingNames();
 			
 			Iterator it = statements.iterator();
 			while (it.hasNext()) {
@@ -480,31 +492,31 @@ public class HBaseSailConnection extends NotifyingSailConnectionBase {
 			}
 			
 			CloseableIteration<? extends BindingSet, QueryEvaluationException> ci = memStoreCon.evaluate(tupleExpr, dataset, bindings, includeInferred);
-			CloseableIteration<? extends BindingSet, QueryEvaluationException> cj = memStoreCon.evaluate(tupleExpr, dataset, bindings, includeInferred);
-					
-			List<String> bindingList = new ArrayList<String>();
-
-			System.out.println("NEW BINDING SET SIZE:" + bindings.getBindingNames().size());
-			int index = 0;
-			while (ci.hasNext()) {
-				index++;
-				BindingSet bs = (BindingSet)ci.next();
-                System.out.println("Binding size(" + index + "): " + bs.getBindingNames().size());
-				Set<String> localBindings = bs.getBindingNames();
-				Iterator jt = localBindings.iterator();
-				while (jt.hasNext()) {
-					String binding = (String)jt.next();
-					if (bindingList.contains(binding) == false) {
-						bindingList.add(binding);
-						System.out.println("Added binding: " + binding);
-					}
-				}
-			}
-			System.out.println("Results retrieved from memory store: " + index);
-			System.out.println("Bindings retrieved from memory store: " + bindingList.size());
+//			CloseableIteration<? extends BindingSet, QueryEvaluationException> cj = memStoreCon.evaluate(tupleExpr, dataset, bindings, includeInferred);
+//					
+//			List<String> bindingList = new ArrayList<String>();
+//
+//			System.out.println("NEW BINDING SET SIZE:" + bindings.getBindingNames().size());
+//			int index = 0;
+//			while (ci.hasNext()) {
+//				index++;
+//				BindingSet bs = (BindingSet)ci.next();
+//                System.out.println("Binding size(" + index + "): " + bs.getBindingNames().size());
+//				Set<String> localBindings = bs.getBindingNames();
+//				Iterator jt = localBindings.iterator();
+//				while (jt.hasNext()) {
+//					String binding = (String)jt.next();
+//					if (bindingList.contains(binding) == false) {
+//						bindingList.add(binding);
+//						System.out.println("Added binding: " + binding);
+//					}
+//				}
+//			}
+//			System.out.println("Results retrieved from memory store: " + index);
+			System.out.println("Bindings retrieved from memory store: " + bindingNames.size());
 			
 			
-			TupleQueryResult result = new TupleQueryResultImpl(bindingList, cj);
+			TupleQueryResult result = new TupleQueryResultImpl(bindingNames, ci);
 			
 //			int ressize = 0;
 //			while (result.hasNext()) {

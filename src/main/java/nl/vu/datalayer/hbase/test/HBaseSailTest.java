@@ -40,13 +40,12 @@ public class HBaseSailTest {
 		    	BindingSet bindingSet = result.next();
 		    	Value valueOfX = bindingSet.getValue("name");
 		    	System.out.print("?name = " + valueOfX.stringValue() + "\"");
-
-                        Value valueOfY = bindingSet.getValue("mbox");
-                        if (valueOfY != null) {
-				System.out.print(", ?mbox = " + valueOfY.stringValue());
-			}
-			System.out.print("\n");
-
+		    	
+		    	Value valueOfY = bindingSet.getValue("mbox");
+		    	if (valueOfY != null) {
+                	System.out.print(", ?mbox = " + valueOfY.stringValue());
+                }
+                System.out.print("\n");
 		    }
 		    
 		} catch (MalformedQueryException e) {
