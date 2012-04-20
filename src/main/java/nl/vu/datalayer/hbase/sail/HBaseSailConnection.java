@@ -241,8 +241,9 @@ public class HBaseSailConnection extends NotifyingSailConnectionBase {
 						String token = st2.nextToken();
 						if (token.startsWith("\"")) {
 							while (token.endsWith("\"") == false) {
-								token += st2.nextToken();
+								token += " " + st2.nextToken();
 							}
+							token += " " + st2.nextToken();
 						}
 						
 						if (i == 0) {
