@@ -239,6 +239,12 @@ public class HBaseSailConnection extends NotifyingSailConnectionBase {
 				else {
 					try {
 						String token = st2.nextToken();
+						if (token.startsWith("\"")) {
+							while (token.endsWith("\"") == false) {
+								token += st2.nextToken();
+							}
+						}
+						
 						if (i == 0) {
 							s = (Resource)constructNode(token);
 						} else if (i == 1) {
