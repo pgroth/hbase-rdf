@@ -479,48 +479,49 @@ public class HBaseSailConnection extends NotifyingSailConnectionBase {
 				memStoreCon.addStatement(statement.getSubject(), statement.getPredicate(), statement.getObject(), context);
 			}
 			
-			TupleQueryResult result = (TupleQueryResult)memStoreCon.evaluate(tupleExpr, dataset, bindings, includeInferred);
-			return result;
+			CloseableIteration<? extends BindingSet, QueryEvaluationException> ci = memStoreCon.evaluate(tupleExpr, dataset, bindings, includeInferred);
+			CloseableIteration<? extends BindingSet, QueryEvaluationException> cj = memStoreCon.evaluate(tupleExpr, dataset, bindings, includeInferred);
+					
+			List<String> bindingList = new ArrayList<String>();
+
+			System.out.println("NEW BINDING SET SIZE:" + bindings.getBindingNames().size());
+			int index = 0;
+			while (ci.hasNext()) {
+				index++;
+				BindingSet bs = (BindingSet)ci.next();
+                System.out.println("Binding size(" + index + "): " + bs.getBindingNames().size());
+				Set<String> localBindings = bs.getBindingNames();
+				Iterator jt = localBindings.iterator();
+				while (jt.hasNext()) {
+					String binding = (String)jt.next();
+					if (bindingList.contains(binding) == false) {
+						bindingList.add(binding);
+						System.out.println("Added binding: " + binding);
+					}
+				}
+			}
+			System.out.println("Results retrieved from memory store: " + index);
+			System.out.println("Bindings retrieved from memory store: " + bindingList.size());
 			
-//			CloseableIteration<? extends BindingSet, QueryEvaluationException> cj = new CloseableIteration(ci);
-//					
-//			List<String> bindingList = new ArrayList<String>();
-//
-//			System.out.println("NEW BINDING SET SIZE:" + bindings.getBindingNames().size());
-//			int index = 0;
-//			while (ci.hasNext()) {
-//				index++;
-//				BindingSet bs = (BindingSet)ci.next();
-//                System.out.println("Binding size(" + index + "): " + bs.getBindingNames().size());
-//				Set<String> localBindings = bs.getBindingNames();
-//				Iterator jt = localBindings.iterator();
-//				while (jt.hasNext()) {
-//					String binding = (String)jt.next();
-//					if (bindingList.contains(binding) == false) {
-//						bindingList.add(binding);
-//						System.out.println("Added binding: " + binding);
-//					}
-//				}
+			
+			TupleQueryResult result = new TupleQueryResultImpl(bindingList, cj);
+			
+//			int ressize = 0;
+//			while (result.hasNext()) {
+//				BindingSet binding = result.next();
+//				System.out.println("x = " + binding.getValue("x").stringValue());
+//				ressize += 1;
 //			}
-//			System.out.println("Results retrieved from memory store: " + index);
-//			System.out.println("Bindings retrieved from memory store: " + bindingList.size());
-//			
-//			
-//			TupleQueryResult result = new TupleQueryResultImpl(bindingList, cj);
-//			
-////			int ressize = 0;
-////			while (result.hasNext()) {
-////				BindingSet binding = result.next();
-////				System.out.println("x = " + binding.getValue("x").stringValue());
-////				ressize += 1;
-////			}
-////			System.out.println("TupleQueryResult size: " + ressize);
-//			
-//			return result;
+//			System.out.println("TupleQueryResult size: " + ressize);
+			
+			return result;
 			
 		} catch (SailException e) {
 			e.printStackTrace();
 			throw e;
+		} catch (QueryEvaluationException e) {
+			// TODO Auto-generated catch block
+			throw new SailException(e);
 		}
 	}
 
