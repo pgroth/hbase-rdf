@@ -39,7 +39,7 @@ public class HBaseSailTest {
 		    while (result.hasNext()) {
 		    	BindingSet bindingSet = result.next();
 		    	Value valueOfX = bindingSet.getValue("name");
-		    	System.out.print("?name = " + valueOfX.stringValue() + "\"");
+		    	System.out.print("?name = " + valueOfX.stringValue());
 		    	
 		    	Value valueOfY = bindingSet.getValue("mbox");
 		    	if (valueOfY != null) {
