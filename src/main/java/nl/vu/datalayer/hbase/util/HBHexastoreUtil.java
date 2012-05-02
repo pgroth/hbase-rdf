@@ -127,10 +127,10 @@ public class HBHexastoreUtil implements IHBaseUtil {
 	 * @param index
 	 * @return
 	 */
-	private byte[] getKey(String []triple, int index){
+	public byte[] getKey(String []triple, int index){
 		ArrayList<Integer> keyMask = keyPositions.get(index);
 		
-		//construct the by concatenating the hashes of each element
+		//construct the key by concatenating the hashes of each element
 		long []hashes = new long[keyMask.size()];
 		for (int i = 0; i < hashes.length; i++) {
 			hashes[i] = hashFunction(triple[keyMask.get(i)]);
@@ -154,7 +154,7 @@ public class HBHexastoreUtil implements IHBaseUtil {
 	 * @param index
 	 * @return
 	 */
-	private byte[] getValue(String []triple, int index){
+	public byte[] getValue(String []triple, int index){
 		ArrayList<Integer> valueMask = valuePositions.get(index);
 		
 		String value = "";
@@ -177,7 +177,7 @@ public class HBHexastoreUtil implements IHBaseUtil {
 	 * @param batchPut
 	 * @throws IOException
 	 */
-	private boolean addTriple(HTable []tables, int index, String []triple, ArrayList<Put> batchPut) throws IOException{
+	private boolean addTriple(HTable []tables, int index, String []triple) throws IOException{
 		
 		byte []key = getKey(triple, index);
 		
@@ -207,6 +207,7 @@ public class HBHexastoreUtil implements IHBaseUtil {
 		}
 		
 		Put p = new Put(key);
+		p.setWriteToWAL(false);
 		p.add(HBHexastoreSchema.COLUMN_FAMILY.getBytes(),
 				HBHexastoreSchema.COLUMN_NAME.getBytes(),
 				val);
@@ -222,12 +223,13 @@ public class HBHexastoreUtil implements IHBaseUtil {
 			throws Exception {
 		
 		HTable []tables = new HTable[HBHexastoreSchema.TABLE_COUNT];
-		ArrayList<ArrayList<Put>> batchPuts = new ArrayList<ArrayList<Put>>();
+		//ArrayList<ArrayList<Put>> batchPuts = new ArrayList<ArrayList<Put>>();
 		//initialize connections to all tables
 		//for each table initialize a buffer of Put operations 
 		for (int i = 0; i < tables.length; i++) {
 			tables[i] = new HTable(con.getConfiguration(), HBHexastoreSchema.TABLE_NAMES[i]);
-			batchPuts.add(new ArrayList<Put>());
+			tables[i].setAutoFlush(false);
+			//batchPuts.add(new ArrayList<Put>());
 		}
 		
 		//populate tables
@@ -243,10 +245,10 @@ public class HBHexastoreUtil implements IHBaseUtil {
 			
 			//first check if the triple is added in the SPO table
 			//if it isn't added then it is a duplicate, so we don't add it to other tables anymore
-			boolean added = addTriple(tables, HBHexastoreSchema.SPO-1, triple, batchPuts.get(HBHexastoreSchema.SPO-1));
+			boolean added = addTriple(tables, HBHexastoreSchema.SPO-1, triple);
 			if (added == true){//add it also to the other tables
 				for (int j=0; j < tables.length-1; j++) {
-					addTriple(tables, j, triple, batchPuts.get(j));
+					addTriple(tables, j, triple);
 				}
 			}
 			
