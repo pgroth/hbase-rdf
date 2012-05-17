@@ -18,7 +18,7 @@ public class RetrieveQuads {
 			
 			if (args.length != 1){
 				System.out.println("Usage: RetrieveQuads <queryFile>");
-				System.out.println("Use \"<?>\" for the positions representing variables");
+				System.out.println("Use \"?\" for the positions representing variables");
 				return;
 			}
 			
@@ -33,11 +33,12 @@ public class RetrieveQuads {
 			String strLine;
 			while ((strLine = br.readLine()) != null) {
 				System.out.println("Query: "+strLine);
-				//String[] quad = parseLine(strLine);
+				
 				long start = System.currentTimeMillis();
-				ArrayList<ArrayList<String>> result = sol.util.getRow(strLine.split(" "));
+				String []quad = parseLine(strLine);
+				ArrayList<ArrayList<String>> result = sol.util.getRow(quad);
 				long end = System.currentTimeMillis();
-				System.out.println("Result retrieved in: "+(end-start)+" ms");
+				System.out.println(result.size()+" quads retrieved in: "+(end-start)+" ms");
 				
 				for (ArrayList<String> arrayList : result) {
 					for (String string : arrayList) {
@@ -45,6 +46,8 @@ public class RetrieveQuads {
 					}
 					System.out.println();
 				}
+				
+				System.out.println();
 			}
 			
 			con.close();
@@ -53,16 +56,17 @@ public class RetrieveQuads {
 			e.printStackTrace();
 		}
 	}
-
-	/*private static String[] parseLine(String strLine) {
+	
+	private static String[] parseLine(String strLine) {
 		int firstSpace = strLine.indexOf(" ");
 		int secondSpace = strLine.indexOf(" ", firstSpace+1);
-		int thirdSpace = strLine.indexOf(" ", secondSpace+1);
+		int lastSpace = strLine.lastIndexOf(" ");
 		String []ret = new String[4];
 		ret[0] = strLine.substring(0, firstSpace);
 		ret[1] = strLine.substring(firstSpace+1, secondSpace);
-		ret[2] = strLine.substring(secondSpace+1, thirdSpace);
+		ret[2] = strLine.substring(secondSpace+1, lastSpace);
+		ret[3] = strLine.substring(lastSpace+1);
 		return ret;
-	}*/
+	}
 
 }

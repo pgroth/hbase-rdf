@@ -4,7 +4,6 @@ import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
-import java.util.Iterator;
 
 import net.fortytwo.sesametools.nquads.NQuadsParser;
 import nl.vu.datalayer.hbase.id.BaseId;
@@ -13,6 +12,7 @@ import nl.vu.datalayer.hbase.id.NumericalRangeException;
 import nl.vu.datalayer.hbase.id.TypedId;
 import nl.vu.datalayer.hbase.schema.HBPrefixMatchSchema;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
@@ -21,12 +21,7 @@ import org.apache.hadoop.io.SequenceFile;
 import org.apache.hadoop.io.SequenceFile.CompressionType;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
-import org.apache.hadoop.mapred.JobConf;
-import org.apache.hadoop.mapred.MapReduceBase;
-import org.apache.hadoop.mapred.Mapper;
-import org.apache.hadoop.mapred.OutputCollector;
-import org.apache.hadoop.mapred.Reducer;
-import org.apache.hadoop.mapred.Reporter;
+import org.apache.hadoop.mapreduce.Counter;
 import org.openrdf.model.Literal;
 import org.openrdf.model.Statement;
 import org.openrdf.model.ValueFactory;
@@ -45,7 +40,8 @@ public class TripleToResource {
 	
 	public static final String EXCEPTION_GROUP = "ExceptionGroup";
 	
-	public static class TripleToResourceMapper extends MapReduceBase implements Mapper<LongWritable, Writable, Text, DataPair>
+	public static class TripleToResourceMapper extends 
+				org.apache.hadoop.mapreduce.Mapper<LongWritable, Writable, Text, DataPair>
 	{
 		private static RDFParser parser = null;
 		private static StatementCollector collector = null;
@@ -54,10 +50,8 @@ public class TripleToResource {
 		private int partitionId;
 		private long localRowCount = 0;
 		
-		
-		
 		@Override
-		public void configure(JobConf job) {
+		protected void setup(Context context) throws IOException, InterruptedException {
 			statements = new ArrayList<Statement>();
 			collector = new StatementCollector(statements);
 			parser = new NQuadsParser();
@@ -65,11 +59,12 @@ public class TripleToResource {
 			parser.setRDFHandler(collector);
 			parser.setPreserveBNodeIDs(true);
 			
-			partitionId = job.getInt("mapred.task.partition", 0);
+			partitionId = context.getConfiguration().getInt("mapred.task.partition", 0);
 			System.out.println("Finished configuration "+partitionId);
 		}
 		
-		public void map(LongWritable key, Writable value,  OutputCollector<Text, DataPair> output, Reporter reporter) throws IOException{
+		@Override
+		public void map(LongWritable key, Writable value, Context context) throws IOException, InterruptedException{
 			try {
 				InputStream in = new ByteArrayInputStream(value.toString().getBytes());
 				parser.parse(in, "");
@@ -79,7 +74,6 @@ public class TripleToResource {
 				}				
 				
 				Statement s = statements.get(statements.size()-1);
-				//System.out.println(s);
 				
 				//generate triple ID
 				BaseId id = new BaseId(partitionId, localRowCount);
@@ -92,16 +86,16 @@ public class TripleToResource {
 				DataPair tContext = new DataPair(id, DataPair.C);
 				
 				//emit output
-				output.collect(new Text(s.getSubject().toString()), subject);
-				output.collect(new Text(s.getPredicate().toString()), predicate);
-				output.collect(new Text(s.getObject().toString()), object);
+				context.write(new Text(s.getSubject().toString()), subject);
+				context.write(new Text(s.getPredicate().toString()), predicate);
+				context.write(new Text(s.getObject().toString()), object);
 				
 				String quadContext;
 				if (s.getContext() == null)
 					quadContext = DEFAULT_CONTEXT;
 				else
 					quadContext = s.getContext().toString();
-				output.collect(new Text(quadContext), tContext);
+				context.write(new Text(quadContext), tContext);
 				
 				if (statements.size() == 5000){
 					statements.clear();
@@ -109,26 +103,21 @@ public class TripleToResource {
 				
 			} catch (RDFParseException e) {
 				System.err.println("Unexpected input at line: "+key.get()+" : "+e.getMessage());
-				reporter.incrCounter(EXCEPTION_GROUP, "RDDParseExceptions", 1);
+				context.getCounter(EXCEPTION_GROUP, "RDDParseExceptions").increment(1);
 			} catch (RDFHandlerException e) {
 				System.err.println("Line: "+key.get()+"; "+e.getMessage());
-				reporter.incrCounter(EXCEPTION_GROUP, "RDDHandlerExceptions", 1);
+				context.getCounter(EXCEPTION_GROUP, "RDDHandlerExceptions").increment(1);
 			} 
 		}
-
+	
 		@Override
-		public void close() throws IOException {
+		protected void cleanup(Context context) throws IOException, InterruptedException {
 			System.out.println("Mapper Partition: "+partitionId+"; "+localRowCount);
-		}
-				
-		
+		}		
 	}
 	
-	/**
-	 * @author sever
-	 *
-	 */
-	public static class TripleToResourceReducer extends MapReduceBase implements Reducer<Text, DataPair, TypedId, DataPair>
+	
+	public static class TripleToResourceReducer extends org.apache.hadoop.mapreduce.Reducer<Text, DataPair, TypedId, DataPair>
 	{
 			private int partitionId;
 			private long localRowCount = 0;
@@ -136,15 +125,28 @@ public class TripleToResource {
 			
 			private static SequenceFile.Writer id2StringWriter;
 			
-			//public static final String URI_GROUP = "URIGroup";
+			
+			/**
+			 * Counter group with 3 counters: URIs, bNodes and Literals 
+			 */
 			public static final String ELEMENT_TYPE_GROUP = "ElemsGroup";
+			
+			
+			/**
+			 * Counter group that build a byte histogram* of the last characters of input keys
+			 * 
+			 * note: the histogram is not complete because hadoop limits the number of counters to 120: 
+			 * so 2 byte values are counted with the same counter, and we assume that they are equally distributed
+			 * TODO change in future releases when counter limit can be configured
+			 */
 			public static final String HISTOGRAM_GROUP = "HistogramGroup";
 			public static final String NUMERICAL_GROUP = "NumericalGroup";		
 			
 			@Override
-			public void configure(JobConf config) {		
+			protected void setup(Context context) throws IOException, InterruptedException {
 				FileSystem fs;
 				try {
+					Configuration config = context.getConfiguration();
 					partitionId = config.getInt("mapred.task.partition", 0);
 					String outputPath = config.get("outputPath");
 					fs = FileSystem.get(config);
@@ -160,14 +162,9 @@ public class TripleToResource {
 					e.printStackTrace();
 				}
 			}
-
-			//for testing purposes
-			public static void setValueVatory(ValueFactory valFactory){
-				valFact = valFactory;
-			}
 			
 			@Override
-			public void close() throws IOException {
+			protected void cleanup(Context context) throws IOException, InterruptedException {
 				id2StringWriter.syncFs();
 				id2StringWriter.close();
 				
@@ -175,79 +172,85 @@ public class TripleToResource {
 				HBPrefixMatchSchema.updateCounter(partitionId, localRowCount);
 				System.out.println("Counter updated for partition "+partitionId);
 			}
+
+			//for testing purposes
+			public static void setValueVatory(ValueFactory valFactory){
+				valFact = valFactory;
+			}
 			
-			public void updateHistogram(Reporter reporter, String literal){
+			public void updateHistogram(Context context, String literal){
 				if (literal.endsWith("\"")){
-					reporter.incrCounter(HISTOGRAM_GROUP, String.format("%02x", (short)literal.getBytes()[literal.getBytes().length-2] & 0xfe), 1);
+					context.getCounter(HISTOGRAM_GROUP, String.format("%02x", (short)literal.getBytes()[literal.getBytes().length-2] & 0xfe)).increment(1);
 				}
 				else{
-					reporter.incrCounter(HISTOGRAM_GROUP, String.format("%02x", (short)literal.getBytes()[literal.getBytes().length-1] & 0xfe), 1);
+					context.getCounter(HISTOGRAM_GROUP, String.format("%02x", (short)literal.getBytes()[literal.getBytes().length-1] & 0xfe)).increment(1);
 				}
 			}
 
 			@Override
-			public void reduce(Text key, Iterator<DataPair> it, OutputCollector<TypedId, DataPair> output, Reporter reporter) throws IOException {
-				
+			public void reduce(Text key, Iterable<DataPair> values, Context context) throws IOException, InterruptedException {
 				//generate a new id for the triple element represented by the key
-			
-					TypedId newId;
-					String elem = key.toString();			
-					if (elem.startsWith("\"")){//Literals
-						reporter.incrCounter(ELEMENT_TYPE_GROUP, "Literals", 1);
-						try{
-							Literal l = NTriplesUtil.parseLiteral(elem, valFact);
-							if (l.getDatatype() == null){//the Literals with no datatype are considered Strings
+				
+				TypedId newId;
+				String elem = key.toString();			
+				if (elem.startsWith("\"")){//Literals
+					Counter c = context.getCounter(ELEMENT_TYPE_GROUP, "Literals"); 
+					c.increment(1);
+					try{
+						Literal l = NTriplesUtil.parseLiteral(elem, valFact);
+						if (l.getDatatype() == null){//the Literals with no datatype are considered Strings
+							newId = new TypedId(partitionId, localRowCount);
+							updateHistogram(context, elem);
+						}
+						else{//we have a datatype
+							newId = TypedId.createNumerical(l);
+							if (newId == null){//non-numerical literal
 								newId = new TypedId(partitionId, localRowCount);
-								updateHistogram(reporter, elem);
-							}
-							else{//we have a datatype
-								newId = TypedId.createNumerical(l);
-								if (newId == null){//non-numerical literal
-									newId = new TypedId(partitionId, localRowCount);
-									updateHistogram(reporter, elem);
-								}
+								updateHistogram(context, elem);
 							}
 						}
-						catch(NumericalRangeException e){
-							System.err.println("Numerical not in expected range: "+e.getMessage());
-							reporter.incrCounter(EXCEPTION_GROUP, "RangeExceptions", 1);
-							return;
-						}
-						catch(IllegalArgumentException e){
-							System.err.println("Literal not in proper format: "+e.getMessage());
-							reporter.incrCounter(EXCEPTION_GROUP, "LiteralExceptions", 1);
-							return;
-						}	
 					}
-					else{//non-Literals
-						reporter.incrCounter(HISTOGRAM_GROUP, String.format("%02x", (short)elem.getBytes()[elem.getBytes().length-1] & 0xfe), 1);
-						if (elem.startsWith("_:")){
-							reporter.incrCounter(ELEMENT_TYPE_GROUP, "Blanks", 1);
-						}
-						else{
-							reporter.incrCounter(ELEMENT_TYPE_GROUP, "URIs", 1);
-						}
-						
-						newId = new TypedId(partitionId, localRowCount);
+					catch(NumericalRangeException e){
+						System.err.println("Numerical not in expected range: "+e.getMessage());
+						context.getCounter(EXCEPTION_GROUP, "RangeExceptions").increment(1);
+						return;
 					}
-					
-					//write the association between IDs and Strings in a SequenceFile
-					if (newId.getType() != TypedId.NUMERICAL){
-						id2StringWriter.append(new ImmutableBytesWritable(newId.getContent()), key);
-						if (localRowCount % 1000 == 0){
-							id2StringWriter.syncFs();
-						}
-						localRowCount++;
-						reporter.incrCounter(NUMERICAL_GROUP, "NonNumericals", 1);
+					catch(IllegalArgumentException e){
+						System.err.println("Literal not in proper format: "+e.getMessage());
+						context.getCounter(EXCEPTION_GROUP, "LiteralExceptions").increment(1); 
+						return;
+					}	
+				}
+				else{//non-Literals
+					context.getCounter(HISTOGRAM_GROUP, String.format("%02x", (short)elem.getBytes()[elem.getBytes().length-1] & 0xfe)).increment(1);
+					if (elem.startsWith("_:")){
+						context.getCounter(ELEMENT_TYPE_GROUP, "Blanks").increment(1);
 					}
 					else{
-						reporter.incrCounter(NUMERICAL_GROUP, "Numericals", 1);
+						context.getCounter(ELEMENT_TYPE_GROUP, "URIs").increment(1);
 					}
 					
-					//emit (elementID, <tripleID, position>) elements
-					while (it.hasNext()){										
-						output.collect(newId, it.next());
-					}	
+					newId = new TypedId(partitionId, localRowCount);
+				}
+				
+				//write the association between IDs and Strings in a SequenceFile
+				if (newId.getType() != TypedId.NUMERICAL){
+					id2StringWriter.append(new ImmutableBytesWritable(newId.getContent()), key);
+					if (localRowCount % 1000 == 0){
+						id2StringWriter.syncFs();
+					}
+					localRowCount++;
+					context.getCounter(NUMERICAL_GROUP, "NonNumericals").increment(1);
+				}
+				else{
+					context.getCounter(NUMERICAL_GROUP, "Numericals").increment(1);
+				}
+				
+				//emit (elementID, <tripleID, position>) elements
+				for (DataPair dataPair : values) {
+					context.write(newId, dataPair);
+				}										
+					
 			}
 	}
 

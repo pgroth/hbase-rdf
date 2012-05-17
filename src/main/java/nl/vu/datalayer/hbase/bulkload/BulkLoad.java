@@ -26,18 +26,15 @@ import org.apache.hadoop.hbase.mapreduce.HFileOutputFormat;
 import org.apache.hadoop.hbase.mapreduce.LoadIncrementalHFiles;
 import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.io.Text;
-import org.apache.hadoop.mapred.Counters;
-import org.apache.hadoop.mapred.Counters.Counter;
-import org.apache.hadoop.mapred.Counters.Group;
-import org.apache.hadoop.mapred.JobClient;
 import org.apache.hadoop.mapred.JobConf;
-import org.apache.hadoop.mapred.RunningJob;
-import org.apache.hadoop.mapred.SequenceFileOutputFormat;
-import org.apache.hadoop.mapred.TextInputFormat;
+import org.apache.hadoop.mapreduce.Counter;
+import org.apache.hadoop.mapreduce.CounterGroup;
+import org.apache.hadoop.mapreduce.Counters;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.hadoop.mapreduce.lib.input.SequenceFileInputFormat;
-
+import org.apache.hadoop.mapreduce.lib.input.TextInputFormat;
+import org.apache.hadoop.mapreduce.lib.output.SequenceFileOutputFormat;
 
 /**
  * Class representing main entry point for Bulk loading process
@@ -45,9 +42,6 @@ import org.apache.hadoop.mapreduce.lib.input.SequenceFileInputFormat;
  */
 
 public class BulkLoad {
-	
-	//public static final String INPUT_PATH = "/user/sfu200/input/dbpedia";
-	//public static final String OUTPUT_PATH = "/user/sfu200/output";
 	
 	/**
 	 * Used to load successively the tables containing quads
@@ -82,66 +76,75 @@ public class BulkLoad {
 	public static long totalStringCount, numericalCount, literalCount, bNodeCount;
 	public static int tripleToResourceReduceTasks;
 	
-	public static JobConf createTripleToResourceJob(Path input, Path output, int inputSizeEstimate) throws IOException{
-			
-		JobConf conf = new JobConf();
-		conf.setJobName("TripleToResource");
+	public static Job createTripleToResourceJob(Path input, Path output, int inputSizeEstimate) throws IOException{
+		
+		Configuration conf = new Configuration();
 		conf.setInt("mapred.job.reuse.jvm.num.tasks", -1);
+		
+		//the intermediate keys are larger than intermediate values
 		conf.setFloat("io.sort.record.percent", 0.6f);
+		
+		//for large data we will spill anyway, so might as well start it as soon as possible, 
+		//so that the mapper doesn't block
 		conf.setFloat("io.sort.spill.percent", 0.6f);
+		
+		Job j = new Job(conf);
+		
+		j.setJobName("TripleToResource");
 		
 		long numInputBytes = (long)(inputSizeEstimate*Math.pow(10.0, 6.0));
 		long numQuads = numInputBytes/QUAD_AVERAGE_SIZE;
-		long totalNumberOfElements = numQuads*ELEMENTS_PER_QUAD;
-		
+		long totalNumberOfElements = numQuads*ELEMENTS_PER_QUAD;		
 		tripleToResourceReduceTasks = (int)(Math.ceil((double)totalNumberOfElements/Math.pow(2.0, 24.0)) * LOAD_BALANCER_FACTOR);
 		System.out.println("Number of reduce tasks: "+tripleToResourceReduceTasks);
-		conf.setNumReduceTasks(tripleToResourceReduceTasks);
-		//conf.setNumReduceTasks(3);
 		
-		conf.setJarByClass(BulkLoad.class);
-		conf.setMapperClass(TripleToResource.TripleToResourceMapper.class);
-		conf.setReducerClass(TripleToResource.TripleToResourceReducer.class);
+		j.setJarByClass(BulkLoad.class);
+		j.setMapperClass(TripleToResource.TripleToResourceMapper.class);
+		j.setReducerClass(TripleToResource.TripleToResourceReducer.class);
 		
-		conf.setOutputKeyClass(TypedId.class);
-		conf.setOutputValueClass(DataPair.class);
+		j.setOutputKeyClass(TypedId.class);
+		j.setOutputValueClass(DataPair.class);
 		
-		conf.setMapOutputKeyClass(Text.class);
-		conf.setMapOutputValueClass(DataPair.class);
+		j.setMapOutputKeyClass(Text.class);
+		j.setMapOutputValueClass(DataPair.class);
 		
-		conf.setInputFormat(TextInputFormat.class);
-		conf.setOutputFormat(SequenceFileOutputFormat.class);
-		TextInputFormat.setInputPaths(conf, input);
-		SequenceFileOutputFormat.setOutputPath(conf, output);
+		j.setInputFormatClass(TextInputFormat.class);
+		j.setOutputFormatClass(SequenceFileOutputFormat.class);
+		TextInputFormat.setInputPaths(j, input);
+		SequenceFileOutputFormat.setOutputPath(j, output);
 		
-		return conf;
+		j.setNumReduceTasks(tripleToResourceReduceTasks);
+		
+		return j;
 	}
 	
-	public static JobConf createResourceToTripleJob(Path input, Path output) throws IOException {
+	public static Job createResourceToTripleJob(Path input, Path output) throws IOException {
 
-		JobConf conf = new JobConf();
-		
-		conf.setJobName("ResourceToTriple");
+		Configuration conf = new Configuration();
 		conf.setInt("mapred.job.reuse.jvm.num.tasks", -1);
 		conf.setFloat("io.sort.record.percent", 0.2f);
 		conf.setFloat("io.sort.spill.percent", 0.7f);
+		
+		Job j = new Job();
+		j.setJobName("ResourceToTriple");
+		
 		int reduceTasks = (int)(1.75*(double)CLUSTER_SIZE*(double)TASK_PER_NODE);
-		conf.setNumReduceTasks(reduceTasks);
+		j.setNumReduceTasks(reduceTasks);
 
-		conf.setJarByClass(BulkLoad.class);
-		conf.setMapperClass(ResourceToTriple.ResourceToTripleMapper.class);
-		conf.setReducerClass(ResourceToTriple.ResourceToTripleReducer.class);
+		j.setJarByClass(BulkLoad.class);
+		j.setMapperClass(ResourceToTriple.ResourceToTripleMapper.class);
+		j.setReducerClass(ResourceToTriple.ResourceToTripleReducer.class);
 
-		conf.setMapOutputKeyClass(BaseId.class);
-		conf.setMapOutputValueClass(DataPair.class);
-		conf.setOutputKeyClass(NullWritable.class);
-		conf.setOutputValueClass(ImmutableBytesWritable.class);
-		conf.setInputFormat(org.apache.hadoop.mapred.SequenceFileInputFormat.class);
-		conf.setOutputFormat(SequenceFileOutputFormat.class);
-		org.apache.hadoop.mapred.SequenceFileInputFormat.setInputPaths(conf, input);
-		SequenceFileOutputFormat.setOutputPath(conf, output);
+		j.setMapOutputKeyClass(BaseId.class);
+		j.setMapOutputValueClass(DataPair.class);
+		j.setOutputKeyClass(NullWritable.class);
+		j.setOutputValueClass(ImmutableBytesWritable.class);
+		j.setInputFormatClass(SequenceFileInputFormat.class);
+		j.setOutputFormatClass(SequenceFileOutputFormat.class);
+		SequenceFileInputFormat.setInputPaths(j, input);
+		SequenceFileOutputFormat.setOutputPath(j, output);
 
-		return conf;
+		return j;
 	}
 	
 	public static Job createString2IdJob(HBaseConnection con, Path input, Path output) throws Exception {
@@ -166,7 +169,6 @@ public class BulkLoad {
 		string2Id = new HTable(con.getConfiguration(), HBPrefixMatchSchema.STRING2ID);
 
 		HFileOutputFormat.configureIncrementalLoad(j, string2Id);
-
 		return j;
 	}
 	
@@ -215,30 +217,29 @@ public class BulkLoad {
 		return j;
 	}
 	
-	public static void retrieveCounters(RunningJob runningJ1) throws IOException{
+	public static void retrieveCounters(Job j1) throws IOException{
 		sufixCounters = new TreeMap<Short, Long>();
 		
-		Counters counters = runningJ1.getCounters();
-		Group numGroup = counters.getGroup(TripleToResource.TripleToResourceReducer.NUMERICAL_GROUP);
-		totalStringCount = numGroup.getCounter("NonNumericals");
-		numericalCount = numGroup.getCounter("Numericals");
+		Counters counters = j1.getCounters();
+		CounterGroup numGroup = counters.getGroup(TripleToResource.TripleToResourceReducer.NUMERICAL_GROUP);
+		totalStringCount = numGroup.findCounter("NonNumericals").getValue();
+		numericalCount = numGroup.findCounter("Numericals").getValue();
 		
-		Group elemsGroup = counters.getGroup(TripleToResource.TripleToResourceReducer.ELEMENT_TYPE_GROUP);
-		literalCount = elemsGroup.getCounter("Literals");
-		//long nonNumericalLiteralCount = literalCount-numericalCount;
-		bNodeCount = elemsGroup.getCounter("Blanks");
+		CounterGroup elemsGroup = counters.getGroup(TripleToResource.TripleToResourceReducer.ELEMENT_TYPE_GROUP);
+		literalCount = elemsGroup.findCounter("Literals").getValue();
+		bNodeCount = elemsGroup.findCounter("Blanks").getValue();
 		
 		//build histogram
-		Group histogramGroup = counters.getGroup(TripleToResource.TripleToResourceReducer.HISTOGRAM_GROUP);
+		CounterGroup histogramGroup = counters.getGroup(TripleToResource.TripleToResourceReducer.HISTOGRAM_GROUP);
 		Iterator<Counter> it = histogramGroup.iterator();
 		while (it.hasNext()){
 			Counter c = it.next();
 			short b = Short.parseShort(c.getName(), 16);
-			System.out.println((char)b +" "+c.getName()+" "+c.getCounter());
+			System.out.println((char)b +" "+c.getName()+" "+c.getValue());
 			
-			long half = c.getCounter()/2;
+			long half = c.getValue()/2;
 			sufixCounters.put(b, half);
-			sufixCounters.put((short)(b | 0x01), c.getCounter()-half);
+			sufixCounters.put((short)(b | 0x01), c.getValue()-half);
 		}		
 		
 		//save counter values to file
@@ -292,10 +293,41 @@ public class BulkLoad {
 		}
 	}
 	
+	public static void main(String[] args) {
+		try {
+		Path input = new Path(args[0]);
+		String outputPath = args[2];
+		Path resourceIds = new Path(outputPath+TripleToResource.RESOURCE_IDS_DIR);
+		Path convertedTripletsPath = new Path(outputPath+ResourceToTriple.TEMP_TRIPLETS_DIR);
+		
+		Path string2IdInput = new Path(outputPath+TripleToResource.ID2STRING_DIR);
+		Path string2IdOutput = new Path(outputPath+StringIdAssoc.STRING2ID_DIR);
+		
+		HBaseConnection con = new HBaseConnection();
+		HBPrefixMatchSchema.createCounterTable(con.getAdmin());
+		
+		long start = System.currentTimeMillis();
+		
+		Job j1 = createTripleToResourceJob(input, resourceIds, Integer.parseInt(args[1]));
+		j1.getConfiguration().set("outputPath", outputPath);
+		j1.waitForCompletion(true);
+		
+		long firstJob = System.currentTimeMillis()-start;
+		System.out.println("First pass finished in "+firstJob+" ms");
+		
+		//retrieve counter values and build a SortedMap
+		retrieveCounters(j1);
+		long startPartition = HBPrefixMatchSchema.updateLastCounter(tripleToResourceReduceTasks, con.getConfiguration())+1;
+		}
+		catch (Exception e) {
+			e.printStackTrace();
+		}
+	}
+	
 	/**
 	 * @param args
 	 */
-	public static void main(String[] args) {
+	public static void main_asdadd(String[] args) {
 		try {
 			if (args.length != 3){
 				System.out.println("Usage: bulkLoad <inputPath> <inputSizeEstimate in MB> <outputPath>");
@@ -313,44 +345,42 @@ public class BulkLoad {
 			HBaseConnection con = new HBaseConnection();
 			HBPrefixMatchSchema.createCounterTable(con.getAdmin());
 			
-			/*start = System.currentTimeMillis();
+			long start = System.currentTimeMillis();
 			
-			JobConf j1 = createTripleToResourceJob(input, resourceIds, Integer.parseInt(args[1]));
-			j1.set("outputPath", outputPath);
-			RunningJob runningJ1 = JobClient.runJob(j1);
+			Job j1 = createTripleToResourceJob(input, resourceIds, Integer.parseInt(args[1]));
+			j1.getConfiguration().set("outputPath", outputPath);
+			j1.waitForCompletion(true);
 			
 			long firstJob = System.currentTimeMillis()-start;
 			System.out.println("First pass finished in "+firstJob+" ms");
 			
 			//retrieve counter values and build a SortedMap
-			retrieveCounters(runningJ1);
+			retrieveCounters(j1);
 			long startPartition = HBPrefixMatchSchema.updateLastCounter(tripleToResourceReduceTasks, con.getConfiguration())+1;
 			//long startPartition = HBPrefixMatchSchema.getLastCounter(con.getConfiguration())+1;
 			
 			
 			//SECOND PASS-----------------------------------------------	
 			
-			JobConf j2 = createResourceToTripleJob(resourceIds, convertedTripletsPath);	
-			JobClient.runJob(j2);
+			Job j2 = createResourceToTripleJob(resourceIds, convertedTripletsPath);	
+			j2.waitForCompletion(true);
 			
 			System.out.println("Second pass finished");
 			
 			//read counters from file
-			buildCountersFromFile();
-			*/
-			//create all tables containing PrefixMatch schema
-			//tempCounters();
+			//buildCountersFromFile();
+		
+			//create all tables containing PrefixMatch schema ----------------------
 			System.out.println(totalStringCount+" : "+numericalCount);
 			HBaseClientSolution sol = HBaseFactory.getHBaseSolution(HBPrefixMatchSchema.SCHEMA_NAME, con, null);		
 			
 			HBPrefixMatchSchema prefMatchSchema = (HBPrefixMatchSchema)sol.schema;
-			prefMatchSchema.setObjectPrefixTableSplitInfo(totalStringCount, numericalCount);
-			prefMatchSchema.setId2StringTableSplitInfo(tripleToResourceReduceTasks, 0);//TODO change to start partition
-			prefMatchSchema.setString2IdTableSplitInfo(totalStringCount, sufixCounters);
-			//sol.schema.create();
+			prefMatchSchema.setTableSplitInfo(totalStringCount, numericalCount, 
+					tripleToResourceReduceTasks, startPartition, sufixCounters);
+			sol.schema.create();
 			
 			LoadIncrementalHFiles bulkLoad = new LoadIncrementalHFiles(con.getConfiguration());
-			/*
+			
 			//String2Id PASS----------------------------------------------
 					
 			Job j3 = createString2IdJob(con, string2IdInput, string2IdOutput);
@@ -361,21 +391,21 @@ public class BulkLoad {
 			
 			System.out.println("Finished bulk load for String2Id table");//=====================//=============
 			
-			/*Path id2StringOutput = new Path(outputPath+StringIdAssoc.ID2STRING_DIR);
+			Path id2StringOutput = new Path(outputPath+StringIdAssoc.ID2STRING_DIR);
 			Job j4 = createId2StringJob(con, string2IdInput, id2StringOutput);
 			j4.waitForCompletion(true);
 			
 			doBulkLoad(bulkLoad, id2StringOutput, id2String);
 			
 			System.out.println("Finished bulk load for Id2String table");//=====================//==================================
-			*/
+			
 			Path spocPath = new Path(outputPath+"/"+HBPrefixMatchSchema.TABLE_NAMES[HBPrefixMatchSchema.SPOC]);
 			Path pocsPath = new Path(outputPath+"/"+HBPrefixMatchSchema.TABLE_NAMES[HBPrefixMatchSchema.POCS]);
 			Path cspoPath = new Path(outputPath+"/"+HBPrefixMatchSchema.TABLE_NAMES[HBPrefixMatchSchema.CSPO]);
 			Path cpsoPath = new Path(outputPath+"/"+HBPrefixMatchSchema.TABLE_NAMES[HBPrefixMatchSchema.CPSO]);
 			Path ocspPath = new Path(outputPath+"/"+HBPrefixMatchSchema.TABLE_NAMES[HBPrefixMatchSchema.OCSP]);
 			Path ospcPath = new Path(outputPath+"/"+HBPrefixMatchSchema.TABLE_NAMES[HBPrefixMatchSchema.OSPC]);
-			/*
+			
 			//SPOC--------------------
 			Job j5 = createPrefixMatchJob(con, convertedTripletsPath, spocPath, HBPrefixMatchSchema.SPOC, PrefixMatch.PrefixMatchSPOCMapper.class);
 			j5.waitForCompletion(true);
@@ -409,8 +439,7 @@ public class BulkLoad {
 			//POCS---------------------
 			Job j6 = createPrefixMatchJob(con, convertedTripletsPath, pocsPath, HBPrefixMatchSchema.POCS, PrefixMatch.PrefixMatchPOCSMapper.class);
 			j6.waitForCompletion(true);
-			*/
-			currentTable = new HTable(con.getConfiguration(), HBPrefixMatchSchema.TABLE_NAMES[HBPrefixMatchSchema.POCS]);
+			
 			doBulkLoad(bulkLoad, pocsPath, currentTable);
 			
 			con.close();

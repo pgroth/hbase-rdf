@@ -33,11 +33,12 @@ public class HBPrefixMatchSchema implements IHBaseSchema {
 	public static final String []TABLE_NAMES = {"SPOC", "POCS", "OCSP", "CSPO", "CPSO", "OSPC"};
 	public static final String []TEST_TABLE_NAMES = {"SPOCTest", "POCSTest", "OCSPTest", "CSPOTest", "CPSOTest", "OSPCTest"};
 	
+	//3 BaseIds + 1 TypedId (in the Object position of each table)
 	public static final int KEY_LENGTH = 33;
 	
 	//mapping between the SPOC order and the order in other tables
 	public static final int [][]ORDER = {{0,1,2,3}, {3,0,1,2}, {2,3,0,1}, {1,2,3,0}, {2,1,3,0}, {1,2,0,3}};
-	public static final int [][]OFFSETS = {{0,8,16,25}, {25,0,8,16}, {16,25,0,8}, {8,16,24,0}, {16,8,24,0}, {9,17,0,25}};
+	public static final int [][]OFFSETS = {{0,8,16,25}, {25,0,8,17}, {17,25,0,9}, {8,16,24,0}, {16,8,24,0}, {9,17,0,25}};
 	
 	public static final int SPOC = 0;
 	public static final int POCS = 1;
@@ -49,6 +50,7 @@ public class HBPrefixMatchSchema implements IHBaseSchema {
 	public static final String STRING2ID = "String2Id";
 	public static final String ID2STRING = "Id2String";
 	
+	//information for the table of Counters
 	public static final String COUNTER_TABLE = "Counters";
 	public static final byte []META_COL = "Meta".getBytes();
 	public static final byte [] FIRST_COUNTER_ROWKEY = "FirstCounter".getBytes();
@@ -58,15 +60,26 @@ public class HBPrefixMatchSchema implements IHBaseSchema {
 	public static final String STRING2ID_TEST = "String2IdTest";
 	public static final String ID2STRING_TEST = "Id2StringTest";
 	
+	//default number of initial regions
 	public static final int NUM_REGIONS = 64;
 	
-	private static int numInputPartitions;
-	private static long startPartition;
+	private int numInputPartitions;
+	private long startPartition;
 	
-	private static SortedMap<Short, Long> prefixCounters = null;
-	//private long bNodeCounters = 0;
-	//private long nonNumericalLiteralCounter = 0;
-	private static long totalStringCount = 0;
+	/**
+	 * Histogram that stores the frequency of the last byte in each quad element 
+	 * used for proper splits for the table String2Id
+	 */
+	private SortedMap<Short, Long> prefixCounters = null;
+	
+	/**
+	 * Number of non-numerical elements: includes URIs, bNodes and non-numerical Literals
+	 */
+	private long totalStringCount = 0;
+	
+	/**
+	 * Number of numericals 
+	 */
 	private static long numericalCount = 0;
 	
 	public HBPrefixMatchSchema(HBaseConnection con) {
@@ -74,7 +87,25 @@ public class HBPrefixMatchSchema implements IHBaseSchema {
 		this.con = con;
 	}
 	
-	public static void setId2StringTableSplitInfo(int numPartitions, long startPartitionParam){
+	/**
+	 * Sets all the information required to do proper pre-splits when creating the tables making up this schema
+	 * @param totalNumberOfStrings - number of non-numerical elements: including URIs, bNodes and non-numerical Literals
+	 * @param numericalParam - number of numerical literals
+	 * @param numPartitions  - number of partitions created in the Triple2Resource pass
+	 * @param startPartitionParam - the partition from which Id generation started in the current bulk load 
+	 * @param prefixCounter   - histogram containing character frequency for elements that will be stored in String2Id
+	 */
+	public void setTableSplitInfo(long totalNumberOfStrings, long numericalParam,
+									int numPartitions, long startPartitionParam, 
+									SortedMap<Short, Long> prefixCounter){
+		startPartition = startPartitionParam;
+		numInputPartitions = numPartitions;
+		totalStringCount = totalNumberOfStrings;
+		prefixCounters = prefixCounter;
+		numericalCount = numericalParam;
+	}
+	
+	/*public static void setId2StringTableSplitInfo(int numPartitions, long startPartitionParam){
 		startPartition = startPartitionParam;
 		numInputPartitions = numPartitions;
 	}
@@ -82,15 +113,22 @@ public class HBPrefixMatchSchema implements IHBaseSchema {
 	public static void setString2IdTableSplitInfo(long totalNumberOfString, SortedMap<Short, Long> prefixCounter){
 		totalStringCount = totalNumberOfString;
 		prefixCounters = prefixCounter;
-		//this.nonNumericalLiteralCounter = nonNummericalLiteralCounter;
-		//this.bNodeCounters = bNodeCounters;
 	}
 	
 	public static void setObjectPrefixTableSplitInfo(long totalNumberOfString, long numericalParam){
 		numericalCount = numericalParam;
 		totalStringCount = totalNumberOfString;
-	}
+	}*/
 	
+	/**
+	 * Creates an HBase table with specified splits and optional compression for the values in the table
+	 * 
+	 * @param admin
+	 * @param tableName
+	 * @param splits
+	 * @param enableCompression
+	 * @throws IOException
+	 */
 	public static void createTable(HBaseAdmin admin, String tableName, byte [][]splits, boolean enableCompression) throws IOException{
 		if (admin.tableExists(tableName) == false){
 			HTableDescriptor desc = new HTableDescriptor(tableName);
@@ -103,7 +141,6 @@ public class HBPrefixMatchSchema implements IHBaseSchema {
 			desc.addFamily(famDesc);
 
 			System.out.println("Creating table: " + tableName);
-
 			admin.createTable(desc, splits);
 		}
 	}
@@ -253,10 +290,12 @@ public class HBPrefixMatchSchema implements IHBaseSchema {
 	
 	
 	/**
+	 * Computes the splits based on the histogram stored in prefixCounters 
+	 * 
 	 * @param numRegions
 	 * @return
 	 */
-	public static byte [][] getString2IdSplits(int numRegions){
+	public byte [][] getString2IdSplits(int numRegions){
 		
 		//divide all elements to the desired number of regions, so that a proper load balance is maintained
 		if (totalStringCount < numRegions){
@@ -293,7 +332,6 @@ public class HBPrefixMatchSchema implements IHBaseSchema {
 					currentAddress = getAddress(range, currentAddress, remaining, entry.getValue());
 					byte []addressBytes = convertBigIntegerToAddress(currentAddress, remainingLength);
 					
-					//Bytes.putBytes(byteSplits[splitIndex], 0, completePrefix.getBytes(), 0, completePrefix.length());
 					byteSplits[splitIndex][0] = entry.getKey().byteValue();
 					Bytes.putBytes(byteSplits[splitIndex], 1, addressBytes, 0, remainingLength);
 					splitIndex++;
@@ -304,13 +342,11 @@ public class HBPrefixMatchSchema implements IHBaseSchema {
 				
 				while (prefixRemaining > elementsPerRegion){
 					byteSplits[splitIndex] = new byte[KEY_LENGTH];
-					//currentPrefixCount += elementsPerRegion;
 					
 					currentAddress = getAddress(range, currentAddress, elementsPerRegion, entry.getValue());
 					byte []addressBytes = convertBigIntegerToAddress(currentAddress, remainingLength);
 					
 					System.out.println(splitIndex);
-					//Bytes.putBytes(byteSplits[splitIndex], 0, completePrefix.getBytes(), 0, completePrefix.length());
 					byteSplits[splitIndex][0] = entry.getKey().byteValue();
 					Bytes.putBytes(byteSplits[splitIndex], 1, addressBytes, 0, remainingLength);
 					splitIndex++;
@@ -335,17 +371,16 @@ public class HBPrefixMatchSchema implements IHBaseSchema {
 	}
 	
 	/**
+	 * Splits the space between 0x80 and 0xff in equal parts
+	 * 
 	 * @param numRegions
 	 * @param startOffset - 0 or 1
 	 * @return
 	 */
-	public static byte [][]getNonNumericalSplits(int numRegions, int startOffset){
+	public byte [][]getNonNumericalSplits(int numRegions, int startOffset){
 		byte []startKey = new byte[KEY_LENGTH];
 		byte []endKey = new byte[KEY_LENGTH];
 		Arrays.fill(endKey, startOffset+Long.SIZE/8, KEY_LENGTH, (byte)0xff);
-		/*for (int i = 0; i < endKey.length; i++) {
-			endKey[i] = (byte)0xff;
-		}*/
 		
 		long startKeyPrefix = startPartition << 24;
 		Bytes.putLong(startKey, startOffset, startKeyPrefix);
@@ -361,10 +396,9 @@ public class HBPrefixMatchSchema implements IHBaseSchema {
 	 * @param numRegions
 	 * @return
 	 */
-	public static byte [][]getNumericalSplits(int numRegions){
+	public byte [][]getNumericalSplits(int numRegions){
 		byte []startKey = new byte[KEY_LENGTH];
-		startKey[0] = (byte)0x80;
-		
+		startKey[0] = (byte)0x80;		
 		byte []endKey = new byte[KEY_LENGTH];
 		Arrays.fill(endKey, (byte)0xff);
 		
@@ -375,7 +409,7 @@ public class HBPrefixMatchSchema implements IHBaseSchema {
 	 * @param numRegions
 	 * @return
 	 */
-	public static byte [][]getObjectPrefixSplits(int numRegions){
+	public byte [][]getObjectPrefixSplits(int numRegions){
 		int numericalRegions = (int)Math.round((double)numRegions*((double)numericalCount/(double)(totalStringCount+numericalCount)));
 		
 		byte [][]nonNumSplits = getNonNumericalSplits(numRegions-numericalRegions, 1);
@@ -409,14 +443,7 @@ public class HBPrefixMatchSchema implements IHBaseSchema {
 	@Override
 	public void create() throws Exception {
 		HBaseAdmin admin = con.getAdmin();
-		/*byte []startKey = new byte[33];
-		byte []endKey = new byte[33];
-		for (int i = 1; i < endKey.length; i++) {
-			endKey[i] = (byte)0xff;
-		}
-		startKey[0]=0x20;
-		endKey[0]=0x7F;
-		*/
+	
 		//distribute the regions over the entire ID space for String2ID
 		byte [][]splits = getString2IdSplits(NUM_REGIONS);
 		System.out.println(" String2Id splits: ");
@@ -429,7 +456,6 @@ public class HBPrefixMatchSchema implements IHBaseSchema {
 		System.out.println("Id2String splits: ");
 		printSplits(splits);
 		
-		//createTable(admin, ID2STRING_TEST, splits, false);//TODO change back
 		createTable(admin, ID2STRING, splits, true);
 		
 		createTable(admin, TABLE_NAMES[SPOC], splits, false);

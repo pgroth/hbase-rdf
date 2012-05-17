@@ -78,7 +78,7 @@ public class HBPrefixMatchSchemaTest {
 		}
 	}*/
 	
-	public static void main(String[] args) {
+	/*public static void main(String[] args) {
 		
 		long startPartition = 0;
 		int numInputPartitions = 111;
@@ -96,6 +96,6 @@ public class HBPrefixMatchSchemaTest {
 			}
 			System.out.println();
 		}
-	}
+	}*/
 
 }

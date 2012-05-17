@@ -78,6 +78,7 @@ public class StringIdAssoc {
 				long hash = hashFunction(s);
 				inValueBytes = new byte[9];
 				//the first byte is left 00, because it is not part of RDF characters
+				//it acts as an escape in case all the bytes in the hash are valid RDF characters
 				Bytes.putLong(inValueBytes, 1, hash);
 			}
 			else{//reverse the value so that we have a better dispersion for links which have the same prefix		

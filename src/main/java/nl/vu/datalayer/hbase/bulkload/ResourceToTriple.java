@@ -1,7 +1,6 @@
 package nl.vu.datalayer.hbase.bulkload;
 
 import java.io.IOException;
-import java.util.Iterator;
 
 import nl.vu.datalayer.hbase.id.BaseId;
 import nl.vu.datalayer.hbase.id.DataPair;
@@ -10,21 +9,15 @@ import nl.vu.datalayer.hbase.id.TypedId;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.NullWritable;
-import org.apache.hadoop.mapred.MapReduceBase;
-import org.apache.hadoop.mapred.Mapper;
-import org.apache.hadoop.mapred.OutputCollector;
-import org.apache.hadoop.mapred.Reducer;
-import org.apache.hadoop.mapred.Reporter;
 
 public class ResourceToTriple {
 	
 	public static final String TEMP_TRIPLETS_DIR = "/tempTriplets";
 	
-	public static class ResourceToTripleMapper extends MapReduceBase implements Mapper<TypedId, DataPair, BaseId, DataPair>
+	public static class ResourceToTripleMapper extends org.apache.hadoop.mapreduce.Mapper<TypedId, DataPair, BaseId, DataPair>
 	{
 		@Override
-		public void map(TypedId key, DataPair dataPair,
-				 OutputCollector<BaseId, DataPair> output, Reporter r) throws IOException{			
+		public void map(TypedId key, DataPair dataPair, Context context) throws IOException, InterruptedException {
 			BaseId tripleId = (BaseId)dataPair.getId();
 			
 			BaseId resourceId;
@@ -37,25 +30,21 @@ public class ResourceToTriple {
 			}
 			dataPair.setId(resourceId);
 			
-			output.collect(tripleId, dataPair);
-		}	
+			context.write(tripleId, dataPair);
+		}
 	}
 	
-	public static class ResourceToTripleReducer extends MapReduceBase implements Reducer<BaseId, DataPair, NullWritable, ImmutableBytesWritable>
+	public static class ResourceToTripleReducer extends org.apache.hadoop.mapreduce.Reducer<BaseId, DataPair, NullWritable, ImmutableBytesWritable>
 	{
 		public static int[] offsets = {0, 8, 16, 25};
 		public static int outSize = BaseId.SIZE*3+TypedId.SIZE;
 		
 		@Override
-		public void reduce(BaseId id, Iterator<DataPair> it,  OutputCollector<NullWritable, ImmutableBytesWritable> output, Reporter r)
-							throws IOException{
-			//System.err.println("Reducer: "+id);
-			
+		public void reduce(BaseId tripleId, Iterable<DataPair> values, Context context) throws IOException, InterruptedException {
 			byte []outValue = new byte[outSize];
 			
 			int counter = 0;
-			while (it.hasNext()) {
-				DataPair pair = it.next();
+			for (DataPair pair : values){
 				Bytes.putBytes(outValue, offsets[pair.getPosition()], 
 						pair.getId().getBytes(), 0, pair.getId().getBytes().length);
 				counter++;
@@ -66,7 +55,7 @@ public class ResourceToTriple {
 				return;
 			}
 			
-			output.collect(NullWritable.get(), new ImmutableBytesWritable(outValue));
+			context.write(NullWritable.get(), new ImmutableBytesWritable(outValue));
 		}
 	}
 

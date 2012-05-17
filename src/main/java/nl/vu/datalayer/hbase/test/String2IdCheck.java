@@ -14,7 +14,6 @@ public class String2IdCheck {
 	public static void main(String[] args) {
 		if (args.length != 1){
 			System.out.println("Usage: String2IdCheck <string>");
-			System.out.println("Use \"<?>\" for the positions representing variables");
 			return;
 		}
 		

@@ -9,6 +9,7 @@ import nl.vu.datalayer.hbase.HBaseClientSolution;
 import nl.vu.datalayer.hbase.HBaseConnection;
 import nl.vu.datalayer.hbase.HBaseFactory;
 import nl.vu.datalayer.hbase.bulkload.BulkLoad;
+import nl.vu.datalayer.hbase.bulkload.TripleToResource;
 import nl.vu.datalayer.hbase.schema.HBPrefixMatchSchema;
 import nl.vu.datalayer.hbase.util.IHBaseUtil;
 
@@ -18,6 +19,7 @@ import org.apache.hadoop.hbase.ZooKeeperConnectionException;
 import org.apache.hadoop.mapred.JobClient;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.RunningJob;
+import org.apache.hadoop.mapreduce.Job;
 
 public class HBaseLocalPrefixMatchTest {
 	
@@ -26,12 +28,11 @@ public class HBaseLocalPrefixMatchTest {
 			HBaseConnection con = new HBaseConnection();
 			HBPrefixMatchSchema.createCounterTable(con.getAdmin());
 			
-			Path resourceIds = new Path("resourceIds");
-			JobConf j1 = BulkLoad.createTripleToResourceJob(new Path("input"), resourceIds, 2);
-			j1.set("outputPath", "./");
-			RunningJob runningJ1 = JobClient.runJob(j1);
+			Job j1 = BulkLoad.createTripleToResourceJob(new Path("input"), new Path("./"+TripleToResource.RESOURCE_IDS_DIR), 100);
+			j1.getConfiguration().set("outputPath", "./");
+			j1.waitForCompletion(true);
 			
-			BulkLoad.retrieveCounters(runningJ1);
+			BulkLoad.retrieveCounters(j1);
 			
 			long startPartition = HBPrefixMatchSchema.updateLastCounter(BulkLoad.tripleToResourceReduceTasks, con.getConfiguration())+1;
 			
@@ -42,13 +43,16 @@ public class HBaseLocalPrefixMatchTest {
 			//BulkLoad.buildCountersFromFile();
 		
 			
-			((HBPrefixMatchSchema)sol.schema).setObjectPrefixTableSplitInfo(BulkLoad.totalStringCount, BulkLoad.numericalCount);
-			((HBPrefixMatchSchema)sol.schema).setId2StringTableSplitInfo(BulkLoad.tripleToResourceReduceTasks, startPartition);
+			((HBPrefixMatchSchema)sol.schema).setTableSplitInfo(BulkLoad.totalStringCount, BulkLoad.numericalCount, 
+					BulkLoad.tripleToResourceReduceTasks, 0, BulkLoad.sufixCounters);	
+						
+			//setObjectPrefixTableSplitInfo(BulkLoad.totalStringCount, BulkLoad.numericalCount);
+			//((HBPrefixMatchSchema)sol.schema).setId2StringTableSplitInfo(BulkLoad.tripleToResourceReduceTasks, startPartition);
 			
 			//SortedMap<Short, Long> prefixCounterMap = new TreeMap();
 			//prefixCounterMap.put((short)'a', 1000L);
 			//prefixCounterMap.put((short)'b', 2000L);
-			((HBPrefixMatchSchema)sol.schema).setString2IdTableSplitInfo(BulkLoad.totalStringCount, BulkLoad.sufixCounters);
+			//((HBPrefixMatchSchema)sol.schema).setString2IdTableSplitInfo(BulkLoad.totalStringCount, BulkLoad.sufixCounters);
 			sol.schema.create();
 			
 			IHBaseUtil util = sol.util;
