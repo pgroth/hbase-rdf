@@ -293,7 +293,7 @@ public class BulkLoad {
 		}
 	}
 	
-	public static void main(String[] args) {
+	/*public static void main(String[] args) {
 		try {
 		Path input = new Path(args[0]);
 		String outputPath = args[2];
@@ -322,12 +322,12 @@ public class BulkLoad {
 		catch (Exception e) {
 			e.printStackTrace();
 		}
-	}
+	}*/
 	
 	/**
 	 * @param args
 	 */
-	public static void main_asdadd(String[] args) {
+	public static void main(String[] args) {
 		try {
 			if (args.length != 3){
 				System.out.println("Usage: bulkLoad <inputPath> <inputSizeEstimate in MB> <outputPath>");
