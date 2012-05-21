@@ -49,7 +49,7 @@ public class StringIdAssoc {
 		return hash;
 	}
 	
-	public static byte []reverseString(byte []sourceBytes, int sourceLength){
+	public static byte []reverseBytes(byte []sourceBytes, int sourceLength){
 		int lastIndex;
 		if (sourceBytes[sourceLength-1] == '\"')//eliminate last " for literals in order to have a good dispersion
 			lastIndex = sourceLength-2;
@@ -82,7 +82,7 @@ public class StringIdAssoc {
 				Bytes.putLong(inValueBytes, 1, hash);
 			}
 			else{//reverse the value so that we have a better dispersion for links which have the same prefix		
-				inValueBytes = reverseString(sourceBytes, sourceLength);
+				inValueBytes = reverseBytes(sourceBytes, sourceLength);
 			}		
 			ImmutableBytesWritable outKey = new ImmutableBytesWritable(inValueBytes);				
 

@@ -93,7 +93,7 @@ public class CachingRowCounter {
 	        }
 	      }
 	    }
-	    scan.setCaching(500);
+	    scan.setCaching(100);
 	    
 	    // Second argument is the table name.
 	    job.setOutputFormatClass(NullOutputFormat.class);
@@ -112,6 +112,7 @@ public class CachingRowCounter {
 	  public static void main(String[] args) throws Exception {
 		HBaseConnection con = new HBaseConnection();
 	    Configuration conf = con.getConfiguration();
+	    conf.setBoolean("mapred.reduce.tasks.speculative.execution", false);
 	    String[] otherArgs = new GenericOptionsParser(conf, args).getRemainingArgs();
 	    if (otherArgs.length < 1) {
 	      System.err.println("ERROR: Wrong number of parameters: " + args.length);

@@ -38,6 +38,9 @@ public class HBPrefixMatchSchema implements IHBaseSchema {
 	
 	//mapping between the SPOC order and the order in other tables
 	public static final int [][]ORDER = {{0,1,2,3}, {3,0,1,2}, {2,3,0,1}, {1,2,3,0}, {2,1,3,0}, {1,2,0,3}};
+	
+	//mapping between other tables and SPOC
+	public static final int [][]TO_SPOC_ORDER = {{0,1,2,3}, {1,2,3,0}, {2,3,0,1}, {3,0,1,2}, {3,1,0,2}, {2,0,1,3}};
 	public static final int [][]OFFSETS = {{0,8,16,25}, {25,0,8,17}, {17,25,0,9}, {8,16,24,0}, {16,8,24,0}, {9,17,0,25}};
 	
 	public static final int SPOC = 0;
