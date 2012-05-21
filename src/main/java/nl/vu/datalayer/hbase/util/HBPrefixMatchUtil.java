@@ -289,7 +289,7 @@ public class HBPrefixMatchUtil implements IHBaseUtil {
 							TypedId id = TypedId.createNumerical(l);
 							if (id != null){
 								numerical = id.getBytes();
-								boundElements.add(numerical.toString());
+								boundElements.add(l.toString());
 								continue;
 							}
 						}
