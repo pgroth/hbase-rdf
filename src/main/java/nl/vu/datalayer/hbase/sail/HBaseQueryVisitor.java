@@ -6,14 +6,23 @@ import java.util.List;
 import java.util.Set;
 
 import org.openrdf.query.Dataset;
+import org.openrdf.query.algebra.Add;
 import org.openrdf.query.algebra.And;
+import org.openrdf.query.algebra.ArbitraryLengthPath;
+import org.openrdf.query.algebra.Avg;
 import org.openrdf.query.algebra.BNodeGenerator;
+import org.openrdf.query.algebra.BindingSetAssignment;
 import org.openrdf.query.algebra.Bound;
+import org.openrdf.query.algebra.Clear;
+import org.openrdf.query.algebra.Coalesce;
 import org.openrdf.query.algebra.Compare;
 import org.openrdf.query.algebra.CompareAll;
 import org.openrdf.query.algebra.CompareAny;
+import org.openrdf.query.algebra.Copy;
 import org.openrdf.query.algebra.Count;
+import org.openrdf.query.algebra.Create;
 import org.openrdf.query.algebra.Datatype;
+import org.openrdf.query.algebra.DeleteData;
 import org.openrdf.query.algebra.Difference;
 import org.openrdf.query.algebra.Distinct;
 import org.openrdf.query.algebra.EmptySet;
@@ -23,11 +32,16 @@ import org.openrdf.query.algebra.ExtensionElem;
 import org.openrdf.query.algebra.Filter;
 import org.openrdf.query.algebra.FunctionCall;
 import org.openrdf.query.algebra.Group;
+import org.openrdf.query.algebra.GroupConcat;
 import org.openrdf.query.algebra.GroupElem;
+import org.openrdf.query.algebra.IRIFunction;
+import org.openrdf.query.algebra.If;
 import org.openrdf.query.algebra.In;
+import org.openrdf.query.algebra.InsertData;
 import org.openrdf.query.algebra.Intersection;
 import org.openrdf.query.algebra.IsBNode;
 import org.openrdf.query.algebra.IsLiteral;
+import org.openrdf.query.algebra.IsNumeric;
 import org.openrdf.query.algebra.IsResource;
 import org.openrdf.query.algebra.IsURI;
 import org.openrdf.query.algebra.Join;
@@ -36,10 +50,13 @@ import org.openrdf.query.algebra.Lang;
 import org.openrdf.query.algebra.LangMatches;
 import org.openrdf.query.algebra.LeftJoin;
 import org.openrdf.query.algebra.Like;
+import org.openrdf.query.algebra.Load;
 import org.openrdf.query.algebra.LocalName;
 import org.openrdf.query.algebra.MathExpr;
 import org.openrdf.query.algebra.Max;
 import org.openrdf.query.algebra.Min;
+import org.openrdf.query.algebra.Modify;
+import org.openrdf.query.algebra.Move;
 import org.openrdf.query.algebra.MultiProjection;
 import org.openrdf.query.algebra.Namespace;
 import org.openrdf.query.algebra.Not;
@@ -55,14 +72,18 @@ import org.openrdf.query.algebra.QueryRoot;
 import org.openrdf.query.algebra.Reduced;
 import org.openrdf.query.algebra.Regex;
 import org.openrdf.query.algebra.SameTerm;
+import org.openrdf.query.algebra.Sample;
+import org.openrdf.query.algebra.Service;
 import org.openrdf.query.algebra.SingletonSet;
 import org.openrdf.query.algebra.Slice;
 import org.openrdf.query.algebra.StatementPattern;
 import org.openrdf.query.algebra.Str;
+import org.openrdf.query.algebra.Sum;
 import org.openrdf.query.algebra.TupleExpr;
 import org.openrdf.query.algebra.Union;
 import org.openrdf.query.algebra.ValueConstant;
 import org.openrdf.query.algebra.Var;
+import org.openrdf.query.algebra.ZeroLengthPath;
 
 public class HBaseQueryVisitor implements QueryModelVisitor<QueryExpansionException> {
 
@@ -598,6 +619,279 @@ public class HBaseQueryVisitor implements QueryModelVisitor<QueryExpansionExcept
 		tupleExpr.visit(this);
 
 		return getStatements();
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @see
+	 * org.openrdf.query.algebra.QueryModelVisitor#meet(org.openrdf.query.algebra
+	 * .Add)
+	 */
+	@Override
+	public void meet(Add add) throws QueryExpansionException {
+		// TODO Auto-generated method stub
+
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @see
+	 * org.openrdf.query.algebra.QueryModelVisitor#meet(org.openrdf.query.algebra
+	 * .ArbitraryLengthPath)
+	 */
+	@Override
+	public void meet(ArbitraryLengthPath node) throws QueryExpansionException {
+		// TODO Auto-generated method stub
+
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @see
+	 * org.openrdf.query.algebra.QueryModelVisitor#meet(org.openrdf.query.algebra
+	 * .Avg)
+	 */
+	@Override
+	public void meet(Avg node) throws QueryExpansionException {
+		// TODO Auto-generated method stub
+
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @see
+	 * org.openrdf.query.algebra.QueryModelVisitor#meet(org.openrdf.query.algebra
+	 * .BindingSetAssignment)
+	 */
+	@Override
+	public void meet(BindingSetAssignment node) throws QueryExpansionException {
+		// TODO Auto-generated method stub
+
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @see
+	 * org.openrdf.query.algebra.QueryModelVisitor#meet(org.openrdf.query.algebra
+	 * .Clear)
+	 */
+	@Override
+	public void meet(Clear clear) throws QueryExpansionException {
+		// TODO Auto-generated method stub
+
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @see
+	 * org.openrdf.query.algebra.QueryModelVisitor#meet(org.openrdf.query.algebra
+	 * .Coalesce)
+	 */
+	@Override
+	public void meet(Coalesce node) throws QueryExpansionException {
+		// TODO Auto-generated method stub
+
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @see
+	 * org.openrdf.query.algebra.QueryModelVisitor#meet(org.openrdf.query.algebra
+	 * .Copy)
+	 */
+	@Override
+	public void meet(Copy copy) throws QueryExpansionException {
+		// TODO Auto-generated method stub
+
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @see
+	 * org.openrdf.query.algebra.QueryModelVisitor#meet(org.openrdf.query.algebra
+	 * .Create)
+	 */
+	@Override
+	public void meet(Create create) throws QueryExpansionException {
+		// TODO Auto-generated method stub
+
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @see
+	 * org.openrdf.query.algebra.QueryModelVisitor#meet(org.openrdf.query.algebra
+	 * .DeleteData)
+	 */
+	@Override
+	public void meet(DeleteData deleteData) throws QueryExpansionException {
+		// TODO Auto-generated method stub
+
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @see
+	 * org.openrdf.query.algebra.QueryModelVisitor#meet(org.openrdf.query.algebra
+	 * .GroupConcat)
+	 */
+	@Override
+	public void meet(GroupConcat node) throws QueryExpansionException {
+		// TODO Auto-generated method stub
+
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @see
+	 * org.openrdf.query.algebra.QueryModelVisitor#meet(org.openrdf.query.algebra
+	 * .If)
+	 */
+	@Override
+	public void meet(If node) throws QueryExpansionException {
+		// TODO Auto-generated method stub
+
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @see
+	 * org.openrdf.query.algebra.QueryModelVisitor#meet(org.openrdf.query.algebra
+	 * .InsertData)
+	 */
+	@Override
+	public void meet(InsertData insertData) throws QueryExpansionException {
+		// TODO Auto-generated method stub
+
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @see
+	 * org.openrdf.query.algebra.QueryModelVisitor#meet(org.openrdf.query.algebra
+	 * .IRIFunction)
+	 */
+	@Override
+	public void meet(IRIFunction node) throws QueryExpansionException {
+		// TODO Auto-generated method stub
+
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @see
+	 * org.openrdf.query.algebra.QueryModelVisitor#meet(org.openrdf.query.algebra
+	 * .IsNumeric)
+	 */
+	@Override
+	public void meet(IsNumeric node) throws QueryExpansionException {
+		// TODO Auto-generated method stub
+
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @see
+	 * org.openrdf.query.algebra.QueryModelVisitor#meet(org.openrdf.query.algebra
+	 * .Load)
+	 */
+	@Override
+	public void meet(Load load) throws QueryExpansionException {
+		// TODO Auto-generated method stub
+
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @see
+	 * org.openrdf.query.algebra.QueryModelVisitor#meet(org.openrdf.query.algebra
+	 * .Modify)
+	 */
+	@Override
+	public void meet(Modify modify) throws QueryExpansionException {
+		// TODO Auto-generated method stub
+
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @see
+	 * org.openrdf.query.algebra.QueryModelVisitor#meet(org.openrdf.query.algebra
+	 * .Move)
+	 */
+	@Override
+	public void meet(Move move) throws QueryExpansionException {
+		// TODO Auto-generated method stub
+
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @see
+	 * org.openrdf.query.algebra.QueryModelVisitor#meet(org.openrdf.query.algebra
+	 * .Sample)
+	 */
+	@Override
+	public void meet(Sample node) throws QueryExpansionException {
+		// TODO Auto-generated method stub
+
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @see
+	 * org.openrdf.query.algebra.QueryModelVisitor#meet(org.openrdf.query.algebra
+	 * .Service)
+	 */
+	@Override
+	public void meet(Service node) throws QueryExpansionException {
+		// TODO Auto-generated method stub
+
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @see
+	 * org.openrdf.query.algebra.QueryModelVisitor#meet(org.openrdf.query.algebra
+	 * .Sum)
+	 */
+	@Override
+	public void meet(Sum node) throws QueryExpansionException {
+		// TODO Auto-generated method stub
+
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @see
+	 * org.openrdf.query.algebra.QueryModelVisitor#meet(org.openrdf.query.algebra
+	 * .ZeroLengthPath)
+	 */
+	@Override
+	public void meet(ZeroLengthPath node) throws QueryExpansionException {
+		// TODO Auto-generated method stub
+
 	}
 
 }
