@@ -7,8 +7,8 @@ import org.openrdf.model.Statement;
 
 public interface IHBaseUtil {
 	/**
-	 * Retrieve parsed triple
-	 * @param triple
+	 * Retrieve parsed triple/quad
+	 * @param triple/quad
 	 * @return
 	 * @throws IOException
 	 */

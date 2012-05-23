@@ -21,7 +21,7 @@ public class HBasePredicateCFSchema implements IHBaseSchema {
 	
 	private HBaseConnection con;
 	
-	public HBasePredicateCFSchema(HBaseConnection con, ArrayList<Statement> statements) throws Exception
+	public HBasePredicateCFSchema(HBaseConnection con, ArrayList<Statement> statements)
 	{
 		super();
 		this.statements = statements;
