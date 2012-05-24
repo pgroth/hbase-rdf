@@ -13,14 +13,23 @@ import org.openrdf.model.impl.BNodeImpl;
 import org.openrdf.model.impl.StatementImpl;
 import org.openrdf.model.impl.URIImpl;
 import org.openrdf.query.Dataset;
+import org.openrdf.query.algebra.Add;
 import org.openrdf.query.algebra.And;
+import org.openrdf.query.algebra.ArbitraryLengthPath;
+import org.openrdf.query.algebra.Avg;
 import org.openrdf.query.algebra.BNodeGenerator;
+import org.openrdf.query.algebra.BindingSetAssignment;
 import org.openrdf.query.algebra.Bound;
+import org.openrdf.query.algebra.Clear;
+import org.openrdf.query.algebra.Coalesce;
 import org.openrdf.query.algebra.Compare;
 import org.openrdf.query.algebra.CompareAll;
 import org.openrdf.query.algebra.CompareAny;
+import org.openrdf.query.algebra.Copy;
 import org.openrdf.query.algebra.Count;
+import org.openrdf.query.algebra.Create;
 import org.openrdf.query.algebra.Datatype;
+import org.openrdf.query.algebra.DeleteData;
 import org.openrdf.query.algebra.Difference;
 import org.openrdf.query.algebra.Distinct;
 import org.openrdf.query.algebra.EmptySet;
@@ -30,11 +39,16 @@ import org.openrdf.query.algebra.ExtensionElem;
 import org.openrdf.query.algebra.Filter;
 import org.openrdf.query.algebra.FunctionCall;
 import org.openrdf.query.algebra.Group;
+import org.openrdf.query.algebra.GroupConcat;
 import org.openrdf.query.algebra.GroupElem;
+import org.openrdf.query.algebra.IRIFunction;
+import org.openrdf.query.algebra.If;
 import org.openrdf.query.algebra.In;
+import org.openrdf.query.algebra.InsertData;
 import org.openrdf.query.algebra.Intersection;
 import org.openrdf.query.algebra.IsBNode;
 import org.openrdf.query.algebra.IsLiteral;
+import org.openrdf.query.algebra.IsNumeric;
 import org.openrdf.query.algebra.IsResource;
 import org.openrdf.query.algebra.IsURI;
 import org.openrdf.query.algebra.Join;
@@ -43,10 +57,13 @@ import org.openrdf.query.algebra.Lang;
 import org.openrdf.query.algebra.LangMatches;
 import org.openrdf.query.algebra.LeftJoin;
 import org.openrdf.query.algebra.Like;
+import org.openrdf.query.algebra.Load;
 import org.openrdf.query.algebra.LocalName;
 import org.openrdf.query.algebra.MathExpr;
 import org.openrdf.query.algebra.Max;
 import org.openrdf.query.algebra.Min;
+import org.openrdf.query.algebra.Modify;
+import org.openrdf.query.algebra.Move;
 import org.openrdf.query.algebra.MultiProjection;
 import org.openrdf.query.algebra.Namespace;
 import org.openrdf.query.algebra.Not;
@@ -62,14 +79,18 @@ import org.openrdf.query.algebra.QueryRoot;
 import org.openrdf.query.algebra.Reduced;
 import org.openrdf.query.algebra.Regex;
 import org.openrdf.query.algebra.SameTerm;
+import org.openrdf.query.algebra.Sample;
+import org.openrdf.query.algebra.Service;
 import org.openrdf.query.algebra.SingletonSet;
 import org.openrdf.query.algebra.Slice;
 import org.openrdf.query.algebra.StatementPattern;
 import org.openrdf.query.algebra.Str;
+import org.openrdf.query.algebra.Sum;
 import org.openrdf.query.algebra.TupleExpr;
 import org.openrdf.query.algebra.Union;
 import org.openrdf.query.algebra.ValueConstant;
 import org.openrdf.query.algebra.Var;
+import org.openrdf.query.algebra.ZeroLengthPath;
 
 public class HBaseQueryVisitor implements QueryModelVisitor<QueryExpansionException> {
     
@@ -120,6 +141,10 @@ public class HBaseQueryVisitor implements QueryModelVisitor<QueryExpansionExcept
         this.contexts = contexts;
         
         statements = new ArrayList();
+    }
+    
+    public static ArrayList<Var> getContexts(TupleExpr tupleExpr) throws QueryExpansionException {
+    	return ContextListerVisitor.getContexts(tupleExpr);
     }
 
    /**
@@ -570,5 +595,131 @@ public class HBaseQueryVisitor implements QueryModelVisitor<QueryExpansionExcept
         tupleExpr.visit(writer);
         return writer.getStatements();
     }
+
+	@Override
+	public void meet(Add arg0) throws QueryExpansionException {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public void meet(ArbitraryLengthPath arg0) throws QueryExpansionException {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public void meet(Avg arg0) throws QueryExpansionException {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public void meet(BindingSetAssignment arg0) throws QueryExpansionException {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public void meet(Clear arg0) throws QueryExpansionException {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public void meet(Coalesce arg0) throws QueryExpansionException {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public void meet(Copy arg0) throws QueryExpansionException {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public void meet(Create arg0) throws QueryExpansionException {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public void meet(DeleteData arg0) throws QueryExpansionException {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public void meet(GroupConcat arg0) throws QueryExpansionException {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public void meet(If arg0) throws QueryExpansionException {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public void meet(InsertData arg0) throws QueryExpansionException {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public void meet(IRIFunction arg0) throws QueryExpansionException {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public void meet(IsNumeric arg0) throws QueryExpansionException {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public void meet(Load arg0) throws QueryExpansionException {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public void meet(Modify arg0) throws QueryExpansionException {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public void meet(Move arg0) throws QueryExpansionException {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public void meet(Sample arg0) throws QueryExpansionException {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public void meet(Service arg0) throws QueryExpansionException {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public void meet(Sum arg0) throws QueryExpansionException {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public void meet(ZeroLengthPath arg0) throws QueryExpansionException {
+		// TODO Auto-generated method stub
+		
+	}
 
 }

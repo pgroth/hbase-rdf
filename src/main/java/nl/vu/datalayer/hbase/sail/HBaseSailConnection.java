@@ -20,6 +20,7 @@ import org.openrdf.model.Statement;
 import org.openrdf.model.URI;
 import org.openrdf.model.Value;
 import org.openrdf.model.impl.BNodeImpl;
+import org.openrdf.model.impl.ContextStatementImpl;
 import org.openrdf.model.impl.LiteralImpl;
 import org.openrdf.model.impl.StatementImpl;
 import org.openrdf.model.impl.URIImpl;
@@ -40,9 +41,9 @@ import org.openrdf.sail.memory.MemoryStore;
 
 public class HBaseSailConnection extends NotifyingSailConnectionBase {
 
-	HBaseConnection con;
 	MemoryStore memStore;
 	NotifyingSailConnection memStoreCon;
+	HBaseClientSolution hbase;
 	
     //Builder to write the query to bit by bit
     StringBuilder queryString = new StringBuilder();
@@ -51,7 +52,7 @@ public class HBaseSailConnection extends NotifyingSailConnectionBase {
 	public HBaseSailConnection(SailBase sailBase) {
 		super(sailBase);
 //		System.out.println("SailConnection created");
-		con = ((HBaseSail)sailBase).getHBaseConnection();
+		hbase = ((HBaseSail)sailBase).getHBase();
 
 		memStore = new MemoryStore();
 		try {
@@ -70,15 +71,17 @@ public class HBaseSailConnection extends NotifyingSailConnectionBase {
 		Statement s = new StatementImpl(arg0, arg1, arg2);
 		myList.add(s);
 		
-		try {
-			HBaseClientSolution sol = HBaseFactory.getHBaseSolution(HBHexastoreSchema.SCHEMA_NAME, con, myList);
-			sol.schema.create();
-			sol.util.populateTables(myList);
-		}
-		catch (Exception e) {
-			e.printStackTrace();
-			// TODO error handling
-		}
+		// TODO: update method for adding quads
+		
+//		try {
+//			HBaseClientSolution sol = HBaseFactory.getHBaseSolution(HBHexastoreSchema.SCHEMA_NAME, con, myList);
+//			sol.schema.create();
+//			sol.util.populateTables(myList);
+//		}
+//		catch (Exception e) {
+//			e.printStackTrace();
+//			// TODO error handling
+//		}
 	}
 
 	@Override
@@ -129,52 +132,58 @@ public class HBaseSailConnection extends NotifyingSailConnectionBase {
 	protected CloseableIteration<? extends Statement, SailException> getStatementsInternal(
 			Resource arg0, URI arg1, Value arg2, boolean arg3, Resource... arg4)
 			throws SailException {
-		try {
-			if (arg4 == null) {
-				HBaseConnection con = HBaseConnection.create(HBaseConnection.NATIVE_JAVA);
-				
-				HBaseClientSolution sol = HBaseFactory.getHBaseSolution(HBHexastoreSchema.SCHEMA_NAME, con, null);
-				
-				String s = null;
-				String p = null;
-				String o = null;
-				if (arg0 != null) {
-					s = arg0.stringValue();
-				}
-				else {
-					s = "?";
-				}
-				if (arg1 != null) {
-					p = arg1.stringValue();
-				}
-				else {
-					p = "?";
-				}
-				if (arg2 != null) {
-					o = arg2.stringValue();
-				}
-				else {
-					o = "?";
-				}
-				
-				String []triple = {s, p, o};
-				String triples = sol.util.getRawCellValue(triple[0], triple[1], triple[2]);
-//				System.out.println("Raw triples: " + triples);
-				
-
-				ArrayList<Statement> myList = reconstructTriples(triples, triple);
-				
-//				System.out.println("Triples retrieved:");
-//				System.out.println(myList.toString());
-				
-				Iterator it = myList.iterator();
-				CloseableIteration<Statement, SailException> ci = new CloseableIteratorIteration<Statement, SailException>(it);
-				return ci;
+		try {	
+			String s = null;
+			String p = null;
+			String o = null;
+			ArrayList<String> g = new ArrayList();
+			
+			if (arg0 != null) {
+				s = arg0.stringValue();
 			}
 			else {
-				Exception e = new SailException("Context information is not supported");
-				throw e;
+				s = "?";
 			}
+			
+			if (arg1 != null) {
+				p = arg1.stringValue();
+			}
+			else {
+				p = "?";
+			}
+			
+			if (arg2 != null) {
+				o = arg2.stringValue();
+			}
+			else {
+				o = "?";
+			}
+
+			if (arg4 != null) {
+				for (Resource r : arg4) {
+					g.add(r.stringValue());
+				}
+			}
+			else {
+				g.add("?");
+			}
+			
+			ArrayList<Statement> myList = new ArrayList();
+			for (String graph : g) {
+				String []triple = {s, p, o, graph};
+				ArrayList<ArrayList<String>> triples = hbase.util.getRow(triple);
+	//			System.out.println("Raw triples: " + triples);
+				
+				myList.addAll(reconstructTriples(triples, triple));
+			}
+				
+//			System.out.println("Triples retrieved:");
+//			System.out.println(myList.toString());
+				
+			Iterator it = myList.iterator();
+			CloseableIteration<Statement, SailException> ci = new CloseableIteratorIteration<Statement, SailException>(it);
+			return ci;
+	
 		}
 		catch (Exception e) {
 			Exception ex = new SailException("HBase connection error: " + e.getMessage());
@@ -188,63 +197,126 @@ public class HBaseSailConnection extends NotifyingSailConnectionBase {
 		return null;
 	}
 	
-	protected ArrayList<Statement> reconstructTriples(String data, String[] triple) throws SailException {
+	protected ArrayList<Statement> reconstructTriples(ArrayList<ArrayList<String>> result, String[] triple) throws SailException {
 		ArrayList<Statement> list = new ArrayList();
 		
-		StringTokenizer st1 = new StringTokenizer(data, "\n");
-		while (st1.hasMoreTokens()) {
-			String line = st1.nextToken();
+		for (ArrayList<String> arrayList : result) {
 			int index = 0;
 			
 			Resource s = null;
 			URI p = null;
 			Value o = null;
-			StringTokenizer st2 = new StringTokenizer(line);
-			for (int i = 0; i < 3; i++) {
-				if (triple[i].compareTo("?") != 0) {
-					if (i == 0) {
-						s = (Resource)constructNode(triple[i]);
-					} else if (i == 1) {
-						p = (URI)constructNode(triple[i]);
-					} else {
-						o = (Value)constructNode(triple[i]);
-					}
+			Resource c = null;
+			
+			for (String value : arrayList) {
+				if (index == 0) {
+					s = (Resource)getSubject(value);
 				}
-				else {
-					try {
-						String token = st2.nextToken();
-						if (i == 0) {
-							s = (Resource)constructNode(token);
-						} else if (i == 1) {
-							p = (URI)constructNode(token);
-						} else {
-							o = (Value)constructNode(token);
-						}
-					} catch (Exception e) {
-						throw new SailException(e);
-					}
+				else if (index == 1) {
+					p = (URI) getPredicate(value);
+				} else if (index == 2) {
+
+					o = getObject(value);
+				} else {
+					c = (Resource)getContext(value);
 				}
+				index++;
 			}
-			Statement st = new StatementImpl(s, p, o);
-			list.add(st);
+			
+			Statement statement = new ContextStatementImpl(s, p, o, c);
+			list.add(statement);
 		}
-		
 		return list;
 	}
 	
-	Value constructNode(String s) {
-		if (s.startsWith("http") | s.startsWith("file")) {
-//			System.out.println("Resource: " + s);
-			return new URIImpl(s);
-		}
-		else if (s.startsWith("_")) {
-//			System.out.println("BNode: " + s);
+	Value getSubject(String s) {
+		if (s.startsWith("_")) {
 			return new BNodeImpl(s.substring(2));
 		}
-		else {
-//			System.out.println("Literal: " + s);
-			return new LiteralImpl(s);
+		return new URIImpl(s);
+	}
+	
+	Value getPredicate(String s) {
+		return new URIImpl(s);
+	}
+	
+	Value getObject(String s) {
+		if (s.startsWith("_")) {
+			return new BNodeImpl(s.substring(2));
 		}
+		else if (s.startsWith("\"")) {
+			String literal = "";
+			String language = "";
+			String datatype = "";
+			
+			for (int i = 1; i < s.length(); i++) {
+				while (s.charAt(i) != '"') {
+					
+					// read literal value
+					literal += s.charAt(i);
+					if (s.charAt(i) == '\\') {
+						i++;
+						literal += s.charAt(i);
+					}
+					i++;
+					if (i == s.length()) {
+						// EOF exception
+					}
+				}
+				
+				// charAt(i) = '"', read next char
+				i++;
+				
+				if (s.charAt(i) == '@') {
+					// read language
+					i++;
+					while (i < s.length()) {
+						language += s.charAt(i);
+					}
+					return new LiteralImpl(literal, language);
+				}
+				else if (s.charAt(i) == '^') {
+					// read datatype
+					i++;
+					
+					// check for second '^'
+					if (i == s.length()) {
+						// EOF exception
+					}
+					else if (s.charAt(i) != '^') {
+						// incorrect formatting exception
+					}
+					i++;
+					
+					// check for '<'
+					if (i == s.length()) {
+						// EOF exception
+					}
+					else if (s.charAt(i) != '<') {
+						// incorrect formatting exception
+					}
+					i++;
+					
+					while (s.charAt(i) != '>') {
+						datatype += s.charAt(i); 
+						i++;
+						if (i == s.length()) {
+							// EOF exception
+						}
+					}
+					return new LiteralImpl(literal, new URIImpl(datatype));
+				}
+				else {
+					return new LiteralImpl(literal);
+				}
+				
+			}
+		}
+		return new URIImpl(s);
+	}
+	
+	Value getContext(String s) {
+		return new URIImpl(s);
 	}
 
 	@Override
@@ -315,23 +387,23 @@ public class HBaseSailConnection extends NotifyingSailConnectionBase {
 					
 					if (index == 0) {
 						if (var.hasValue()) {
-				            subj = (Resource)constructNode(var.getValue().stringValue());
+				            subj = (Resource)getSubject(var.getValue().stringValue());
 				        } else if (var.isAnonymous()) {
-				        	subj = (Resource)constructNode(var.getName()); 
+				        	subj = (Resource)getSubject(var.getName()); 
 				        	
 				        }
 					}
 					else if (index == 1) {
 						if (var.hasValue()) {
-				            pred = (URI)constructNode(var.getValue().stringValue());
+				            pred = (URI)getPredicate(var.getValue().stringValue());
 				        }
 						
 					}
 					else {
 						if (var.hasValue()) {
-				            obj = (Value)constructNode(var.getValue().stringValue());
+				            obj = (Value)getObject(var.getValue().stringValue());
 				        } else if (var.isAnonymous()) {
-				        	obj = (Value)constructNode(var.getName());
+				        	obj = (Value)getObject(var.getName());
 				        }
 					}
 					index += 1;
@@ -366,6 +438,11 @@ public class HBaseSailConnection extends NotifyingSailConnectionBase {
 		
 		try {
 			ArrayList<ArrayList<Var>> statements = HBaseQueryVisitor.convertToStatements(arg0, null, null);
+			ArrayList<Var> contexts = HBaseQueryVisitor.getContexts(arg0);
+			
+			for (Var con : contexts) {
+				System.out.println("CONTEXT: " + con.toString());
+			}
 			
 			Iterator it = statements.iterator();
 			while (it.hasNext()) {
@@ -385,23 +462,23 @@ public class HBaseSailConnection extends NotifyingSailConnectionBase {
 					
 					if (index == 0) {
 						if (var.hasValue()) {
-				            subj = (Resource)constructNode(var.getValue().stringValue());
+				            subj = (Resource)getSubject(var.getValue().stringValue());
 				        } else if (var.isAnonymous()) {
-				        	subj = (Resource)constructNode(var.getName()); 
+				        	subj = (Resource)getSubject(var.getName()); 
 				        	
 				        }
 					}
 					else if (index == 1) {
 						if (var.hasValue()) {
-				            pred = (URI)constructNode(var.getValue().stringValue());
+				            pred = (URI)getPredicate(var.getValue().stringValue());
 				        }
 						
 					}
 					else {
 						if (var.hasValue()) {
-				            obj = (Value)constructNode(var.getValue().stringValue());
+				            obj = (Value)getObject(var.getValue().stringValue());
 				        } else if (var.isAnonymous()) {
-				        	obj = (Value)constructNode(var.getName());
+				        	obj = (Value)getObject(var.getName());
 				        }
 					}
 					index += 1;
