@@ -2,24 +2,21 @@ package nl.vu.datalayer.hbase.mapred;
 
 import java.io.IOException;
 
-import nl.vu.datalayer.hbase.HBaseConnection;
+import nl.vu.datalayer.hbase.connection.HBaseConnection;
+import nl.vu.datalayer.hbase.connection.NativeJavaConnection;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.filter.FirstKeyOnlyFilter;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
-import org.apache.hadoop.hbase.mapreduce.RowCounter;
 import org.apache.hadoop.hbase.mapreduce.TableMapReduceUtil;
 import org.apache.hadoop.hbase.mapreduce.TableMapper;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.mapreduce.Job;
-import org.apache.hadoop.mapreduce.Mapper.Context;
 import org.apache.hadoop.mapreduce.lib.output.NullOutputFormat;
 import org.apache.hadoop.util.GenericOptionsParser;
-import org.apache.hadoop.hbase.filter.RandomRowFilter;
 
 public class CachingRowCounter {
 	
@@ -110,7 +107,7 @@ public class CachingRowCounter {
 	   * @throws Exception When running the job fails.
 	   */
 	  public static void main(String[] args) throws Exception {
-		HBaseConnection con = new HBaseConnection();
+		NativeJavaConnection con = (NativeJavaConnection)HBaseConnection.create(HBaseConnection.NATIVE_JAVA);
 	    Configuration conf = con.getConfiguration();
 	    conf.setBoolean("mapred.reduce.tasks.speculative.execution", false);
 	    String[] otherArgs = new GenericOptionsParser(conf, args).getRemainingArgs();

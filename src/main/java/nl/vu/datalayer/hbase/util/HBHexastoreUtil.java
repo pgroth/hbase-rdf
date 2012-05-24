@@ -4,11 +4,12 @@ import java.io.IOException;
 import java.math.BigInteger;
 import java.util.ArrayList;
 
-import nl.vu.datalayer.hbase.HBaseConnection;
+import nl.vu.datalayer.hbase.connection.HBaseConnection;
 import nl.vu.datalayer.hbase.schema.HBHexastoreSchema;
 
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HTable;
+import org.apache.hadoop.hbase.client.HTableInterface;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -110,7 +111,7 @@ public class HBHexastoreUtil implements IHBaseUtil {
 		byte []key = getKey(inversedTriple, index-1);
 		
 		Get g = new Get(key);
-		HTable table = new HTable(con.getConfiguration(), HBHexastoreSchema.TABLE_NAMES[index-1]);
+		HTableInterface table = con.getTable(HBHexastoreSchema.TABLE_NAMES[index-1]);
 		Result r = table.get(g);
 		
 		byte []value = r.getValue(HBHexastoreSchema.COLUMN_FAMILY.getBytes(), HBHexastoreSchema.COLUMN_NAME.getBytes());
@@ -227,7 +228,7 @@ public class HBHexastoreUtil implements IHBaseUtil {
 		//initialize connections to all tables
 		//for each table initialize a buffer of Put operations 
 		for (int i = 0; i < tables.length; i++) {
-			tables[i] = new HTable(con.getConfiguration(), HBHexastoreSchema.TABLE_NAMES[i]);
+			tables[i] = (HTable)con.getTable(HBHexastoreSchema.TABLE_NAMES[i]);
 			tables[i].setAutoFlush(false);
 			//batchPuts.add(new ArrayList<Put>());
 		}

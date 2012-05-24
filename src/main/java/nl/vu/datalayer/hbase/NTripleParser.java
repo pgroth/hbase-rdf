@@ -4,6 +4,9 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.util.ArrayList;
 
+import nl.vu.datalayer.hbase.connection.HBaseConnection;
+import nl.vu.datalayer.hbase.connection.NativeJavaConnection;
+
 import org.openrdf.model.Statement;
 import org.openrdf.rio.RDFHandlerException;
 import org.openrdf.rio.RDFParseException;
@@ -42,7 +45,7 @@ public class NTripleParser {
 			}
 
 			//connect to HBase
-			HBaseConnection con = new HBaseConnection();
+			NativeJavaConnection con = (NativeJavaConnection)HBaseConnection.create(HBaseConnection.NATIVE_JAVA);
 			HBaseClientSolution sol = HBaseFactory.getHBaseSolution(schemaName, con, myList);
 			sol.schema.create();
 			

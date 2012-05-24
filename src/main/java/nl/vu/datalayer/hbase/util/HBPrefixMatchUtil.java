@@ -4,11 +4,9 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
-import java.util.List;
-import java.util.Vector;
 
-import nl.vu.datalayer.hbase.HBaseConnection;
 import nl.vu.datalayer.hbase.bulkload.StringIdAssoc;
+import nl.vu.datalayer.hbase.connection.HBaseConnection;
 import nl.vu.datalayer.hbase.id.BaseId;
 import nl.vu.datalayer.hbase.id.NumericalRangeException;
 import nl.vu.datalayer.hbase.id.TypedId;
@@ -16,6 +14,7 @@ import nl.vu.datalayer.hbase.schema.HBPrefixMatchSchema;
 
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HTable;
+import org.apache.hadoop.hbase.client.HTableInterface;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
@@ -122,12 +121,12 @@ public class HBPrefixMatchUtil implements IHBaseUtil {
 			scan.setCaching(500);
 
 			String tableName = HBPrefixMatchSchema.TABLE_NAMES[tableIndex];
-			HTable table = new HTable(con.getConfiguration(), tableName);
+			HTableInterface table = con.getTable(tableName);
 			ResultScanner results = table.getScanner(scan);
 
 			Result r = null;
 			int sizeOfInterest = HBPrefixMatchSchema.KEY_LENGTH - startKey.length;
-			HTable id2StringTable = new HTable(con.getConfiguration(), HBPrefixMatchSchema.ID2STRING);
+			HTableInterface id2StringTable = con.getTable(HBPrefixMatchSchema.ID2STRING);
 
 			ArrayList<Get> batchGets = new ArrayList<Get>();
 			while ((r = results.next()) != null) {
@@ -155,7 +154,7 @@ public class HBPrefixMatchUtil implements IHBaseUtil {
 			}			
 			
 			int queryElemNo = boundElements.size();
-			// the quads using strings
+			// build the quads in SPOC order using strings
 			ArrayList<ArrayList<String>> ret = new ArrayList<ArrayList<String>>();
 			
 			for (ArrayList<ByteArray> quadList : quadResults) {
@@ -163,10 +162,8 @@ public class HBPrefixMatchUtil implements IHBaseUtil {
 				
 				ArrayList<String> newQuadResult = new ArrayList<String>(4);
 				newQuadResult.addAll(Arrays.asList(new String[]{"", "", "", ""}));			
-				for (int i = 0; i < queryElemNo; i++) {
-					newQuadResult.set(HBPrefixMatchSchema.TO_SPOC_ORDER[tableIndex][i], boundElements.get(i));
-				}
 				
+				//fill in unbound elements
 				for (int i = 0; i < quadList.size(); i++) {
 					if ((i+queryElemNo) == HBPrefixMatchSchema.ORDER[tableIndex][2] && 
 							TypedId.getType(quadList.get(i).getBytes()[0]) == TypedId.NUMERICAL){
@@ -177,6 +174,12 @@ public class HBPrefixMatchUtil implements IHBaseUtil {
 					else{
 						newQuadResult.set(HBPrefixMatchSchema.TO_SPOC_ORDER[tableIndex][(i+queryElemNo)], id2StringMap.get(quadList.get(i)));
 					}
+				}
+					
+				//fill in bound elements
+				for (int i = 0, j = 0; i<newQuadResult.size() && j<boundElements.size(); i++) {
+					if (newQuadResult.get(i).equals(""))
+						newQuadResult.set(i, boundElements.get(j++));
 				}
 				
 				ret.add(new ArrayList<String>(newQuadResult));
@@ -205,7 +208,7 @@ public class HBPrefixMatchUtil implements IHBaseUtil {
 		Get g = new Get(key);
 		g.addColumn(HBPrefixMatchSchema.COLUMN_FAMILY, HBPrefixMatchSchema.COLUMN_NAME);
 		
-		HTable table = new HTable(con.getConfiguration(), HBPrefixMatchSchema.STRING2ID);
+		HTableInterface table = con.getTable(HBPrefixMatchSchema.STRING2ID);
 		Result r = table.get(g);
 		byte []id = r.getValue(HBPrefixMatchSchema.COLUMN_FAMILY, HBPrefixMatchSchema.COLUMN_NAME);
 		if (id == null){
@@ -313,7 +316,8 @@ public class HBPrefixMatchUtil implements IHBaseUtil {
 		
 		tableIndex = pattern2Table.get(pattern);
 		
-		HTable table = new HTable(con.getConfiguration(), HBPrefixMatchSchema.STRING2ID);
+		//HTable table = con.getTable(HBPrefixMatchSchema.STRING2ID);
+		HTableInterface table = con.getTable(HBPrefixMatchSchema.STRING2ID);
 		
 		byte []key = new byte[keySize];
 		for (int i=0; i<string2Ids.size(); i++) {

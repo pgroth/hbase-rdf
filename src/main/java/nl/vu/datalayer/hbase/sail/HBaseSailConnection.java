@@ -1,10 +1,8 @@
 package nl.vu.datalayer.hbase.sail;
 
-import java.io.BufferedWriter;
-import java.io.ByteArrayInputStream;
-import java.io.FileWriter;
-import java.io.IOException;
-import java.io.InputStream;
+import info.aduna.iteration.CloseableIteration;
+import info.aduna.iteration.CloseableIteratorIteration;
+
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
@@ -12,20 +10,10 @@ import java.util.Set;
 import java.util.StringTokenizer;
 
 import nl.vu.datalayer.hbase.HBaseClientSolution;
-import nl.vu.datalayer.hbase.HBaseConnection;
 import nl.vu.datalayer.hbase.HBaseFactory;
-import nl.vu.datalayer.hbase.NTripleParser;
-import nl.vu.datalayer.hbase.RetrieveURI;
+import nl.vu.datalayer.hbase.connection.HBaseConnection;
 import nl.vu.datalayer.hbase.schema.HBHexastoreSchema;
-import nl.vu.datalayer.hbase.schema.HBasePredicateCFSchema;
-import nl.vu.datalayer.hbase.schema.IHBaseSchema;
-import nl.vu.datalayer.hbase.util.HBasePredicateCFUtil;
 
-import info.aduna.iteration.CloseableIteration;
-import info.aduna.iteration.CloseableIteratorIteration;
-
-import org.apache.commons.validator.UrlValidator;
-import org.openrdf.model.Literal;
 import org.openrdf.model.Namespace;
 import org.openrdf.model.Resource;
 import org.openrdf.model.Statement;
@@ -38,30 +26,16 @@ import org.openrdf.model.impl.URIImpl;
 import org.openrdf.query.BindingSet;
 import org.openrdf.query.Dataset;
 import org.openrdf.query.QueryEvaluationException;
-import org.openrdf.query.QueryLanguage;
-import org.openrdf.query.TupleQuery;
 import org.openrdf.query.TupleQueryResult;
-import org.openrdf.query.TupleQueryResultHandlerException;
 import org.openrdf.query.algebra.TupleExpr;
-import org.openrdf.repository.RepositoryConnection;
-import org.openrdf.repository.sail.SailQuery;
-import org.openrdf.rio.RDFParser;
-import org.openrdf.rio.helpers.StatementCollector;
-import org.openrdf.rio.turtle.TurtleParser;
+import org.openrdf.query.algebra.Var;
+import org.openrdf.query.impl.MapBindingSet;
+import org.openrdf.query.impl.TupleQueryResultImpl;
 import org.openrdf.sail.NotifyingSailConnection;
 import org.openrdf.sail.SailException;
 import org.openrdf.sail.helpers.NotifyingSailConnectionBase;
 import org.openrdf.sail.helpers.SailBase;
 import org.openrdf.sail.memory.MemoryStore;
-import org.openrdf.sail.memory.MemoryStoreConnection;
-
-import org.openrdf.query.algebra.QueryModelNode;
-import org.openrdf.query.algebra.QueryModelVisitor;
-import org.openrdf.query.algebra.Var;
-import org.openrdf.query.impl.MapBindingSet;
-import org.openrdf.query.impl.TupleQueryResultBuilder;
-import org.openrdf.query.impl.TupleQueryResultImpl;
-import org.openrdf.query.parser.ParsedTupleQuery;
 
 
 public class HBaseSailConnection extends NotifyingSailConnectionBase {
@@ -69,8 +43,6 @@ public class HBaseSailConnection extends NotifyingSailConnectionBase {
 	HBaseConnection con;
 	MemoryStore memStore;
 	NotifyingSailConnection memStoreCon;
-	List<String> bindingNames;
-	
 	
     //Builder to write the query to bit by bit
     StringBuilder queryString = new StringBuilder();
@@ -80,8 +52,6 @@ public class HBaseSailConnection extends NotifyingSailConnectionBase {
 		super(sailBase);
 //		System.out.println("SailConnection created");
 		con = ((HBaseSail)sailBase).getHBaseConnection();
-		
-		bindingNames = new ArrayList();
 
 		memStore = new MemoryStore();
 		try {
@@ -161,7 +131,7 @@ public class HBaseSailConnection extends NotifyingSailConnectionBase {
 			throws SailException {
 		try {
 			if (arg4 == null) {
-				HBaseConnection con = new HBaseConnection();
+				HBaseConnection con = HBaseConnection.create(HBaseConnection.NATIVE_JAVA);
 				
 				HBaseClientSolution sol = HBaseFactory.getHBaseSolution(HBHexastoreSchema.SCHEMA_NAME, con, null);
 				
@@ -207,19 +177,23 @@ public class HBaseSailConnection extends NotifyingSailConnectionBase {
 			}
 		}
 		catch (Exception e) {
-			throw new SailException(e);
+			Exception ex = new SailException("HBase connection error: " + e.getMessage());
+			try {
+				throw ex;
+			} catch (Exception e1) {
+				// TODO Auto-generated catch block
+				e1.printStackTrace();
+			}
 		}
+		return null;
 	}
 	
 	protected ArrayList<Statement> reconstructTriples(String data, String[] triple) throws SailException {
 		ArrayList<Statement> list = new ArrayList();
 		
-		if (data != null) {
 		StringTokenizer st1 = new StringTokenizer(data, "\n");
 		while (st1.hasMoreTokens()) {
-			
 			String line = st1.nextToken();
-			System.out.println("FOUND TRIPLE PATTERN: " + line);
 			int index = 0;
 			
 			Resource s = null;
@@ -239,12 +213,6 @@ public class HBaseSailConnection extends NotifyingSailConnectionBase {
 				else {
 					try {
 						String token = st2.nextToken();
-						if (token.startsWith("\"")) {
-							while (st2.hasMoreTokens()) {
-								token += " " + st2.nextToken();
-							}
-						}
-						
 						if (i == 0) {
 							s = (Resource)constructNode(token);
 						} else if (i == 1) {
@@ -259,7 +227,6 @@ public class HBaseSailConnection extends NotifyingSailConnectionBase {
 			}
 			Statement st = new StatementImpl(s, p, o);
 			list.add(st);
-		}
 		}
 		
 		return list;
@@ -330,12 +297,7 @@ public class HBaseSailConnection extends NotifyingSailConnectionBase {
 		ArrayList<Statement> result = new ArrayList();
 		
 		try {
-			HBaseQueryVisitor queryParser = new HBaseQueryVisitor(null, null, null);
-			
-			ArrayList<ArrayList<Var>> statements = queryParser.convertToStatements(arg0);
-			bindingNames = queryParser.getBindingNames();
-			
-			
+			ArrayList<ArrayList<Var>> statements = HBaseQueryVisitor.convertToStatements(arg0, null, null);
 //			System.out.println("StatementPatterns: " + statements.size());
 			
 			Iterator it = statements.iterator();
@@ -403,10 +365,7 @@ public class HBaseSailConnection extends NotifyingSailConnectionBase {
 		Set<String> bindingSet = arg2.getBindingNames();
 		
 		try {
-			HBaseQueryVisitor queryParser = new HBaseQueryVisitor(null, null, null);
-			
-			ArrayList<ArrayList<Var>> statements = queryParser.convertToStatements(arg0);
-			bindingNames = queryParser.getBindingNames();
+			ArrayList<ArrayList<Var>> statements = HBaseQueryVisitor.convertToStatements(arg0, null, null);
 			
 			Iterator it = statements.iterator();
 			while (it.hasNext()) {
@@ -500,31 +459,29 @@ public class HBaseSailConnection extends NotifyingSailConnectionBase {
 			}
 			
 			CloseableIteration<? extends BindingSet, QueryEvaluationException> ci = memStoreCon.evaluate(tupleExpr, dataset, bindings, includeInferred);
-//			CloseableIteration<? extends BindingSet, QueryEvaluationException> cj = memStoreCon.evaluate(tupleExpr, dataset, bindings, includeInferred);
-//					
-//			List<String> bindingList = new ArrayList<String>();
-//
-//			System.out.println("NEW BINDING SET SIZE:" + bindings.getBindingNames().size());
-//			int index = 0;
-//			while (ci.hasNext()) {
-//				index++;
-//				BindingSet bs = (BindingSet)ci.next();
+			CloseableIteration<? extends BindingSet, QueryEvaluationException> cj = memStoreCon.evaluate(tupleExpr, dataset, bindings, includeInferred);
+			
+			List<String> bindingList = new ArrayList<String>();
+			int index = 0;
+			while (ci.hasNext()) {
+				index++;
+				BindingSet bs = (BindingSet)ci.next();
 //                System.out.println("Binding size(" + index + "): " + bs.getBindingNames().size());
-//				Set<String> localBindings = bs.getBindingNames();
-//				Iterator jt = localBindings.iterator();
-//				while (jt.hasNext()) {
-//					String binding = (String)jt.next();
-//					if (bindingList.contains(binding) == false) {
-//						bindingList.add(binding);
+				Set<String> localBindings = bs.getBindingNames();
+				Iterator jt = localBindings.iterator();
+				while (jt.hasNext()) {
+					String binding = (String)jt.next();
+					if (bindingList.contains(binding) == false) {
+						bindingList.add(binding);
 //						System.out.println("Added binding: " + binding);
-//					}
-//				}
-//			}
+					}
+				}
+			}
 //			System.out.println("Results retrieved from memory store: " + index);
-			System.out.println("Bindings retrieved from memory store: " + bindingNames.size());
+//			System.out.println("Bindings retrieved from memory store: " + bindingList.size());
 			
 			
-			TupleQueryResult result = new TupleQueryResultImpl(bindingNames, ci);
+			TupleQueryResult result = new TupleQueryResultImpl(bindingList, cj);
 			
 //			int ressize = 0;
 //			while (result.hasNext()) {
@@ -539,11 +496,10 @@ public class HBaseSailConnection extends NotifyingSailConnectionBase {
 		} catch (SailException e) {
 			e.printStackTrace();
 			throw e;
+		} catch (QueryEvaluationException e) {
+			// TODO Auto-generated catch block
+			throw new SailException(e);
 		}
-//		catch (QueryEvaluationException e) {
-//			// TODO Auto-generated catch block
-//			throw new SailException(e);
-//		}
 	}
 
 }

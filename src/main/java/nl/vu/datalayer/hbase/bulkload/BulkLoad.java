@@ -10,8 +10,9 @@ import java.util.SortedMap;
 import java.util.TreeMap;
 
 import nl.vu.datalayer.hbase.HBaseClientSolution;
-import nl.vu.datalayer.hbase.HBaseConnection;
 import nl.vu.datalayer.hbase.HBaseFactory;
+import nl.vu.datalayer.hbase.connection.HBaseConnection;
+import nl.vu.datalayer.hbase.connection.NativeJavaConnection;
 import nl.vu.datalayer.hbase.id.BaseId;
 import nl.vu.datalayer.hbase.id.DataPair;
 import nl.vu.datalayer.hbase.id.TypedId;
@@ -20,6 +21,7 @@ import nl.vu.datalayer.hbase.schema.HBPrefixMatchSchema;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.client.HTable;
+import org.apache.hadoop.hbase.client.HTableInterface;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.mapreduce.HFileOutputFormat;
@@ -46,10 +48,10 @@ public class BulkLoad {
 	/**
 	 * Used to load successively the tables containing quads
 	 */
-	private static HTable currentTable = null;
+	private static HTableInterface currentTable = null;
 	
-	private static HTable string2Id = null;
-	private static HTable id2String = null;
+	private static HTableInterface string2Id = null;
+	private static HTableInterface id2String = null;
 	
 	/**
 	 * Cluster parameters used to estimate number of reducers 
@@ -166,9 +168,9 @@ public class BulkLoad {
 		SequenceFileInputFormat.setInputPaths(j, input);
 		HFileOutputFormat.setOutputPath(j, output);
 
-		string2Id = new HTable(con.getConfiguration(), HBPrefixMatchSchema.STRING2ID);
+		string2Id = con.getTable(HBPrefixMatchSchema.STRING2ID);
 
-		HFileOutputFormat.configureIncrementalLoad(j, string2Id);
+		HFileOutputFormat.configureIncrementalLoad(j, (HTable)string2Id);
 		return j;
 	}
 	
@@ -187,9 +189,9 @@ public class BulkLoad {
 		SequenceFileInputFormat.setInputPaths(j, input);
 		HFileOutputFormat.setOutputPath(j, output);
 
-		id2String = new HTable(con.getConfiguration(), HBPrefixMatchSchema.ID2STRING);
+		id2String = con.getTable(HBPrefixMatchSchema.ID2STRING);
 
-		HFileOutputFormat.configureIncrementalLoad(j, id2String);
+		HFileOutputFormat.configureIncrementalLoad(j, (HTable)id2String);
 
 		return j;
 	}
@@ -210,9 +212,9 @@ public class BulkLoad {
 		SequenceFileInputFormat.setInputPaths(j, input);
 		HFileOutputFormat.setOutputPath(j, output);
 
-		currentTable = new HTable(con.getConfiguration(), HBPrefixMatchSchema.TABLE_NAMES[tableIndex]);
+		currentTable = con.getTable(HBPrefixMatchSchema.TABLE_NAMES[tableIndex]);
 
-		HFileOutputFormat.configureIncrementalLoad(j, currentTable);
+		HFileOutputFormat.configureIncrementalLoad(j, (HTable)currentTable);
 
 		return j;
 	}
@@ -235,7 +237,7 @@ public class BulkLoad {
 		while (it.hasNext()){
 			Counter c = it.next();
 			short b = Short.parseShort(c.getName(), 16);
-			System.out.println((char)b +" "+c.getName()+" "+c.getValue());
+			//System.out.println((char)b +" "+c.getName()+" "+c.getValue());
 			
 			long half = c.getValue()/2;
 			sufixCounters.put(b, half);
@@ -252,11 +254,6 @@ public class BulkLoad {
 			file.write(entry.getKey()+"@"+entry.getValue()+"\n");
 		}
 		file.close();
-	}
-	
-	public static void tempCounters(){
-		totalStringCount = 193426919L;
-		numericalCount = 22694894L;
 	}
 	
 	public static void buildCountersFromFile() throws IOException{
@@ -280,10 +277,10 @@ public class BulkLoad {
 		System.out.println(totalCounter);
 	}
 
-	private static void doBulkLoad(LoadIncrementalHFiles bulkLoad, Path dir, HTable table) throws InterruptedException{
+	private static void doBulkLoad(LoadIncrementalHFiles bulkLoad, Path dir, HTableInterface table) throws InterruptedException{
 		try{
 			long start = System.currentTimeMillis();
-			bulkLoad.doBulkLoad(dir, table);
+			bulkLoad.doBulkLoad(dir, (HTable)table);
 			long bulkTime = System.currentTimeMillis()-start;
 			System.out.println(table.getTableDescriptor().getNameAsString()+" bulkLoad time: "+bulkTime);
 		}
@@ -303,7 +300,7 @@ public class BulkLoad {
 		Path string2IdInput = new Path(outputPath+TripleToResource.ID2STRING_DIR);
 		Path string2IdOutput = new Path(outputPath+StringIdAssoc.STRING2ID_DIR);
 		
-		HBaseConnection con = new HBaseConnection();
+		HBaseConnection con = new HBaseConnection(HBaseConnection.JAVA_API);
 		HBPrefixMatchSchema.createCounterTable(con.getAdmin());
 		
 		long start = System.currentTimeMillis();
@@ -342,7 +339,7 @@ public class BulkLoad {
 			Path string2IdInput = new Path(outputPath+TripleToResource.ID2STRING_DIR);
 			Path string2IdOutput = new Path(outputPath+StringIdAssoc.STRING2ID_DIR);
 			
-			HBaseConnection con = new HBaseConnection();
+			NativeJavaConnection con = (NativeJavaConnection)HBaseConnection.create(HBaseConnection.NATIVE_JAVA);
 			HBPrefixMatchSchema.createCounterTable(con.getAdmin());
 			
 			long start = System.currentTimeMillis();
@@ -386,7 +383,7 @@ public class BulkLoad {
 			Job j3 = createString2IdJob(con, string2IdInput, string2IdOutput);
 			j3.waitForCompletion(true);
 			
-			//string2Id = new HTable(con.getConfiguration(), HBPrefixMatchSchema.STRING2ID);
+			//string2Id = con.getTable(HBPrefixMatchSchema.STRING2ID);
 			doBulkLoad(bulkLoad, string2IdOutput, string2Id);
 			
 			System.out.println("Finished bulk load for String2Id table");//=====================//=============

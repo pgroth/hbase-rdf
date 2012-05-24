@@ -12,13 +12,14 @@ import java.util.Iterator;
 import nl.vu.datalayer.hbase.schema.HBasePredicateCFSchema;
 import nl.vu.datalayer.hbase.schema.IHBaseSchema;
 import nl.vu.datalayer.hbase.util.HBasePredicateCFUtil;
+import nl.vu.datalayer.hbase.connection.HBaseConnection;
 
 
 public class RetrieveURI {
 	
 	public static void retrieveURI(String URI, BufferedWriter out) {
 		try {
-			HBaseConnection con = new HBaseConnection();
+			HBaseConnection con = HBaseConnection.create(HBaseConnection.NATIVE_JAVA);
 			IHBaseSchema schema  = new HBasePredicateCFSchema(con, null);
 			HBasePredicateCFUtil util = new HBasePredicateCFUtil(con, schema);
 			
@@ -57,7 +58,7 @@ public class RetrieveURI {
 	
 	public static void printURIInfo(String URI) {
 		try {
-			HBaseConnection con = new HBaseConnection();
+			HBaseConnection con = HBaseConnection.create(HBaseConnection.NATIVE_JAVA);
 			IHBaseSchema schema  = new HBasePredicateCFSchema(con, null);
 			HBasePredicateCFUtil util = new HBasePredicateCFUtil(con, schema);
 			

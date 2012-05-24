@@ -30,7 +30,7 @@ public class HBaseSailTest {
 		HBaseSailRepository myRepo = new HBaseSailRepository(mySail);
 		HBaseRepositoryConnection conn = myRepo.getConnection();
 		
-		String queryString = "PREFIX foaf: <http://xmlns.com/foaf/0.1/> \n SELECT ?name ?mbox  WHERE  { ?x foaf:name  ?name . OPTIONAL {?x  foaf:mbox  ?mbox } } ";
+		String queryString = "SELECT ?x WHERE { ?s <http://xmlns.com/foaf/0.1/knows> ?x . }";
 		System.out.println(queryString);
 		
 		try {
@@ -38,14 +38,8 @@ public class HBaseSailTest {
 		    TupleQueryResult result = tupleQuery.evaluate();
 		    while (result.hasNext()) {
 		    	BindingSet bindingSet = result.next();
-		    	Value valueOfX = bindingSet.getValue("name");
-		    	System.out.print("?name = " + valueOfX.stringValue());
-		    	
-		    	Value valueOfY = bindingSet.getValue("mbox");
-		    	if (valueOfY != null) {
-                	System.out.print(", ?mbox = " + valueOfY.stringValue());
-                }
-                System.out.print("\n");
+		    	Value valueOfX = bindingSet.getValue("x");
+		    	System.out.println("?x = " + valueOfX.stringValue());
 		    }
 		    
 		} catch (MalformedQueryException e) {

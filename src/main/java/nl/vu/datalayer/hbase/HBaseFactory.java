@@ -8,6 +8,7 @@ import nl.vu.datalayer.hbase.schema.HBasePredicateCFSchema;
 import nl.vu.datalayer.hbase.util.HBHexastoreUtil;
 import nl.vu.datalayer.hbase.util.HBPrefixMatchUtil;
 import nl.vu.datalayer.hbase.util.HBasePredicateCFUtil;
+import nl.vu.datalayer.hbase.connection.HBaseConnection;
 
 import org.openrdf.model.Statement;
 

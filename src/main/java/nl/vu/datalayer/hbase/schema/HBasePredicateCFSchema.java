@@ -4,7 +4,8 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Iterator;
 
-import nl.vu.datalayer.hbase.HBaseConnection;
+import nl.vu.datalayer.hbase.connection.HBaseConnection;
+import nl.vu.datalayer.hbase.connection.NativeJavaConnection;
 
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HTableDescriptor;
@@ -19,13 +20,13 @@ public class HBasePredicateCFSchema implements IHBaseSchema {
 	
 	public static final String TABLE_NAME = "TRIPLETS";
 	
-	private HBaseConnection con;
+	private NativeJavaConnection con;
 	
 	public HBasePredicateCFSchema(HBaseConnection con, ArrayList<Statement> statements)
 	{
 		super();
 		this.statements = statements;
-		this.con = con;
+		this.con = (NativeJavaConnection)con;
 	}
 
 	@Override

@@ -6,7 +6,8 @@ import java.util.Arrays;
 import java.util.Map;
 import java.util.SortedMap;
 
-import nl.vu.datalayer.hbase.HBaseConnection;
+import nl.vu.datalayer.hbase.connection.HBaseConnection;
+import nl.vu.datalayer.hbase.connection.NativeJavaConnection;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
@@ -31,7 +32,7 @@ public class HBPrefixMatchSchema implements IHBaseSchema {
 	public static final byte [] COLUMN_NAME = "".getBytes();
 	
 	public static final String []TABLE_NAMES = {"SPOC", "POCS", "OCSP", "CSPO", "CPSO", "OSPC"};
-	public static final String []TEST_TABLE_NAMES = {"SPOCTest", "POCSTest", "OCSPTest", "CSPOTest", "CPSOTest", "OSPCTest"};
+	//public static final String []TABLE_NAMES = {"SPOCLUBM", "POCSLUBM", "OCSPLUBM", "CSPOLUBM", "CPSOLUBM", "OSPCLUBM"};
 	
 	//3 BaseIds + 1 TypedId (in the Object position of each table)
 	public static final int KEY_LENGTH = 33;
@@ -50,18 +51,18 @@ public class HBPrefixMatchSchema implements IHBaseSchema {
 	public static final int CPSO = 4;
 	public static final int OSPC = 5;
 	
-	public static final String STRING2ID = "String2Id";
+	public static final String STRING2ID = "String2Id";//TODO change back
 	public static final String ID2STRING = "Id2String";
 	
 	//information for the table of Counters
-	public static final String COUNTER_TABLE = "Counters";
+	public static final String COUNTER_TABLE = "CountersLUBM";
 	public static final byte []META_COL = "Meta".getBytes();
 	public static final byte [] FIRST_COUNTER_ROWKEY = "FirstCounter".getBytes();
 	public static final byte [] LAST_COUNTER_ROWKEY = "LastCounter".getBytes();
 	public static final long COUNTER_LIMIT = 0x000000ffffffffffL;
 	
-	public static final String STRING2ID_TEST = "String2IdTest";
-	public static final String ID2STRING_TEST = "Id2StringTest";
+	//public static final String STRING2ID_TEST = "String2IdTest";
+	//public static final String ID2STRING_TEST = "Id2StringTest";
 	
 	//default number of initial regions
 	public static final int NUM_REGIONS = 64;
@@ -445,7 +446,7 @@ public class HBPrefixMatchSchema implements IHBaseSchema {
 
 	@Override
 	public void create() throws Exception {
-		HBaseAdmin admin = con.getAdmin();
+		HBaseAdmin admin = ((NativeJavaConnection)con).getAdmin();
 	
 		//distribute the regions over the entire ID space for String2ID
 		byte [][]splits = getString2IdSplits(NUM_REGIONS);

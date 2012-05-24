@@ -7,6 +7,7 @@ import java.io.InputStreamReader;
 import java.util.ArrayList;
 
 import nl.vu.datalayer.hbase.schema.HBPrefixMatchSchema;
+import nl.vu.datalayer.hbase.connection.HBaseConnection;
 
 public class RetrieveQuads {
 
@@ -16,13 +17,22 @@ public class RetrieveQuads {
 	public static void main(String[] args) {
 		try{
 			
-			if (args.length != 1){
-				System.out.println("Usage: RetrieveQuads <queryFile>");
+			if (args.length != 2){
+				System.out.println("Usage: RetrieveQuads <queryFile> <Connection_type>");
 				System.out.println("Use \"?\" for the positions representing variables");
+				System.out.println("For Connection_type use: \"native-java\" or \"rest\"");
 				return;
 			}
 			
-			HBaseConnection con = new HBaseConnection();
+			HBaseConnection con;
+			if (args[1].equals("rest"))
+				con = HBaseConnection.create(HBaseConnection.REST);
+			else if (args[1].equals("native-java"))
+				con = HBaseConnection.create(HBaseConnection.NATIVE_JAVA);
+			else{
+				System.err.println("Unknown HBase connection type");
+				return;
+			}	
 			
 			HBaseClientSolution sol = HBaseFactory.getHBaseSolution(HBPrefixMatchSchema.SCHEMA_NAME, con, null);
 			

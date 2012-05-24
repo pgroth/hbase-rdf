@@ -5,13 +5,14 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 
-import nl.vu.datalayer.hbase.HBaseConnection;
+import nl.vu.datalayer.hbase.connection.HBaseConnection;
 import nl.vu.datalayer.hbase.schema.HBasePredicateCFSchema;
 import nl.vu.datalayer.hbase.schema.IHBaseSchema;
 
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HTable;
+import org.apache.hadoop.hbase.client.HTableInterface;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -30,7 +31,7 @@ public class HBasePredicateCFUtil implements IHBaseUtil {
 
 	public  void addRow(String tableName, String key, String columnFam, String columnName, String val) throws IOException {
 	    // add triples to HBase
-	    HTable table = new HTable(con.getConfiguration(), tableName);
+	    HTableInterface table = con.getTable(tableName);
 	    Put row = new Put(Bytes.toBytes(key));
 	    row.add(Bytes.toBytes(columnFam.replaceAll("[^A-Za-z0-9 ]", "")), Bytes.toBytes(columnName.replaceAll("[^A-Za-z0-9 ]", "")), Bytes.toBytes(val));
 	    table.put(row);
@@ -45,7 +46,7 @@ public class HBasePredicateCFUtil implements IHBaseUtil {
 	    }
 	    
 	    System.out.println("PRED ENTRY: " + pred + " " + pred.replaceAll("[^A-Za-z0-9 ]", ""));
-	    table = new HTable(con.getConfiguration(), "predicates");
+	    table = con.getTable("predicates");
 	    row = new Put(Bytes.toBytes(pred.replaceAll("[^A-Za-z0-9 ]", ""))); 
 	    row.add(Bytes.toBytes("URI"), Bytes.toBytes(""), Bytes.toBytes(pred));
 	    table.put(row);
@@ -54,7 +55,7 @@ public class HBasePredicateCFUtil implements IHBaseUtil {
 	@Override
 	public ArrayList<ArrayList<String>> getRow(String []triplet)  throws IOException {
 		String URI = triplet[0];
-	    HTable table = new HTable(con.getConfiguration(), HBasePredicateCFSchema.TABLE_NAME);
+	    HTableInterface table = con.getTable(HBasePredicateCFSchema.TABLE_NAME);
 	    
 		Get g = new Get(Bytes.toBytes(URI));
 	    Result r = table.get(g);
@@ -97,7 +98,7 @@ public class HBasePredicateCFUtil implements IHBaseUtil {
 	public String getPredicate(String pred) throws IOException {
 		String URI = "";
 		
-	    HTable table = new HTable(con.getConfiguration(), "predicates");
+	    HTableInterface table = con.getTable("predicates");
 	    
 		Get g = new Get(Bytes.toBytes(pred));
 	    Result r = table.get(g);
