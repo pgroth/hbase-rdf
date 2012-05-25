@@ -323,6 +323,7 @@ public class HBaseSailConnection extends NotifyingSailConnectionBase {
 	}
 	
 	Value getContext(String s) {
+		System.out.println("GRAPH: " + s);
 		return new URIImpl(s);
 	}
 
