@@ -285,6 +285,7 @@ public class HBaseSailConnection extends NotifyingSailConnectionBase {
 				
 				if (s.charAt(i) == '@') {
 					// read language
+					System.out.println("reading language");
 					i++;
 					while (i < s.length()) {
 						language += s.charAt(i);
