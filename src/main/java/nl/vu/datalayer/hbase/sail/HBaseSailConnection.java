@@ -375,6 +375,90 @@ public class HBaseSailConnection extends NotifyingSailConnectionBase {
 			Iterator it = statements.iterator();
 			while (it.hasNext()) {
 				ArrayList<Var> sp = (ArrayList<Var>)it.next();
+				ArrayList<Var> contexts = HBaseQueryVisitor.getContexts(arg0);
+				ArrayList<Resource> cons = new ArrayList();
+				
+				for (Var con : contexts) {
+					System.out.println("CONTEXT: " + con.toString());
+//					cons.add((Resource)new URIImpl(con.));
+				}
+				
+				Resource subj = null;
+				URI pred = null;
+				Value obj = null;
+				Iterator jt = sp.iterator();
+				
+				
+				int index = 0;
+				
+//				while (jt.hasNext()) {
+//					Var var = (Var)jt.next();
+//					
+//					if (index == 0) {
+//						if (var.hasValue()) {
+//				            subj = (Resource)getSubject(var.getValue().stringValue());
+//				        } else if (var.isAnonymous()) {
+//				        	subj = (Resource)getSubject(var.getName()); 
+//				        	
+//				        }
+//					}
+//					else if (index == 1) {
+//						if (var.hasValue()) {
+//				            pred = (URI)getPredicate(var.getValue().stringValue());
+//				        }
+//						
+//					}
+//					else {
+//						if (var.hasValue()) {
+//				            obj = (Value)getObject(var.getValue().stringValue());
+//				        } else if (var.isAnonymous()) {
+//				        	obj = (Value)getObject(var.getName());
+//				        }
+//					}
+//					index += 1;
+//				}
+//				
+//				CloseableIteration ci = getStatementsInternal(subj, pred, obj, false, null);
+//				
+//				while (ci.hasNext()) {
+//					Statement statement = (Statement)ci.next();
+//					result.add(statement);
+//				}
+//			}
+		}
+		catch (Exception e) {
+			throw new SailException(e);
+		}
+		
+		return result;
+	}
+	
+	/**
+	 * This function retrieves all the triples from HBase that
+	 * match with StatementPatterns in the SPARQL query, without
+	 * executing the SPARQL query on them.
+	 */
+	@Override
+	protected CloseableIteration<? extends BindingSet, QueryEvaluationException> evaluateInternal(
+			TupleExpr arg0, Dataset arg1, BindingSet arg2, boolean arg3)
+			throws SailException {
+		ArrayList<MapBindingSet> result = new ArrayList();
+		Set<String> bindingSet = arg2.getBindingNames();
+		
+		try {
+			ArrayList<ArrayList<Var>> statements = HBaseQueryVisitor.convertToStatements(arg0, null, null);
+			ArrayList<Var> contexts = HBaseQueryVisitor.getContexts(arg0);
+			
+			for (Var con : contexts) {
+				System.out.println("CONTEXT: " + con.toString());
+			}
+			
+			Iterator it = statements.iterator();
+			while (it.hasNext()) {
+				ArrayList<Var> sp = (ArrayList<Var>)it.next();
+
+				String[] variables = {"", "", ""};
+				MapBindingSet mapBindingSet  = new MapBindingSet();
 				
 				Resource subj = null;
 				URI pred = null;
@@ -413,92 +497,16 @@ public class HBaseSailConnection extends NotifyingSailConnectionBase {
 				
 				while (ci.hasNext()) {
 					Statement statement = (Statement)ci.next();
-					result.add(statement);
+					Value[] values = {statement.getSubject(), statement.getPredicate(), statement.getObject()};
+					
+					for (int i = 0; i < 3; i ++) {
+						if (variables[i] != "" && bindingSet.contains(variables[i])) {
+							mapBindingSet.addBinding(variables[i], values[i]);
+						}
+					}
 				}
+				result.add(mapBindingSet);
 			}
-		}
-		catch (Exception e) {
-			throw new SailException(e);
-		}
-		
-		return result;
-	}
-	
-	/**
-	 * This function retrieves all the triples from HBase that
-	 * match with StatementPatterns in the SPARQL query, without
-	 * executing the SPARQL query on them.
-	 */
-	@Override
-	protected CloseableIteration<? extends BindingSet, QueryEvaluationException> evaluateInternal(
-			TupleExpr arg0, Dataset arg1, BindingSet arg2, boolean arg3)
-			throws SailException {
-		ArrayList<MapBindingSet> result = new ArrayList();
-		Set<String> bindingSet = arg2.getBindingNames();
-		
-		try {
-			ArrayList<ArrayList<Var>> statements = HBaseQueryVisitor.convertToStatements(arg0, null, null);
-			ArrayList<Var> contexts = HBaseQueryVisitor.getContexts(arg0);
-			
-			System.out.println("LISTING CONTEXTS:");
-			for (Var con : contexts) {
-				System.out.println("CONTEXT: " + con.toString());
-			}
-			
-//			Iterator it = statements.iterator();
-//			while (it.hasNext()) {
-//				ArrayList<Var> sp = (ArrayList<Var>)it.next();
-//
-//				String[] variables = {"", "", ""};
-//				MapBindingSet mapBindingSet  = new MapBindingSet();
-//				
-//				Resource subj = null;
-//				URI pred = null;
-//				Value obj = null;
-//				Iterator jt = sp.iterator();
-//				int index = 0;
-//				
-//				while (jt.hasNext()) {
-//					Var var = (Var)jt.next();
-//					
-//					if (index == 0) {
-//						if (var.hasValue()) {
-//				            subj = (Resource)getSubject(var.getValue().stringValue());
-//				        } else if (var.isAnonymous()) {
-//				        	subj = (Resource)getSubject(var.getName()); 
-//				        	
-//				        }
-//					}
-//					else if (index == 1) {
-//						if (var.hasValue()) {
-//				            pred = (URI)getPredicate(var.getValue().stringValue());
-//				        }
-//						
-//					}
-//					else {
-//						if (var.hasValue()) {
-//				            obj = (Value)getObject(var.getValue().stringValue());
-//				        } else if (var.isAnonymous()) {
-//				        	obj = (Value)getObject(var.getName());
-//				        }
-//					}
-//					index += 1;
-//				}
-//				
-//				CloseableIteration ci = getStatementsInternal(subj, pred, obj, false, null);
-//				
-//				while (ci.hasNext()) {
-//					Statement statement = (Statement)ci.next();
-//					Value[] values = {statement.getSubject(), statement.getPredicate(), statement.getObject()};
-//					
-//					for (int i = 0; i < 3; i ++) {
-//						if (variables[i] != "" && bindingSet.contains(variables[i])) {
-//							mapBindingSet.addBinding(variables[i], values[i]);
-//						}
-//					}
-//				}
-//				result.add(mapBindingSet);
-//			}
 		}
 		catch (Exception e) {
 			e.printStackTrace();
