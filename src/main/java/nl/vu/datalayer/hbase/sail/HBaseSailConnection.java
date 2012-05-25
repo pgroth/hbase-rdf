@@ -395,9 +395,9 @@ public class HBaseSailConnection extends NotifyingSailConnectionBase {
 			
 			ArrayList<Var> contexts = HBaseQueryVisitor.getContexts(arg0);
 			ArrayList<Resource> cons = new ArrayList();
-			Iterator it = contexts.iterator();
-			while (it.hasNext()) {
-				Var context = (Var)it.next();
+			Iterator qt = contexts.iterator();
+			while (qt.hasNext()) {
+				Var context = (Var)qt.next();
 				if (context != null) {
 					System.out.println(context.toString());
 				}
