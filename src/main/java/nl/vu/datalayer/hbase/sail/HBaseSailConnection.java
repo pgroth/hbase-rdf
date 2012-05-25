@@ -424,12 +424,12 @@ public class HBaseSailConnection extends NotifyingSailConnectionBase {
 					index += 1;
 				}
 				
-//				CloseableIteration ci = getStatementsInternal(subj, pred, obj, false, null);
-//				
-//				while (ci.hasNext()) {
-//					Statement statement = (Statement)ci.next();
-//					result.add(statement);
-//				}
+				CloseableIteration ci = getStatementsInternal(subj, pred, obj, false, null);
+				
+				while (ci.hasNext()) {
+					Statement statement = (Statement)ci.next();
+					result.add(statement);
+				}
 			}
 		}
 		catch (Exception e) {
