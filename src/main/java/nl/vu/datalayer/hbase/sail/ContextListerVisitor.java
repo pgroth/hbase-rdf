@@ -35,7 +35,7 @@ public class ContextListerVisitor extends QueryModelVisitorBase<QueryExpansionEx
     @Override
     public void meet(StatementPattern sp) throws QueryExpansionException {
         //Record the context even if NULL.
-    	System.out.println("FOUND CONTEXT STATEMENT PATTERN");
+    	System.out.println("FOUND CONTEXT STATEMENT PATTERN " + sp.getContextVar().toString());
         contexts.add(sp.getContextVar());
     }
 
