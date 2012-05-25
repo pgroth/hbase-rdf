@@ -377,6 +377,8 @@ public class HBaseRepositoryConnection extends SailRepositoryConnection {
 				TupleExpr te = getParsedQuery().getTupleExpr();
 				Dataset dataset = getDataset();
 				
+				System.out.println("ORIGINAL TUPLE EXPRESSION: " + te.toString());
+				
 				TupleQueryResult result = connection.query(te, dataset, getBindings(), getIncludeInferred());
 				
 //				System.out.println("TupleQueryResult bindings: " + result.getBindingNames().size());
