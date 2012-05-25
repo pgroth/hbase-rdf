@@ -173,12 +173,12 @@ public class HBaseSailConnection extends NotifyingSailConnectionBase {
 				String []triple = {s, p, o, graph};
 				ArrayList<ArrayList<String>> triples = hbase.util.getRow(triple);
 				
-				for (ArrayList<String> tr : triples) {
-					for (String st : tr) {
-						System.out.print(st + " ");
-					}
-					System.out.print("\n");
-				}
+//				for (ArrayList<String> tr : triples) {
+//					for (String st : tr) {
+//						System.out.print(st + " ");
+//					}
+//					System.out.print("\n");
+//				}
 				
 	//			System.out.println("Raw triples: " + triples);
 				
@@ -332,7 +332,16 @@ public class HBaseSailConnection extends NotifyingSailConnectionBase {
 				
 			}
 		}
-		return new URIImpl(s);
+		
+
+		Value object;
+		try {
+			 object = new URIImpl(s);
+		}
+		catch (Exception e) {
+			object = new LiteralImpl(s);
+		}
+		return object;
 	}
 	
 	Value getContext(String s) {
