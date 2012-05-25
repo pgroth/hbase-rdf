@@ -289,6 +289,7 @@ public class HBaseSailConnection extends NotifyingSailConnectionBase {
 					i++;
 					while (i < s.length()) {
 						language += s.charAt(i);
+						i++;
 					}
 					System.out.println(language);
 					return new LiteralImpl(literal, language);
