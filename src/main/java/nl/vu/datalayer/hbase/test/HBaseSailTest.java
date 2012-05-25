@@ -30,7 +30,7 @@ public class HBaseSailTest {
 		HBaseSailRepository myRepo = new HBaseSailRepository(mySail);
 		HBaseRepositoryConnection conn = myRepo.getConnection();
 		
-		String queryString = "SELECT ?p ?o FROM <http://en.wikipedia.org/wiki/Alabama#absolute-line=33> WHERE { <http://en.wikipedia.org/wiki/Alabama> ?p ?o . }";
+		String queryString = "SELECT ?p ?o FROM <http://en.wikipedia.org/wiki/Alabama#absolute-line=33> WHERE { <http://dbpedia.org/resource/Alabama> ?p ?o . }";
 		System.out.println(queryString);
 		
 		try {
