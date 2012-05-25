@@ -230,6 +230,7 @@ public class HBaseSailConnection extends NotifyingSailConnectionBase {
 	}
 	
 	Value getSubject(String s) {
+		System.out.println("SUBJECT: " + s);
 		if (s.startsWith("_")) {
 			return new BNodeImpl(s.substring(2));
 		}
@@ -237,10 +238,12 @@ public class HBaseSailConnection extends NotifyingSailConnectionBase {
 	}
 	
 	Value getPredicate(String s) {
+		System.out.println("PREDICATE: " + s);
 		return new URIImpl(s);
 	}
 	
 	Value getObject(String s) {
+		System.out.println("OBJECT: " + s);
 		if (s.startsWith("_")) {
 			return new BNodeImpl(s.substring(2));
 		}
