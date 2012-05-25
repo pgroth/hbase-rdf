@@ -440,64 +440,65 @@ public class HBaseSailConnection extends NotifyingSailConnectionBase {
 			ArrayList<ArrayList<Var>> statements = HBaseQueryVisitor.convertToStatements(arg0, null, null);
 			ArrayList<Var> contexts = HBaseQueryVisitor.getContexts(arg0);
 			
+			System.out.println("LISTING CONTEXTS:");
 			for (Var con : contexts) {
 				System.out.println("CONTEXT: " + con.toString());
 			}
 			
-			Iterator it = statements.iterator();
-			while (it.hasNext()) {
-				ArrayList<Var> sp = (ArrayList<Var>)it.next();
-
-				String[] variables = {"", "", ""};
-				MapBindingSet mapBindingSet  = new MapBindingSet();
-				
-				Resource subj = null;
-				URI pred = null;
-				Value obj = null;
-				Iterator jt = sp.iterator();
-				int index = 0;
-				
-				while (jt.hasNext()) {
-					Var var = (Var)jt.next();
-					
-					if (index == 0) {
-						if (var.hasValue()) {
-				            subj = (Resource)getSubject(var.getValue().stringValue());
-				        } else if (var.isAnonymous()) {
-				        	subj = (Resource)getSubject(var.getName()); 
-				        	
-				        }
-					}
-					else if (index == 1) {
-						if (var.hasValue()) {
-				            pred = (URI)getPredicate(var.getValue().stringValue());
-				        }
-						
-					}
-					else {
-						if (var.hasValue()) {
-				            obj = (Value)getObject(var.getValue().stringValue());
-				        } else if (var.isAnonymous()) {
-				        	obj = (Value)getObject(var.getName());
-				        }
-					}
-					index += 1;
-				}
-				
-				CloseableIteration ci = getStatementsInternal(subj, pred, obj, false, null);
-				
-				while (ci.hasNext()) {
-					Statement statement = (Statement)ci.next();
-					Value[] values = {statement.getSubject(), statement.getPredicate(), statement.getObject()};
-					
-					for (int i = 0; i < 3; i ++) {
-						if (variables[i] != "" && bindingSet.contains(variables[i])) {
-							mapBindingSet.addBinding(variables[i], values[i]);
-						}
-					}
-				}
-				result.add(mapBindingSet);
-			}
+//			Iterator it = statements.iterator();
+//			while (it.hasNext()) {
+//				ArrayList<Var> sp = (ArrayList<Var>)it.next();
+//
+//				String[] variables = {"", "", ""};
+//				MapBindingSet mapBindingSet  = new MapBindingSet();
+//				
+//				Resource subj = null;
+//				URI pred = null;
+//				Value obj = null;
+//				Iterator jt = sp.iterator();
+//				int index = 0;
+//				
+//				while (jt.hasNext()) {
+//					Var var = (Var)jt.next();
+//					
+//					if (index == 0) {
+//						if (var.hasValue()) {
+//				            subj = (Resource)getSubject(var.getValue().stringValue());
+//				        } else if (var.isAnonymous()) {
+//				        	subj = (Resource)getSubject(var.getName()); 
+//				        	
+//				        }
+//					}
+//					else if (index == 1) {
+//						if (var.hasValue()) {
+//				            pred = (URI)getPredicate(var.getValue().stringValue());
+//				        }
+//						
+//					}
+//					else {
+//						if (var.hasValue()) {
+//				            obj = (Value)getObject(var.getValue().stringValue());
+//				        } else if (var.isAnonymous()) {
+//				        	obj = (Value)getObject(var.getName());
+//				        }
+//					}
+//					index += 1;
+//				}
+//				
+//				CloseableIteration ci = getStatementsInternal(subj, pred, obj, false, null);
+//				
+//				while (ci.hasNext()) {
+//					Statement statement = (Statement)ci.next();
+//					Value[] values = {statement.getSubject(), statement.getPredicate(), statement.getObject()};
+//					
+//					for (int i = 0; i < 3; i ++) {
+//						if (variables[i] != "" && bindingSet.contains(variables[i])) {
+//							mapBindingSet.addBinding(variables[i], values[i]);
+//						}
+//					}
+//				}
+//				result.add(mapBindingSet);
+//			}
 		}
 		catch (Exception e) {
 			e.printStackTrace();
