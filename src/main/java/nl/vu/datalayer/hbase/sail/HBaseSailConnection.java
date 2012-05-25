@@ -218,13 +218,17 @@ public class HBaseSailConnection extends NotifyingSailConnectionBase {
 
 					o = getObject(value);
 				} else {
-					c = (Resource)getContext(value);
+					if (value.compareTo("?") == 0) {
+						Statement statement = new StatementImpl(s, p, o);
+						list.add(statement);
+					} else {
+						c = (Resource)getContext(value);
+						Statement statement = new ContextStatementImpl(s, p, o, c);
+						list.add(statement);
+					}
 				}
 				index++;
 			}
-			
-			Statement statement = new ContextStatementImpl(s, p, o, c);
-			list.add(statement);
 		}
 		return list;
 	}
