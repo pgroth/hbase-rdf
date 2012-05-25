@@ -172,6 +172,14 @@ public class HBaseSailConnection extends NotifyingSailConnectionBase {
 			for (String graph : g) {
 				String []triple = {s, p, o, graph};
 				ArrayList<ArrayList<String>> triples = hbase.util.getRow(triple);
+				
+				for (ArrayList<String> tr : triples) {
+					for (String st : tr) {
+						System.out.print(st + " ");
+					}
+					System.out.print("\n");
+				}
+				
 	//			System.out.println("Raw triples: " + triples);
 				
 				myList.addAll(reconstructTriples(triples, triple));
