@@ -35,7 +35,7 @@ public class HBaseSailTest {
 		
 		try {
 			TupleQuery tupleQuery = conn.prepareTupleQuery(QueryLanguage.SPARQL, queryString);
-			System.out.println("TEST TUPLE QUERY: " + tupleQuery.toString());
+			System.out.println("TEST TUPLE QUERY: " + tupleQuery.getDataset().toString());
 		    TupleQueryResult result = tupleQuery.evaluate();
 		    while (result.hasNext()) {
 		    	BindingSet bindingSet = result.next();
