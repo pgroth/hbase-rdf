@@ -575,6 +575,8 @@ public class HBaseSailConnection extends NotifyingSailConnectionBase {
 	 */
 	public TupleQueryResult query(TupleExpr tupleExpr, Dataset dataset, BindingSet bindings, boolean includeInferred) throws SailException {
 //		System.out.println("Evaluating query");
+		System.out.println("EVALUATE:" + tupleExpr.toString());
+		
 		try {
 			ArrayList<Statement> statements = evaluateInternal(tupleExpr);
 //			System.out.println("Statements retrieved: " + statements.size());
