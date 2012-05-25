@@ -391,40 +391,40 @@ public class HBaseSailConnection extends NotifyingSailConnectionBase {
 				
 				int index = 0;
 				
-//				while (jt.hasNext()) {
-//					Var var = (Var)jt.next();
-//					
-//					if (index == 0) {
-//						if (var.hasValue()) {
-//				            subj = (Resource)getSubject(var.getValue().stringValue());
-//				        } else if (var.isAnonymous()) {
-//				        	subj = (Resource)getSubject(var.getName()); 
-//				        	
-//				        }
-//					}
-//					else if (index == 1) {
-//						if (var.hasValue()) {
-//				            pred = (URI)getPredicate(var.getValue().stringValue());
-//				        }
-//						
-//					}
-//					else {
-//						if (var.hasValue()) {
-//				            obj = (Value)getObject(var.getValue().stringValue());
-//				        } else if (var.isAnonymous()) {
-//				        	obj = (Value)getObject(var.getName());
-//				        }
-//					}
-//					index += 1;
-//				}
-//				
+				while (jt.hasNext()) {
+					Var var = (Var)jt.next();
+					
+					if (index == 0) {
+						if (var.hasValue()) {
+				            subj = (Resource)getSubject(var.getValue().stringValue());
+				        } else if (var.isAnonymous()) {
+				        	subj = (Resource)getSubject(var.getName()); 
+				        	
+				        }
+					}
+					else if (index == 1) {
+						if (var.hasValue()) {
+				            pred = (URI)getPredicate(var.getValue().stringValue());
+				        }
+						
+					}
+					else {
+						if (var.hasValue()) {
+				            obj = (Value)getObject(var.getValue().stringValue());
+				        } else if (var.isAnonymous()) {
+				        	obj = (Value)getObject(var.getName());
+				        }
+					}
+					index += 1;
+				}
+				
 //				CloseableIteration ci = getStatementsInternal(subj, pred, obj, false, null);
 //				
 //				while (ci.hasNext()) {
 //					Statement statement = (Statement)ci.next();
 //					result.add(statement);
 //				}
-//			}
+			}
 		}
 		catch (Exception e) {
 			throw new SailException(e);
