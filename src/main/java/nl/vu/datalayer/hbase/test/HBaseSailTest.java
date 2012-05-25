@@ -30,7 +30,7 @@ public class HBaseSailTest {
 		HBaseSailRepository myRepo = new HBaseSailRepository(mySail);
 		HBaseRepositoryConnection conn = myRepo.getConnection();
 		
-		String queryString = "SELECT ?x WHERE { ?s <http://xmlns.com/foaf/0.1/knows> ?x . }";
+		String queryString = "SELECT ?s ?p ?o FROM <http://en.wikipedia.org/wiki/Alabama#absolute-line=33> WHERE { ?s ?p ?o . }";
 		System.out.println(queryString);
 		
 		try {
@@ -38,8 +38,14 @@ public class HBaseSailTest {
 		    TupleQueryResult result = tupleQuery.evaluate();
 		    while (result.hasNext()) {
 		    	BindingSet bindingSet = result.next();
-		    	Value valueOfX = bindingSet.getValue("x");
-		    	System.out.println("?x = " + valueOfX.stringValue());
+		    	Value valueOfS = bindingSet.getValue("s");
+		    	System.out.println("?s = " + valueOfS.stringValue());
+
+		    	Value valueOfP = bindingSet.getValue("p");
+		    	System.out.println("?p = " + valueOfP.stringValue());
+
+		    	Value valueOfO = bindingSet.getValue("o");
+		    	System.out.println("?o = " + valueOfO.stringValue() + "\n");
 		    }
 		    
 		} catch (MalformedQueryException e) {
