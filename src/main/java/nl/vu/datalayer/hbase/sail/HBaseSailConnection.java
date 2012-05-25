@@ -278,6 +278,7 @@ public class HBaseSailConnection extends NotifyingSailConnectionBase {
 						// EOF exception
 					}
 				}
+				System.out.println(literal);
 				
 				// charAt(i) = '"', read next char
 				i++;
@@ -288,6 +289,7 @@ public class HBaseSailConnection extends NotifyingSailConnectionBase {
 					while (i < s.length()) {
 						language += s.charAt(i);
 					}
+					System.out.println(language);
 					return new LiteralImpl(literal, language);
 				}
 				else if (s.charAt(i) == '^') {
@@ -319,6 +321,7 @@ public class HBaseSailConnection extends NotifyingSailConnectionBase {
 							// EOF exception
 						}
 					}
+					System.out.println(datatype);
 					return new LiteralImpl(literal, new URIImpl(datatype));
 				}
 				else {
