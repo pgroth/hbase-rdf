@@ -30,7 +30,7 @@ public class HBaseSailTest {
 		HBaseSailRepository myRepo = new HBaseSailRepository(mySail);
 		HBaseRepositoryConnection conn = myRepo.getConnection();
 		
-		String queryString = "SELECT ?p ?o FROM <http://en.wikipedia.org/wiki/Alabama#absolute-line=33> WHERE { <http://dbpedia.org/resource/Alabama> ?p ?o . }";
+		String queryString = "SELECT ?o FROM <http://en.wikipedia.org/wiki/Alabama#absolute-line=33> WHERE { <http://dbpedia.org/resource/Alabama> <http://dbpedia.org/ontology/abstract> ?o . }";
 		System.out.println(queryString);
 		
 		try {
@@ -39,8 +39,8 @@ public class HBaseSailTest {
 		    while (result.hasNext()) {
 		    	BindingSet bindingSet = result.next();
 
-		    	Value valueOfP = bindingSet.getValue("p");
-		    	System.out.println("?p = " + valueOfP.stringValue());
+//		    	Value valueOfP = bindingSet.getValue("p");
+//		    	System.out.println("?p = " + valueOfP.stringValue());
 
 		    	Value valueOfO = bindingSet.getValue("o");
 		    	System.out.println("?o = " + valueOfO.stringValue() + "\n");
