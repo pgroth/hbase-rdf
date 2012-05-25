@@ -278,20 +278,20 @@ public class HBaseSailConnection extends NotifyingSailConnectionBase {
 						// EOF exception
 					}
 				}
-				System.out.println(literal);
+//				System.out.println(literal);
 				
 				// charAt(i) = '"', read next char
 				i++;
 				
 				if (s.charAt(i) == '@') {
 					// read language
-					System.out.println("reading language");
+//					System.out.println("reading language");
 					i++;
 					while (i < s.length()) {
 						language += s.charAt(i);
 						i++;
 					}
-					System.out.println(language);
+//					System.out.println(language);
 					return new LiteralImpl(literal, language);
 				}
 				else if (s.charAt(i) == '^') {
@@ -323,7 +323,7 @@ public class HBaseSailConnection extends NotifyingSailConnectionBase {
 							// EOF exception
 						}
 					}
-					System.out.println(datatype);
+//					System.out.println(datatype);
 					return new LiteralImpl(literal, new URIImpl(datatype));
 				}
 				else {
@@ -393,11 +393,20 @@ public class HBaseSailConnection extends NotifyingSailConnectionBase {
 			ArrayList<ArrayList<Var>> statements = HBaseQueryVisitor.convertToStatements(arg0, null, null);
 //			System.out.println("StatementPatterns: " + statements.size());
 			
+			ArrayList<Var> contexts = HBaseQueryVisitor.getContexts(arg0);
+			ArrayList<Resource> cons = new ArrayList();
+			Iterator it = contexts.iterator();
+			while (it.hasNext()) {
+				Var context = (Var)it.next();
+				if (context != null) {
+					System.out.println(context.toString());
+				}
+			}
+			
+			
 			Iterator it = statements.iterator();
 			while (it.hasNext()) {
 				ArrayList<Var> sp = (ArrayList<Var>)it.next();
-				ArrayList<Var> contexts = HBaseQueryVisitor.getContexts(arg0);
-				ArrayList<Resource> cons = new ArrayList();
 				
 //				System.out.println("CONTEXTS:");
 //				if (contexts != null) {
