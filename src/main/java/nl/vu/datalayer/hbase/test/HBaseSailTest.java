@@ -29,13 +29,13 @@ public class HBaseSailTest {
 		mySail.initialize();
 		HBaseSailRepository myRepo = new HBaseSailRepository(mySail);
 		HBaseRepositoryConnection conn = myRepo.getConnection();
-		
+//		conn
+	
 		String queryString = "SELECT ?g FROM NAMED <http://en.wikipedia.org/wiki/Alabama#>  WHERE { GRAPH ?g { <http://dbpedia.org/resource/Alabama> <http://dbpedia.org/ontology/abstract> ?o . } }";
 		System.out.println(queryString);
 		
 		try {
 			TupleQuery tupleQuery = conn.prepareTupleQuery(QueryLanguage.SPARQL, queryString);
-			System.out.println("TEST TUPLE QUERY: " + tupleQuery.getDataset().toString());
 		    TupleQueryResult result = tupleQuery.evaluate();
 		    while (result.hasNext()) {
 		    	BindingSet bindingSet = result.next();

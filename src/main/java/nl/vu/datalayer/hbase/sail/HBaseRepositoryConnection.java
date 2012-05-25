@@ -86,6 +86,8 @@ public class HBaseRepositoryConnection extends SailRepositoryConnection {
 	public SailTupleQuery prepareTupleQuery(QueryLanguage lang, String query, String baseURI) 
 			throws MalformedQueryException {
 		ParsedTupleQuery parsedQuery = QueryParserUtil.parseTupleQuery(lang, query, baseURI);
+		
+		System.out.println("TupleExpr Signature: " + parsedQuery.getTupleExpr().getSignature());
 		System.out.println("ParsedTupleQuery: " + parsedQuery.toString());
 		System.out.println("Original query: " + query);
 		return new HBaseSailTupleQuery(query, parsedQuery, this);
