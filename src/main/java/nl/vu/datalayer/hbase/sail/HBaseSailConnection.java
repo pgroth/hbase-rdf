@@ -381,13 +381,13 @@ public class HBaseSailConnection extends NotifyingSailConnectionBase {
 				ArrayList<Var> contexts = HBaseQueryVisitor.getContexts(arg0);
 				ArrayList<Resource> cons = new ArrayList();
 				
-				System.out.println("CONTEXTS:");
-				if (contexts != null) {
-					for (Var con : contexts) {
-						System.out.println("CONTEXT: " + con.toString());
-	//					cons.add((Resource)new URIImpl(con.));
-					}
-				}
+//				System.out.println("CONTEXTS:");
+//				if (contexts != null) {
+//					for (Var con : contexts) {
+//						System.out.println("CONTEXT: " + con.toString());
+//	//					cons.add((Resource)new URIImpl(con.));
+//					}
+//				}
 				
 				Resource subj = null;
 				URI pred = null;
