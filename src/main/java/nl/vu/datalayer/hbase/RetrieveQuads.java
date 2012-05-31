@@ -6,8 +6,13 @@ import java.io.FileInputStream;
 import java.io.InputStreamReader;
 import java.util.ArrayList;
 
-import nl.vu.datalayer.hbase.schema.HBPrefixMatchSchema;
 import nl.vu.datalayer.hbase.connection.HBaseConnection;
+import nl.vu.datalayer.hbase.schema.HBPrefixMatchSchema;
+
+import org.openrdf.model.Value;
+import org.openrdf.model.ValueFactory;
+import org.openrdf.model.impl.ValueFactoryImpl;
+import org.openrdf.rio.ntriples.NTriplesUtil;
 
 public class RetrieveQuads {
 
@@ -41,18 +46,25 @@ public class RetrieveQuads {
 			BufferedReader br = new BufferedReader(new InputStreamReader(in));
 
 			String strLine;
+			ValueFactory valFactory = new ValueFactoryImpl();
 			while ((strLine = br.readLine()) != null) {
 				System.out.println("Query: "+strLine);
 				
 				long start = System.currentTimeMillis();
 				String []quad = parseLine(strLine);
-				ArrayList<ArrayList<String>> result = sol.util.getRow(quad);
-				long end = System.currentTimeMillis();
-				System.out.println(result.size()+" quads retrieved in: "+(end-start)+" ms");
+				Value []valQuad = {null, null, null, null};
+				for (int i = 0; i < valQuad.length; i++) {
+					if (!quad[i].equals("?"))
+						valQuad[i] = NTriplesUtil.parseValue(quad[i], valFactory);
+				}
 				
-				for (ArrayList<String> arrayList : result) {
-					for (String string : arrayList) {
-						System.out.print(string+" ");
+				ArrayList<ArrayList<Value>> results = sol.util.getResults(valQuad);
+				long end = System.currentTimeMillis();
+				System.out.println(results.size()+" quads retrieved in: "+(end-start)+" ms");
+				
+				for (ArrayList<Value> arrayList : results ) {
+					for (Value val : arrayList) {
+						System.out.print(val.toString()+" ");
 					}
 					System.out.println();
 				}

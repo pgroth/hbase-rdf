@@ -21,8 +21,8 @@ public class NTripleParserTest {
 			ValueFactory valFact = new ValueFactoryImpl();
 			//Value object = NTriplesUtil.parseValue("<http://xmlns.com/foaf/0.1/Person>", valFact);
 			//Value object = NTriplesUtil.parseValue("_:genid1", valFact);
-			//Value object = NTriplesUtil.parseValue("\"-24234234234234234234231395\"^^<http://www.w3.org/2001/XMLSchema#negativeInteger>", valFact);
-			Value object = NTriplesUtil.parseValue("\"34556376765767755342343435\"^^<http://www.w3.org/2001/XMLSchema#positiveInteger>", valFact);
+			Value object = NTriplesUtil.parseValue("\"2423\"^^<http://www.w3.org/2001/XMLSchema#integer>", valFact);
+			//Value object = NTriplesUtil.parseValue("\"8082139320607108363\"^^<http://www.w3.org/2001/XMLSchema#positiveInteger>", valFact);
 			//Value object = NTriplesUtil.parseValue("\"-71.091840\"^^<http://www.w3.org/2001/XMLSchema#double>", valFact);
 			//Value object = NTriplesUtil.parseValue("\"1.0\"^^<http://www.w3.org/2001/XMLSchema#double>", valFact);
 			//Value object = NTriplesUtil.parseValue("\"-3591\"^^<http://www.w3.org/2001/XMLSchema#int>", valFact);
@@ -31,8 +31,11 @@ public class NTripleParserTest {
 			//Text t = new Text(objectElem);
 			//Value object = NTriplesUtil.parseValue(t.toString(), valFact);
 			//Value object = NTriplesUtil.parseValue("\"2385646\"^^<http://www.w3.org/2001/XMLSchema#integer>", valFact);
-			//Value object = NTriplesUtil.parseValue("\"-2345676575685675575656385646\"^^<http://www.w3.org/2001/XMLSchema#negativeInteger>", valFact);
+			//Value object = NTriplesUtil.parseValue("\"-8583978581523500142\"^^<http://www.w3.org/2001/XMLSchema#negativeInteger>", valFact);
 			//Value object = NTriplesUtil.parseValue("\"575791.868\"^^<http://www.w3.org/2001/XMLSchema#decimal>", valFact);
+			//Value object = NTriplesUtil.parseValue("\"256\"^^<http://www.w3.org/2001/XMLSchema#unsignedByte>", valFact);
+			//Value object = NTriplesUtil.parseValue("\"18446744073709551615\"^^<http://www.w3.org/2001/XMLSchema#unsignedLong>", valFact);
+			
 
 			if (object instanceof URI) {
 				URI uri = (URI) object;
@@ -46,7 +49,7 @@ public class NTripleParserTest {
 					System.out.println("Not a number");
 				} else {
 					if (id.getType() != TypedId.NUMERICAL) {
-						System.out.println("Naspa type");
+						System.out.println("Wrong type");
 					}
 
 					System.out.println("Number");
@@ -56,9 +59,13 @@ public class NTripleParserTest {
 					System.out.println();
 
 					System.out.println(id);
+					
+					Literal l = id.toLiteral();
+					
+					System.out.println(l);
 				}
 			} else if (object instanceof BNode) {
-				BNode node = (BNode) object;
+				BNode node = (BNode)object;
 				System.out.println("BNodeId: " + node.getID() + "; String value: " + node.stringValue());
 			}
 

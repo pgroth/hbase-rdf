@@ -6,6 +6,7 @@ import java.math.BigInteger;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.openrdf.model.Literal;
 import org.openrdf.model.URI;
+import org.openrdf.model.impl.LiteralImpl;
 import org.openrdf.model.vocabulary.XMLSchema;
 
 /**
@@ -16,6 +17,11 @@ public class TypedId extends BaseId{
 	
 	public static final byte STRING = 0;
 	public static final byte NUMERICAL = 1;	
+	
+	public static final URI []DATATYPES = {XMLSchema.DOUBLE, XMLSchema.DECIMAL, XMLSchema.INTEGER, XMLSchema.BOOLEAN,
+										XMLSchema.NON_POSITIVE_INTEGER, XMLSchema.NEGATIVE_INTEGER, XMLSchema.LONG, XMLSchema.INT,
+										XMLSchema.SHORT, XMLSchema.BYTE, XMLSchema.NON_NEGATIVE_INTEGER, XMLSchema.UNSIGNED_LONG,
+										XMLSchema.UNSIGNED_INT, XMLSchema.UNSIGNED_SHORT, XMLSchema.UNSIGNED_BYTE, XMLSchema.POSITIVE_INTEGER};
 	
 	public static final int XSD_DOUBLE = 0;
 	public static final int XSD_DECIMAL = 1;
@@ -62,12 +68,12 @@ public class TypedId extends BaseId{
 	 * @return
 	 * @throws NumericalRangeException
 	 */
-	public static TypedId createNumerical(Literal l) throws NumericalRangeException{
+	public static TypedId createNumerical(Literal l) throws NumericalRangeException{//TODO
 		URI datatype = l.getDatatype();
 		
 		byte []idSpace = new byte[SIZE];//prepare space also for storing the first byte
 		
-		if (datatype.equals(XMLSchema.DOUBLE)){
+		if (datatype.equals(XMLSchema.DOUBLE) || datatype.equals(XMLSchema.FLOAT)){
 			Bytes.putDouble(idSpace, 1, l.doubleValue());
 			return new TypedId(XSD_DOUBLE, idSpace);
 		}
@@ -79,8 +85,9 @@ public class TypedId extends BaseId{
 			//Java does not have unsigned types
 			//so we neet to use the next larger type - for unsigned int -> long
 			long t = l.longValue();
-			if (t < 0){
-				throw new NumericalRangeException("unsignedInt does not accept negative values");
+			long max = 2L*(long)Integer.MAX_VALUE+1L;
+			if (t < 0 || t>max){
+				throw new NumericalRangeException("unsignedInt accepts values in the range [0, "+max+"]");
 			}
 			Bytes.putLong(idSpace, 1, t);
 			return new TypedId(XSD_UNSIGNED_INT, idSpace);
@@ -92,8 +99,11 @@ public class TypedId extends BaseId{
 		else if(datatype.equals(XMLSchema.UNSIGNED_LONG)){
 			//for unsigned long - we need to use BigInteger
 			BigInteger val = l.integerValue();
-			if (val.signum() == -1){
-				throw new NumericalRangeException("unsignedLong does not accept negative values");
+			
+			BigInteger max = BigInteger.valueOf(Long.MAX_VALUE).multiply(BigInteger.valueOf(2L)).add(BigInteger.ONE);
+			if (val.signum() == -1 ||
+					val.compareTo(max) == 1){
+				throw new NumericalRangeException("unsignedLong accepts values in the range: [0, "+max+"]");
 			}
 			byte []valBytes = val.toByteArray();
 			if (valBytes.length < SIZE-1){
@@ -101,7 +111,6 @@ public class TypedId extends BaseId{
 			}
 			else{
 				Bytes.putBytes(idSpace, 1, valBytes, SIZE-8, 8);
-				idSpace[1] &= 0x7f;//maintain sign
 			}
 			
 			return new TypedId(XSD_UNSIGNED_LONG, idSpace);
@@ -112,12 +121,12 @@ public class TypedId extends BaseId{
 		}
 		else if (datatype.equals(XMLSchema.UNSIGNED_SHORT)){
 			int us = l.intValue();
-			if (us < 0){
+			if (us < 0 || us > 2*Short.MAX_VALUE+1){
 				throw new NumericalRangeException("unsignedShort does not accept negative values");
 			}
 			Bytes.putInt(idSpace, 1, us);
 			
-			return new TypedId(XSD_SHORT, idSpace);
+			return new TypedId(XSD_UNSIGNED_SHORT, idSpace);
 		}
 		else if (datatype.equals(XMLSchema.BYTE)){
 			Bytes.putByte(idSpace, 1, l.byteValue());
@@ -125,44 +134,39 @@ public class TypedId extends BaseId{
 		}
 		else if (datatype.equals(XMLSchema.UNSIGNED_BYTE)){
 			short ub = l.shortValue();
-			if (ub < 0){
-				throw new NumericalRangeException("unsignedByte does not accept negative values");
+			if (ub < 0 || ub > 2*Byte.MAX_VALUE+1){
+				throw new NumericalRangeException("unsignedByte accepts values between 0 and 255");
 			}
 			Bytes.putShort(idSpace, 1, ub);
 			return new TypedId(XSD_UNSIGNED_BYTE, idSpace);
 		}
-		else if (datatype.equals(XMLSchema.FLOAT)){//we are using double instead of float in order
-			double doubleValue = (double)l.floatValue();//to have the same representation
-			Bytes.putDouble(idSpace, 1, doubleValue);
-			return new TypedId(XSD_DOUBLE, idSpace);
-		}
 		else if (datatype.equals(XMLSchema.INTEGER)){
 			BigInteger b = l.integerValue();
-			byte []backingArray = b.toByteArray();
-			int startOffset = backingArray.length-8;
-			if (startOffset < 0){
-				Bytes.putLong(backingArray, 1, b.longValue());
-			}
-			else
-				Bytes.putBytes(idSpace, 1, backingArray, startOffset, SIZE-1);
 			
+			if (b.bitLength() < Long.SIZE*8){
+				Bytes.putLong(idSpace, 1, b.longValue());
+			}
+			else{
+				byte []backingArray = b.toByteArray();
+				int startOffset = backingArray.length-8;
+				Bytes.putBytes(idSpace, 1, backingArray, startOffset, SIZE-1);
+			}
 			return new TypedId(XSD_INTEGER, idSpace);
 		}
 		else if (datatype.equals(XMLSchema.NON_POSITIVE_INTEGER)){
 			BigInteger b = l.integerValue();
 			if (b.signum() == 1){
 				throw new NumericalRangeException("nonPositiveInteger does not accept positive values");
-			}
+			}		
 			
-			byte []backingArray = b.toByteArray();
-			int startOffset = backingArray.length-8;
-			if (startOffset < 0){
+			BigInteger bPos = b.abs();		
+			if (bPos.bitLength() < Long.SIZE*8){
 				Bytes.putLong(idSpace, 1, b.longValue());
 			}
 			else{
+				byte []backingArray = b.toByteArray();
+				int startOffset = backingArray.length-8;
 				Bytes.putBytes(idSpace, 1, backingArray, startOffset, SIZE-1);
-				if (b.signum() == -1)//maintain sign 
-					idSpace[1] |= (byte)0x80;
 			}
 			
 			return new TypedId(XSD_NON_POSITIVE_INTEGER, idSpace);
@@ -173,14 +177,14 @@ public class TypedId extends BaseId{
 				throw new NumericalRangeException("negativeInteger does not accept non-negative values");
 			}
 			
-			byte []backingArray = b.toByteArray();
-			int startOffset = backingArray.length-8;
-			if (startOffset < 0){
-				Bytes.putLong(idSpace, 1, b.longValue());
+			BigInteger bPos = b.abs();
+			if (bPos.bitLength() < Long.SIZE*8){
+				Bytes.putLong(idSpace, 1, bPos.longValue());
 			}
 			else{
+				byte []backingArray = bPos.toByteArray();
+				int startOffset = backingArray.length-8;
 				Bytes.putBytes(idSpace, 1, backingArray, startOffset, SIZE-1);
-				idSpace[1] |= (byte)0x80; //should always be negative so maintain sign bit
 			}
 			
 			return new TypedId(XSD_NEGATIVE_INTEGER, idSpace);
@@ -191,14 +195,13 @@ public class TypedId extends BaseId{
 				throw new NumericalRangeException("nonNegativeInteger does not accept negative values");
 			}
 			
-			byte []backingArray = b.toByteArray();
-			int startOffset = backingArray.length-8;
-			if (startOffset < 0){
+			if (b.bitLength() < Long.SIZE*8){
 				Bytes.putLong(idSpace, 1, b.longValue());
 			}
 			else{
+				byte []backingArray = b.toByteArray();
+				int startOffset = backingArray.length-8;
 				Bytes.putBytes(idSpace, 1, backingArray, startOffset, SIZE-1);
-				idSpace[1] &= (byte)0x7f; //maintain positive
 			}
 			
 			return new TypedId(XSD_NON_NEGATIVE_INTEGER, idSpace);
@@ -207,16 +210,15 @@ public class TypedId extends BaseId{
 			BigInteger b = l.integerValue();
 			if (b.signum() != 1){
 				throw new NumericalRangeException("positiveInteger does not accept non-positive values");
-			}
-			
-			byte []backingArray = b.toByteArray();
-			int startOffset = backingArray.length-8;
-			if (startOffset < 0){
+			}		
+		
+			if (b.bitLength() < Long.SIZE*8){
 				Bytes.putLong(idSpace, 1, b.longValue());
 			}
 			else{
+				byte []backingArray = b.toByteArray();
+				int startOffset = backingArray.length-8;
 				Bytes.putBytes(idSpace, 1, backingArray, startOffset, SIZE-1);
-				idSpace[1] &= (byte)0x7f; //maintain positive
 			}
 			
 			return new TypedId(XSD_POSITIVE_INTEGER, idSpace);
@@ -258,6 +260,16 @@ public class TypedId extends BaseId{
 	public byte []getContent(){
 		return Bytes.tail(id, 8);
 	}
+	
+	public Literal toLiteral(){
+		String s = toString();
+		if (getType() == NUMERICAL){
+			int numericalType = getNumericalType();
+			return new LiteralImpl(s, DATATYPES[numericalType]);
+		}
+		else
+			throw new RuntimeException("Can not convert internal id to literal");
+	}
 
 	@Override
 	public String toString() {
@@ -287,8 +299,12 @@ public class TypedId extends BaseId{
 				boolean b = (id[1] != (byte)0);
 				return Boolean.toString(b);
 			}
-			case XSD_NON_POSITIVE_INTEGER: case XSD_NEGATIVE_INTEGER: case XSD_NON_NEGATIVE_INTEGER: case XSD_UNSIGNED_LONG: case XSD_POSITIVE_INTEGER:{
-				BigInteger b = new BigInteger(getContent());
+			 case XSD_UNSIGNED_LONG: case XSD_NON_NEGATIVE_INTEGER: case XSD_POSITIVE_INTEGER:{
+				 BigInteger b = new BigInteger(1, getContent());
+				 return b.toString();
+			 }
+			case XSD_NON_POSITIVE_INTEGER: case XSD_NEGATIVE_INTEGER: {
+				BigInteger b = new BigInteger(-1, getContent());
 				return b.toString();
 			}
 			case XSD_INT: case XSD_UNSIGNED_SHORT: {

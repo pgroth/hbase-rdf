@@ -15,6 +15,7 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.log4j.Logger;
 import org.openrdf.model.Statement;
+import org.openrdf.model.Value;
 
 
 public class HBHexastoreUtil implements IHBaseUtil {
@@ -274,6 +275,12 @@ public class HBHexastoreUtil implements IHBaseUtil {
 	@Override
 	public ArrayList<ArrayList<String>> getRow(String[] triple)
 			throws IOException {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	@Override
+	public ArrayList<ArrayList<Value>> getResults(Value[] quad) throws IOException {
 		// TODO Auto-generated method stub
 		return null;
 	}

@@ -11,13 +11,13 @@ import nl.vu.datalayer.hbase.schema.IHBaseSchema;
 
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.client.Get;
-import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.HTableInterface;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.openrdf.model.Resource;
 import org.openrdf.model.Statement;
+import org.openrdf.model.Value;
 
 public class HBasePredicateCFUtil implements IHBaseUtil {
 	
@@ -115,6 +115,12 @@ public class HBasePredicateCFUtil implements IHBaseUtil {
 
 	@Override
 	public String getRawCellValue(String s, String p, String o) {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	@Override
+	public ArrayList<ArrayList<Value>> getResults(Value[] quad) throws IOException {
 		// TODO Auto-generated method stub
 		return null;
 	}
