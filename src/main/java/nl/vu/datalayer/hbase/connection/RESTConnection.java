@@ -30,7 +30,7 @@ public class RESTConnection extends HBaseConnection {
 			prop.load(new FileInputStream("config.properties"));
 		}
 		catch (FileNotFoundException e) {
-			System.err.println("[WARN] Config file not found");
+			//continue to use the default properties
 		}
 		String restServer = prop.getProperty(REST_SERVER, DAS4_SERVER);
 		int restPort = Integer.parseInt(prop.getProperty(REST_PORT, DAS4_PORT));		
