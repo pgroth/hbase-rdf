@@ -147,7 +147,7 @@ public class HBPrefixMatchUtil implements IHBaseUtil {
 			Result []id2StringResults = id2StringTable.get(batchGets);
 			id2StringOverhead = System.currentTimeMillis()-start;
 			
-			System.out.println("Search time: "+searchTime+"; Id2StringOverhead: "+id2StringOverhead+"; String2IdOverhead: "+string2IdOverhead);
+			//System.out.println("Search time: "+searchTime+"; Id2StringOverhead: "+id2StringOverhead+"; String2IdOverhead: "+string2IdOverhead);
 			
 			//update the internal mapping between ids and strings
 			for (Result result : id2StringResults) {
