@@ -22,6 +22,7 @@ import org.apache.hadoop.io.SequenceFile.CompressionType;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.mapreduce.Counter;
+import org.apache.hadoop.mapreduce.lib.input.FileSplit;
 import org.openrdf.model.Literal;
 import org.openrdf.model.Statement;
 import org.openrdf.model.ValueFactory;
@@ -61,6 +62,7 @@ public class TripleToResource {
 			
 			partitionId = context.getConfiguration().getInt("mapred.task.partition", 0);
 			System.out.println("Finished configuration "+partitionId);
+			System.out.println( context.getTaskAttemptID() +  " - "+ ((FileSplit)context.getInputSplit()).getPath());
 		}
 		
 		@Override
@@ -123,14 +125,12 @@ public class TripleToResource {
 			private long localRowCount = 0;
 			private static ValueFactory valFact;
 			
-			private static SequenceFile.Writer id2StringWriter;
-			
+			private static SequenceFile.Writer id2StringWriter;	
 			
 			/**
 			 * Counter group with 3 counters: URIs, bNodes and Literals 
 			 */
 			public static final String ELEMENT_TYPE_GROUP = "ElemsGroup";
-			
 			
 			/**
 			 * Counter group that build a byte histogram* of the last characters of input keys
@@ -142,12 +142,15 @@ public class TripleToResource {
 			public static final String HISTOGRAM_GROUP = "HistogramGroup";
 			public static final String NUMERICAL_GROUP = "NumericalGroup";		
 			
+			private String schemaSuffix;
+			
 			@Override
 			protected void setup(Context context) throws IOException, InterruptedException {
 				FileSystem fs;
 				try {
 					Configuration config = context.getConfiguration();
 					partitionId = config.getInt("mapred.task.partition", 0);
+					schemaSuffix = config.get("schemaSuffix");
 					String outputPath = config.get("outputPath");
 					fs = FileSystem.get(config);
 					
@@ -169,7 +172,7 @@ public class TripleToResource {
 				id2StringWriter.close();
 				
 				System.out.println("Closed file writer");
-				HBPrefixMatchSchema.updateCounter(partitionId, localRowCount);
+				HBPrefixMatchSchema.updateCounter(partitionId, localRowCount, schemaSuffix);
 				System.out.println("Counter updated for partition "+partitionId);
 			}
 

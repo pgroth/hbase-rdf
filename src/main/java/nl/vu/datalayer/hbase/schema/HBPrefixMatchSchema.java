@@ -27,6 +27,7 @@ public class HBPrefixMatchSchema implements IHBaseSchema {
 	private HBaseConnection con;	
 	
 	public static final String SCHEMA_NAME = "prefix-match";
+	public static final String SUFFIX_PROPERTY = "suffix_property";
 
 	public static final byte [] COLUMN_FAMILY = "F".getBytes();
 	public static final byte [] COLUMN_NAME = "".getBytes();
@@ -51,11 +52,11 @@ public class HBPrefixMatchSchema implements IHBaseSchema {
 	public static final int CPSO = 4;
 	public static final int OSPC = 5;
 	
-	public static final String STRING2ID = "String2Id";//TODO change back
+	public static final String STRING2ID = "String2Id";
 	public static final String ID2STRING = "Id2String";
 	
 	//information for the table of Counters
-	public static final String COUNTER_TABLE = "CountersLUBM";
+	public static final String COUNTER_TABLE = "Counters";
 	public static final byte []META_COL = "Meta".getBytes();
 	public static final byte [] FIRST_COUNTER_ROWKEY = "FirstCounter".getBytes();
 	public static final byte [] LAST_COUNTER_ROWKEY = "LastCounter".getBytes();
@@ -69,6 +70,8 @@ public class HBPrefixMatchSchema implements IHBaseSchema {
 	
 	private int numInputPartitions;
 	private long startPartition;
+	
+	private boolean onlyTriples = false;
 	
 	/**
 	 * Histogram that stores the frequency of the last byte in each quad element 
@@ -86,9 +89,12 @@ public class HBPrefixMatchSchema implements IHBaseSchema {
 	 */
 	private static long numericalCount = 0;
 	
-	public HBPrefixMatchSchema(HBaseConnection con) {
+	private String schemaSuffix;
+	
+	public HBPrefixMatchSchema(HBaseConnection con, String schemaSuffix) {
 		super();
 		this.con = con;
+		this.schemaSuffix = schemaSuffix;
 	}
 	
 	/**
@@ -101,12 +107,14 @@ public class HBPrefixMatchSchema implements IHBaseSchema {
 	 */
 	public void setTableSplitInfo(long totalNumberOfStrings, long numericalParam,
 									int numPartitions, long startPartitionParam, 
-									SortedMap<Short, Long> prefixCounter){
+									SortedMap<Short, Long> prefixCounter,
+									boolean onlyTriplesParam){
 		startPartition = startPartitionParam;
 		numInputPartitions = numPartitions;
 		totalStringCount = totalNumberOfStrings;
 		prefixCounters = prefixCounter;
 		numericalCount = numericalParam;
+		onlyTriples = onlyTriplesParam; 
 	}
 	
 	/*public static void setId2StringTableSplitInfo(int numPartitions, long startPartitionParam){
@@ -149,37 +157,39 @@ public class HBPrefixMatchSchema implements IHBaseSchema {
 		}
 	}
 	
-	public static void createCounterTable(HBaseAdmin admin) throws IOException{
+	public void createCounterTable(HBaseAdmin admin) throws IOException{
 		
-		if (admin.tableExists(COUNTER_TABLE) == false){
-			HTableDescriptor desc = new HTableDescriptor(COUNTER_TABLE);
+		String fullName = COUNTER_TABLE+schemaSuffix;
+		if (admin.tableExists(fullName) == false){
+			HTableDescriptor desc = new HTableDescriptor(fullName);
 
 			HColumnDescriptor famDesc = new HColumnDescriptor(COLUMN_FAMILY);
 			famDesc.setMaxVersions(1);
 			desc.addFamily(famDesc);
 
-			System.out.println("Creating table: " + COUNTER_TABLE);
+			System.out.println("Creating table: " + fullName);
 			admin.createTable(desc);
 			
 			//initialize the values for the first and last counter names
 			Put p = new Put(FIRST_COUNTER_ROWKEY);
 			p.add(COLUMN_FAMILY, META_COL, Bytes.toBytes(0L));
 			
-			HTable h = new HTable(COUNTER_TABLE);
+			HTable h = new HTable(fullName);
 			h.put(p);
 			
 			p = new Put(LAST_COUNTER_ROWKEY);
 			p.add(COLUMN_FAMILY, META_COL, Bytes.toBytes(-1L));
 			h.put(p);
+			h.close();
 		}
 	}
 	
-	public static void updateCounter(int partitionId, long localRowCount) throws IOException{
+	public static void updateCounter(int partitionId, long localRowCount, String schemaSuffix) throws IOException{
 		Configuration conf = HBaseConfiguration.create();		
-		long lastCounter = getLastCounter(conf);
+		long lastCounter = getLastCounter(conf, schemaSuffix);
 		long newCounterColumn = lastCounter+partitionId+1;
 		
-		HTable h = new HTable(conf, COUNTER_TABLE);
+		HTable h = new HTable(conf, COUNTER_TABLE+schemaSuffix);
 		Put p = new Put(new byte[0]);
 		p.add(COLUMN_FAMILY, Bytes.toBytes(newCounterColumn), Bytes.toBytes(localRowCount));
 		h.put(p);
@@ -192,15 +202,15 @@ public class HBPrefixMatchSchema implements IHBaseSchema {
 	 * @return the last counter column name before adding numCounters
 	 * @throws IOException
 	 */
-	public static Long updateLastCounter(int numCounters, Configuration conf) throws IOException{
-		long val = getLastCounter(conf);
+	public static Long updateLastCounter(int numCounters, Configuration conf, String schemaSuffix) throws IOException{
+		long val = getLastCounter(conf, schemaSuffix);
 		
 		if (COUNTER_LIMIT - val < numCounters){
 			System.err.println(numCounters+" + "+val+" exceeds counter limit:");
 			return null;
 		}
 		
-		HTable h = new HTable(conf, COUNTER_TABLE);
+		HTable h = new HTable(conf, COUNTER_TABLE+schemaSuffix);
 		Put p = new Put(LAST_COUNTER_ROWKEY);
 		p.add(COLUMN_FAMILY, META_COL, Bytes.toBytes(val+numCounters));
 		h.put(p);
@@ -214,8 +224,8 @@ public class HBPrefixMatchSchema implements IHBaseSchema {
 	 * @return
 	 * @throws IOException
 	 */
-	public static Long getLastCounter(Configuration conf) throws IOException{
-		HTable h = new HTable(conf, COUNTER_TABLE);
+	public static Long getLastCounter(Configuration conf, String schemaSuffix) throws IOException{
+		HTable h = new HTable(conf, COUNTER_TABLE+schemaSuffix);
 		
 		Get g = new Get(LAST_COUNTER_ROWKEY);
 		g.addColumn(COLUMN_FAMILY, META_COL);
@@ -453,27 +463,29 @@ public class HBPrefixMatchSchema implements IHBaseSchema {
 		System.out.println(" String2Id splits: ");
 		printSplits(splits);
 		
-		createTable(admin, STRING2ID, splits, false);
+		createTable(admin, STRING2ID+schemaSuffix, splits, false);
 		
 		splits = getNonNumericalSplits(NUM_REGIONS, 0);
 		
 		System.out.println("Id2String splits: ");
 		printSplits(splits);
 		
-		createTable(admin, ID2STRING, splits, true);
+		createTable(admin, ID2STRING+schemaSuffix, splits, true);
 		
-		createTable(admin, TABLE_NAMES[SPOC], splits, false);
+		createTable(admin, TABLE_NAMES[SPOC]+schemaSuffix, splits, false);
 		
-		createTable(admin, TABLE_NAMES[POCS], splits, false);
-		createTable(admin, TABLE_NAMES[CSPO], splits, false);
-		createTable(admin, TABLE_NAMES[CPSO], splits, false);	
+		createTable(admin, TABLE_NAMES[POCS]+schemaSuffix, splits, false);
 		
+		byte [][] objectSplits = getObjectPrefixSplits(NUM_REGIONS);
+		printSplits(objectSplits);
+		createTable(admin, TABLE_NAMES[OSPC]+schemaSuffix, objectSplits, false);
 		
-		splits = getObjectPrefixSplits(NUM_REGIONS);
-		printSplits(splits);
-		
-		createTable(admin, TABLE_NAMES[OCSP], splits, false);
-		createTable(admin, TABLE_NAMES[OSPC], splits, false);
+		if (onlyTriples == false){
+			createTable(admin, TABLE_NAMES[CSPO]+schemaSuffix, splits, false);
+			createTable(admin, TABLE_NAMES[CPSO]+schemaSuffix, splits, false);	
+			
+			createTable(admin, TABLE_NAMES[OCSP]+schemaSuffix, objectSplits, false);
+		}
 	}
 
 }

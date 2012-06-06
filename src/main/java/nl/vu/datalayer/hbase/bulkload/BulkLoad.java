@@ -9,8 +9,6 @@ import java.util.Map;
 import java.util.SortedMap;
 import java.util.TreeMap;
 
-import nl.vu.datalayer.hbase.HBaseClientSolution;
-import nl.vu.datalayer.hbase.HBaseFactory;
 import nl.vu.datalayer.hbase.connection.HBaseConnection;
 import nl.vu.datalayer.hbase.connection.NativeJavaConnection;
 import nl.vu.datalayer.hbase.id.BaseId;
@@ -78,6 +76,8 @@ public class BulkLoad {
 	public static long totalStringCount, numericalCount, literalCount, bNodeCount;
 	public static int tripleToResourceReduceTasks;
 	
+	public static String schemaSuffix = "";
+	
 	public static Job createTripleToResourceJob(Path input, Path output, int inputSizeEstimate) throws IOException{
 		
 		Configuration conf = new Configuration();
@@ -109,7 +109,7 @@ public class BulkLoad {
 		
 		j.setMapOutputKeyClass(Text.class);
 		j.setMapOutputValueClass(DataPair.class);
-		
+
 		j.setInputFormatClass(TextInputFormat.class);
 		j.setOutputFormatClass(SequenceFileOutputFormat.class);
 		TextInputFormat.setInputPaths(j, input);
@@ -157,7 +157,7 @@ public class BulkLoad {
 		conf.setFloat("io.sort.spill.percent", 0.6f);
 		Job j = new Job(conf);
 
-		j.setJobName(HBPrefixMatchSchema.STRING2ID);
+		j.setJobName(HBPrefixMatchSchema.STRING2ID+schemaSuffix);
 		j.setJarByClass(BulkLoad.class);
 		j.setMapperClass(StringIdAssoc.String2IdMapper.class);
 		j.setMapOutputKeyClass(ImmutableBytesWritable.class);
@@ -168,7 +168,7 @@ public class BulkLoad {
 		SequenceFileInputFormat.setInputPaths(j, input);
 		HFileOutputFormat.setOutputPath(j, output);
 
-		string2Id = con.getTable(HBPrefixMatchSchema.STRING2ID);
+		string2Id = con.getTable(HBPrefixMatchSchema.STRING2ID+schemaSuffix);
 
 		HFileOutputFormat.configureIncrementalLoad(j, (HTable)string2Id);
 		return j;
@@ -178,7 +178,7 @@ public class BulkLoad {
 
 		Job j = new Job();
 
-		j.setJobName(HBPrefixMatchSchema.ID2STRING);
+		j.setJobName(HBPrefixMatchSchema.ID2STRING+schemaSuffix);
 		j.setJarByClass(BulkLoad.class);
 		j.setMapperClass(StringIdAssoc.Id2StringMapper.class);
 		j.setMapOutputKeyClass(ImmutableBytesWritable.class);
@@ -189,7 +189,7 @@ public class BulkLoad {
 		SequenceFileInputFormat.setInputPaths(j, input);
 		HFileOutputFormat.setOutputPath(j, output);
 
-		id2String = con.getTable(HBPrefixMatchSchema.ID2STRING);
+		id2String = con.getTable(HBPrefixMatchSchema.ID2STRING+schemaSuffix);
 
 		HFileOutputFormat.configureIncrementalLoad(j, (HTable)id2String);
 
@@ -201,7 +201,7 @@ public class BulkLoad {
 		conf.setFloat("io.sort.record.percent", 0.3f);
 		Job j = new Job(conf);
 
-		j.setJobName(HBPrefixMatchSchema.TABLE_NAMES[tableIndex]);
+		j.setJobName(HBPrefixMatchSchema.TABLE_NAMES[tableIndex]+schemaSuffix);
 		j.setJarByClass(BulkLoad.class);
 		j.setMapperClass(cls);
 		j.setMapOutputKeyClass(ImmutableBytesWritable.class);
@@ -212,7 +212,7 @@ public class BulkLoad {
 		SequenceFileInputFormat.setInputPaths(j, input);
 		HFileOutputFormat.setOutputPath(j, output);
 
-		currentTable = con.getTable(HBPrefixMatchSchema.TABLE_NAMES[tableIndex]);
+		currentTable = con.getTable(HBPrefixMatchSchema.TABLE_NAMES[tableIndex]+schemaSuffix);
 
 		HFileOutputFormat.configureIncrementalLoad(j, (HTable)currentTable);
 
@@ -286,7 +286,7 @@ public class BulkLoad {
 		}
 		catch(java.io.IOException e){
 			System.out.println("Bulk load taking longer than usual: sleeping for 5 minutes before proceeding to the next table..");
-			Thread.sleep(300000);
+			Thread.sleep(600000);
 		}
 	}
 	
@@ -326,13 +326,16 @@ public class BulkLoad {
 	 */
 	public static void main(String[] args) {
 		try {
-			if (args.length != 3){
-				System.out.println("Usage: bulkLoad <inputPath> <inputSizeEstimate in MB> <outputPath>");
+			if (args.length != 5){
+				System.out.println("Usage: bulkLoad <inputPath> <inputSizeEstimate in MB> <outputPath> <schemaSuffix> <onlyTriples(true/false)>");
 				return;
 			}
 			
 			Path input = new Path(args[0]);
 			String outputPath = args[2];
+			schemaSuffix = args[3];
+			boolean onlyTriples = Boolean.parseBoolean(args[4]); 
+			
 			Path resourceIds = new Path(outputPath+TripleToResource.RESOURCE_IDS_DIR);
 			Path convertedTripletsPath = new Path(outputPath+ResourceToTriple.TEMP_TRIPLETS_DIR);
 			
@@ -340,20 +343,22 @@ public class BulkLoad {
 			Path string2IdOutput = new Path(outputPath+StringIdAssoc.STRING2ID_DIR);
 			
 			NativeJavaConnection con = (NativeJavaConnection)HBaseConnection.create(HBaseConnection.NATIVE_JAVA);
-			HBPrefixMatchSchema.createCounterTable(con.getAdmin());
+			HBPrefixMatchSchema prefMatchSchema = new HBPrefixMatchSchema(con, schemaSuffix);
+			prefMatchSchema.createCounterTable(con.getAdmin());
 			
 			long start = System.currentTimeMillis();
 			
-			Job j1 = createTripleToResourceJob(input, resourceIds, Integer.parseInt(args[1]));
+			Job j1 = createTripleToResourceJob(input, resourceIds, Integer.parseInt(args[1]));//TODO
 			j1.getConfiguration().set("outputPath", outputPath);
+			j1.getConfiguration().set("schemaSuffix", schemaSuffix);
 			j1.waitForCompletion(true);
 			
 			long firstJob = System.currentTimeMillis()-start;
 			System.out.println("First pass finished in "+firstJob+" ms");
 			
 			//retrieve counter values and build a SortedMap
-			retrieveCounters(j1);
-			long startPartition = HBPrefixMatchSchema.updateLastCounter(tripleToResourceReduceTasks, con.getConfiguration())+1;
+			retrieveCounters(j1);//TODO
+			long startPartition = HBPrefixMatchSchema.updateLastCounter(tripleToResourceReduceTasks, con.getConfiguration(), schemaSuffix)+1;//TODO
 			//long startPartition = HBPrefixMatchSchema.getLastCounter(con.getConfiguration())+1;
 			
 			
@@ -369,12 +374,11 @@ public class BulkLoad {
 		
 			//create all tables containing PrefixMatch schema ----------------------
 			System.out.println(totalStringCount+" : "+numericalCount);
-			HBaseClientSolution sol = HBaseFactory.getHBaseSolution(HBPrefixMatchSchema.SCHEMA_NAME, con, null);		
-			
-			HBPrefixMatchSchema prefMatchSchema = (HBPrefixMatchSchema)sol.schema;
+					
 			prefMatchSchema.setTableSplitInfo(totalStringCount, numericalCount, 
-					tripleToResourceReduceTasks, startPartition, sufixCounters);
-			sol.schema.create();
+					tripleToResourceReduceTasks, startPartition, sufixCounters, 
+					onlyTriples);
+			prefMatchSchema.create();
 			
 			LoadIncrementalHFiles bulkLoad = new LoadIncrementalHFiles(con.getConfiguration());
 			
@@ -398,9 +402,6 @@ public class BulkLoad {
 			
 			Path spocPath = new Path(outputPath+"/"+HBPrefixMatchSchema.TABLE_NAMES[HBPrefixMatchSchema.SPOC]);
 			Path pocsPath = new Path(outputPath+"/"+HBPrefixMatchSchema.TABLE_NAMES[HBPrefixMatchSchema.POCS]);
-			Path cspoPath = new Path(outputPath+"/"+HBPrefixMatchSchema.TABLE_NAMES[HBPrefixMatchSchema.CSPO]);
-			Path cpsoPath = new Path(outputPath+"/"+HBPrefixMatchSchema.TABLE_NAMES[HBPrefixMatchSchema.CPSO]);
-			Path ocspPath = new Path(outputPath+"/"+HBPrefixMatchSchema.TABLE_NAMES[HBPrefixMatchSchema.OCSP]);
 			Path ospcPath = new Path(outputPath+"/"+HBPrefixMatchSchema.TABLE_NAMES[HBPrefixMatchSchema.OSPC]);
 			
 			//SPOC--------------------
@@ -409,23 +410,29 @@ public class BulkLoad {
 			
 			doBulkLoad(bulkLoad, spocPath, currentTable);
 	
-			//CSPO----------------------
-			Job j7 = createPrefixMatchJob(con, convertedTripletsPath, cspoPath, HBPrefixMatchSchema.CSPO, PrefixMatch.PrefixMatchCSPOMapper.class);
-			j7.waitForCompletion(true);
-			
-			doBulkLoad(bulkLoad, cspoPath, currentTable);
-			
-			//CPSO-------------------------
-			Job j8 = createPrefixMatchJob(con, convertedTripletsPath, cpsoPath, HBPrefixMatchSchema.CPSO, PrefixMatch.PrefixMatchCPSOMapper.class);
-			j8.waitForCompletion(true);
-			
-			doBulkLoad(bulkLoad, cpsoPath, currentTable);
-			
-			//OCSP--------------------------			
-			Job j9 = createPrefixMatchJob(con, convertedTripletsPath, ocspPath, HBPrefixMatchSchema.OCSP, PrefixMatch.PrefixMatchOCSPMapper.class);
-			j9.waitForCompletion(true);
-			
-			doBulkLoad(bulkLoad, ocspPath, currentTable);
+			if (onlyTriples == false){//the table with prefix context
+				Path cspoPath = new Path(outputPath+"/"+HBPrefixMatchSchema.TABLE_NAMES[HBPrefixMatchSchema.CSPO]);
+				Path cpsoPath = new Path(outputPath+"/"+HBPrefixMatchSchema.TABLE_NAMES[HBPrefixMatchSchema.CPSO]);
+				Path ocspPath = new Path(outputPath+"/"+HBPrefixMatchSchema.TABLE_NAMES[HBPrefixMatchSchema.OCSP]);
+				
+				//CSPO----------------------
+				Job j7 = createPrefixMatchJob(con, convertedTripletsPath, cspoPath, HBPrefixMatchSchema.CSPO, PrefixMatch.PrefixMatchCSPOMapper.class);
+				j7.waitForCompletion(true);
+				
+				doBulkLoad(bulkLoad, cspoPath, currentTable);
+				
+				//CPSO-------------------------
+				Job j8 = createPrefixMatchJob(con, convertedTripletsPath, cpsoPath, HBPrefixMatchSchema.CPSO, PrefixMatch.PrefixMatchCPSOMapper.class);
+				j8.waitForCompletion(true);
+				
+				doBulkLoad(bulkLoad, cpsoPath, currentTable);
+				
+				//OCSP--------------------------			
+				Job j9 = createPrefixMatchJob(con, convertedTripletsPath, ocspPath, HBPrefixMatchSchema.OCSP, PrefixMatch.PrefixMatchOCSPMapper.class);
+				j9.waitForCompletion(true);
+				
+				doBulkLoad(bulkLoad, ocspPath, currentTable);
+			}
 			
 			//OSPC---------------------------
 			Job j10 = createPrefixMatchJob(con, convertedTripletsPath, ospcPath, HBPrefixMatchSchema.OSPC, PrefixMatch.PrefixMatchOSPCMapper.class);

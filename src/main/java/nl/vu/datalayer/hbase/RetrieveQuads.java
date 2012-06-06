@@ -39,6 +39,7 @@ public class RetrieveQuads {
 				return;
 			}	
 			
+			//the schemaSuffix is retrieved from config.properties
 			HBaseClientSolution sol = HBaseFactory.getHBaseSolution(HBPrefixMatchSchema.SCHEMA_NAME, con, null);
 			
 			FileInputStream ifstream = new FileInputStream(args[0]);

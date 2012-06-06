@@ -20,6 +20,8 @@ public class HBasePredicateCFSchema implements IHBaseSchema {
 	
 	public static final String TABLE_NAME = "TRIPLETS";
 	
+	public static final String SCHEMA_NAME = "predicate-cf";
+	
 	private NativeJavaConnection con;
 	
 	public HBasePredicateCFSchema(HBaseConnection con, ArrayList<Statement> statements)
