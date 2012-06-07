@@ -87,8 +87,8 @@ public class HBaseRepositoryConnection extends SailRepositoryConnection {
 			throws MalformedQueryException {
 		ParsedTupleQuery parsedQuery = QueryParserUtil.parseTupleQuery(lang, query, baseURI);
 		
-		Dataset dataset = parsedQuery.getDataset();
-		System.out.println("DATASET: " + dataset.toString());
+//		Dataset dataset = parsedQuery.getDataset();
+//		System.out.println("DATASET: " + dataset.toString());
 		
 		return new HBaseSailTupleQuery(query, parsedQuery, this);
 	}
@@ -356,10 +356,12 @@ public class HBaseRepositoryConnection extends SailRepositoryConnection {
 	private static class HBaseSailTupleQuery extends SailTupleQuery {
 		
 		String queryString;
+		Dataset context;
 
 		protected HBaseSailTupleQuery(String qs, final ParsedTupleQuery parsedTupleQuery, final HBaseRepositoryConnection HBaseRepositoryConnection) {
 			super(parsedTupleQuery, HBaseRepositoryConnection);
 			queryString = qs;
+			context = parsedTupleQuery.getDataset();
 		}
 
 		@Override
@@ -382,8 +384,9 @@ public class HBaseRepositoryConnection extends SailRepositoryConnection {
 				Dataset dataset = getDataset();
 				
 				System.out.println("ORIGINAL TUPLE EXPRESSION: " + te.toString());
+				System.out.println("CONTEXT: " + context.toString());
 				
-				TupleQueryResult result = connection.query(te, dataset, getBindings(), getIncludeInferred());
+				TupleQueryResult result = connection.query(te, context, getBindings(), getIncludeInferred());
 				
 //				System.out.println("TupleQueryResult bindings: " + result.getBindingNames().size());
 				

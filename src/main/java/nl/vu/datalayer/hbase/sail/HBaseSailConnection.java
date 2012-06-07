@@ -395,22 +395,24 @@ public class HBaseSailConnection extends NotifyingSailConnectionBase {
 	 * @return
 	 * @throws SailException
 	 */
-	protected ArrayList<Statement> evaluateInternal(TupleExpr arg0) throws SailException {
+	protected ArrayList<Statement> evaluateInternal(TupleExpr arg0, Dataset context) throws SailException {
 		ArrayList<Statement> result = new ArrayList();
 		
 		try {
 			ArrayList<ArrayList<Var>> statements = HBaseQueryVisitor.convertToStatements(arg0, null, null);
 //			System.out.println("StatementPatterns: " + statements.size());
 			
-			ArrayList<Var> contexts = HBaseQueryVisitor.getContexts(arg0);
-			ArrayList<Resource> cons = new ArrayList();
-			Iterator qt = contexts.iterator();
-			while (qt.hasNext()) {
-				Var context = (Var)qt.next();
-				if (context != null) {
-					System.out.println(context.toString());
-				}
-			}
+//			ArrayList<Var> contexts = HBaseQueryVisitor.getContexts(arg0);
+//			ArrayList<Resource> cons = new ArrayList();
+//			Iterator qt = contexts.iterator();
+//			while (qt.hasNext()) {
+//				Var context = (Var)qt.next();
+//				if (context != null) {
+//					System.out.println(context.toString());
+//				}
+//			}
+			
+			Set<URI> contexts = context.getNamedGraphs();
 			
 			
 			Iterator it = statements.iterator();
@@ -460,11 +462,23 @@ public class HBaseSailConnection extends NotifyingSailConnectionBase {
 					index += 1;
 				}
 				
-				CloseableIteration ci = getStatementsInternal(subj, pred, obj, false, null);
-				
-				while (ci.hasNext()) {
-					Statement statement = (Statement)ci.next();
-					result.add(statement);
+				if (contexts.size() == 0) {
+					CloseableIteration ci = getStatementsInternal(subj, pred, obj, false, null);
+					
+					while (ci.hasNext()) {
+						Statement statement = (Statement)ci.next();
+						result.add(statement);
+					}
+				}
+				else {
+					for (URI graph : contexts) {
+						CloseableIteration ci = getStatementsInternal(subj, pred, obj, false, graph);
+						
+						while (ci.hasNext()) {
+							Statement statement = (Statement)ci.next();
+							result.add(statement);
+						}
+					}
 				}
 			}
 		}
@@ -578,7 +592,7 @@ public class HBaseSailConnection extends NotifyingSailConnectionBase {
 		System.out.println("EVALUATE:" + tupleExpr.toString());
 		
 		try {
-			ArrayList<Statement> statements = evaluateInternal(tupleExpr);
+			ArrayList<Statement> statements = evaluateInternal(tupleExpr, dataset);
 //			System.out.println("Statements retrieved: " + statements.size());
 			
 			Iterator it = statements.iterator();
