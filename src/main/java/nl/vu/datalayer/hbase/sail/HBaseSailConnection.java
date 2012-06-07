@@ -130,7 +130,7 @@ public class HBaseSailConnection extends NotifyingSailConnectionBase {
 	
 	
 	protected CloseableIteration<? extends Statement, SailException> getStatementsInternal(
-			Resource arg0, URI arg1, Value arg2, boolean arg3, Set<URI> arg4)
+			Resource arg0, URI arg1, Value arg2, boolean arg3, Set<URI> contexts)
 			throws SailException {
 		try {	
 //			String s = null;
@@ -160,8 +160,8 @@ public class HBaseSailConnection extends NotifyingSailConnectionBase {
 //				o = "?";
 //			}
 //
-			if (arg4 != null && arg4.size() != 0) {
-				for (Resource r : arg4) {
+			if (contexts != null && contexts.size() != 0) {
+				for (Resource r : contexts) {
 					g.add(r);
 				}
 			}
@@ -486,81 +486,7 @@ public class HBaseSailConnection extends NotifyingSailConnectionBase {
 	protected CloseableIteration<? extends BindingSet, QueryEvaluationException> evaluateInternal(
 			TupleExpr arg0, Dataset arg1, BindingSet arg2, boolean arg3)
 			throws SailException {
-		ArrayList<MapBindingSet> result = new ArrayList();
-		Set<String> bindingSet = arg2.getBindingNames();
-		
-		try {
-			ArrayList<ArrayList<Var>> statements = HBaseQueryVisitor.convertToStatements(arg0, null, null);
-			ArrayList<Var> contexts = HBaseQueryVisitor.getContexts(arg0);
-			
-			for (Var con : contexts) {
-				System.out.println("CONTEXT: " + con.toString());
-			}
-			
-			Iterator it = statements.iterator();
-			while (it.hasNext()) {
-				ArrayList<Var> sp = (ArrayList<Var>)it.next();
-
-				String[] variables = {"", "", ""};
-				MapBindingSet mapBindingSet  = new MapBindingSet();
-				
-				Resource subj = null;
-				URI pred = null;
-				Value obj = null;
-				Iterator jt = sp.iterator();
-				int index = 0;
-				
-				while (jt.hasNext()) {
-					Var var = (Var)jt.next();
-					
-					if (index == 0) {
-						if (var.hasValue()) {
-				            subj = (Resource)getSubject(var.getValue().stringValue());
-				        } else if (var.isAnonymous()) {
-				        	subj = (Resource)getSubject(var.getName()); 
-				        	
-				        }
-					}
-					else if (index == 1) {
-						if (var.hasValue()) {
-				            pred = (URI)getPredicate(var.getValue().stringValue());
-				        }
-						
-					}
-					else {
-						if (var.hasValue()) {
-				            obj = (Value)getObject(var.getValue().stringValue());
-				        } else if (var.isAnonymous()) {
-				        	obj = (Value)getObject(var.getName());
-				        }
-					}
-					index += 1;
-				}
-				
-				CloseableIteration ci = getStatementsInternal(subj, pred, obj, false, null);
-				
-				while (ci.hasNext()) {
-					Statement statement = (Statement)ci.next();
-					Value[] values = {statement.getSubject(), statement.getPredicate(), statement.getObject()};
-					
-					for (int i = 0; i < 3; i ++) {
-						if (variables[i] != "" && bindingSet.contains(variables[i])) {
-							mapBindingSet.addBinding(variables[i], values[i]);
-						}
-					}
-				}
-				result.add(mapBindingSet);
-			}
-		}
-		catch (Exception e) {
-			e.printStackTrace();
-			throw new SailException(e);
-		}
-		
-		Iterator it = result.iterator();
-		CloseableIteration<MapBindingSet, QueryEvaluationException> ci = new CloseableIteratorIteration<MapBindingSet, QueryEvaluationException>(it);
-		
-		return ci;
+		return null;
 	}
 	
 	
@@ -634,4 +560,11 @@ public class HBaseSailConnection extends NotifyingSailConnectionBase {
 		}
 	}
 
+	@Override
+	protected CloseableIteration<? extends Statement, SailException> getStatementsInternal(
+			Resource arg0, URI arg1, Value arg2, boolean arg3, Resource... arg4)
+			throws SailException {
+		// TODO Auto-generated method stub
+		return null;
+	}
 }
