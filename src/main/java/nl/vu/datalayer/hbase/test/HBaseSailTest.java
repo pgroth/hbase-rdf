@@ -31,7 +31,7 @@ public class HBaseSailTest {
 		HBaseRepositoryConnection conn = myRepo.getConnection();
 //		conn
 	
-		String queryString = "SELECT ?g FROM NAMED <http://en.wikipedia.org/wiki/Alabama#>  WHERE { GRAPH ?g { <http://dbpedia.org/resource/Alabama> <http://dbpedia.org/ontology/abstract> ?o . } }";
+		String queryString = "SELECT ?p ?o FROM NAMED <http://en.wikipedia.org/wiki/Alabama#absolute-line=33>  WHERE { <http://dbpedia.org/resource/Alabama> ?p ?o }";
 		System.out.println(queryString);
 		
 		try {
@@ -40,11 +40,11 @@ public class HBaseSailTest {
 		    while (result.hasNext()) {
 		    	BindingSet bindingSet = result.next();
 
-//		    	Value valueOfP = bindingSet.getValue("p");
-//		    	System.out.println("?p = " + valueOfP.stringValue());
+		    	Value valueOfP = bindingSet.getValue("p");
+		    	System.out.println("?p = " + valueOfP.stringValue());
 
-		    	Value valueOfO = bindingSet.getValue("g");
-		    	System.out.println("?g = " + valueOfO.stringValue() + "\n");
+		    	Value valueOfO = bindingSet.getValue("o");
+		    	System.out.println("?o = " + valueOfO.stringValue() + "\n");
 		    }
 		    
 		} catch (MalformedQueryException e) {
