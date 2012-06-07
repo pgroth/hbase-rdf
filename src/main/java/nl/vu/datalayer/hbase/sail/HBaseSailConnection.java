@@ -171,6 +171,8 @@ public class HBaseSailConnection extends NotifyingSailConnectionBase {
 			
 			ArrayList<Statement> myList = new ArrayList();
 			for (Value graph : g) {
+				System.out.println("HBase Query: " + arg0 + " - " + arg1 + " - " + arg2 + " - " + graph);
+				
 				Value []query = {arg0, arg1, arg2, graph};
 				ArrayList<ArrayList<Value>> result = hbase.util.getResults(query);
 				
@@ -507,7 +509,7 @@ public class HBaseSailConnection extends NotifyingSailConnectionBase {
 	 */
 	public TupleQueryResult query(TupleExpr tupleExpr, Dataset dataset, BindingSet bindings, boolean includeInferred) throws SailException {
 //		System.out.println("Evaluating query");
-		System.out.println("EVALUATE:" + tupleExpr.toString());
+//		System.out.println("EVALUATE:" + tupleExpr.toString());
 		
 		try {
 			ArrayList<Statement> statements = evaluateInternal(tupleExpr, dataset);
