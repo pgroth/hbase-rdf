@@ -133,45 +133,46 @@ public class HBaseSailConnection extends NotifyingSailConnectionBase {
 			Resource arg0, URI arg1, Value arg2, boolean arg3, Resource... arg4)
 			throws SailException {
 		try {	
-			String s = null;
-			String p = null;
-			String o = null;
-			ArrayList<String> g = new ArrayList();
+//			String s = null;
+//			String p = null;
+//			String o = null;
 			
-			if (arg0 != null) {
-				s = arg0.stringValue();
-			}
-			else {
-				s = "?";
-			}
+			ArrayList<Value> g = new ArrayList();
 			
-			if (arg1 != null) {
-				p = arg1.stringValue();
-			}
-			else {
-				p = "?";
-			}
-			
-			if (arg2 != null) {
-				o = arg2.stringValue();
-			}
-			else {
-				o = "?";
-			}
-
-			if (arg4 != null) {
-				for (Resource r : arg4) {
-					g.add(r.stringValue());
-				}
-			}
-			else {
-				g.add("?");
-			}
+//			if (arg0 != null) {
+//				s = arg0.stringValue();
+//			}
+//			else {
+//				s = "?";
+//			}
+//			
+//			if (arg1 != null) {
+//				p = arg1.stringValue();
+//			}
+//			else {
+//				p = "?";
+//			}
+//			
+//			if (arg2 != null) {
+//				o = arg2.stringValue();
+//			}
+//			else {
+//				o = "?";
+//			}
+//
+//			if (arg4 != null) {
+//				for (Resource r : arg4) {
+//					g.add(r);
+//				}
+//			}
+//			else {
+//				g.add(null);
+//			}
 			
 			ArrayList<Statement> myList = new ArrayList();
-			for (String graph : g) {
-				String []triple = {s, p, o, graph};
-				ArrayList<ArrayList<String>> triples = hbase.util.getRow(triple);
+			for (Value graph : g) {
+				Value []query = {arg0, arg1, arg2, graph};
+				ArrayList<ArrayList<Value>> result = hbase.util.getResults(query);
 				
 //				for (ArrayList<String> tr : triples) {
 //					for (String st : tr) {
@@ -182,7 +183,7 @@ public class HBaseSailConnection extends NotifyingSailConnectionBase {
 				
 	//			System.out.println("Raw triples: " + triples);
 				
-				myList.addAll(reconstructTriples(triples, triple));
+				myList.addAll(reconstructTriples(result, query));
 			}
 				
 //			System.out.println("Triples retrieved:");
@@ -205,10 +206,10 @@ public class HBaseSailConnection extends NotifyingSailConnectionBase {
 		return null;
 	}
 	
-	protected ArrayList<Statement> reconstructTriples(ArrayList<ArrayList<String>> result, String[] triple) throws SailException {
+	protected ArrayList<Statement> reconstructTriples(ArrayList<ArrayList<Value>> result, Value[] triple) throws SailException {
 		ArrayList<Statement> list = new ArrayList();
 		
-		for (ArrayList<String> arrayList : result) {
+		for (ArrayList<Value> arrayList : result) {
 			int index = 0;
 			
 			Resource s = null;
@@ -216,24 +217,23 @@ public class HBaseSailConnection extends NotifyingSailConnectionBase {
 			Value o = null;
 			Resource c = null;
 			
-			for (String value : arrayList) {
+			for (Value value : arrayList) {
 				if (index == 0) {
-					s = (Resource)getSubject(value);
+//					s = (Resource)getSubject(value);
+					s = (Resource)value;
 				}
 				else if (index == 1) {
-					p = (URI) getPredicate(value);
+//					p = (URI) getPredicate(value);
+					p = (URI)value;
 				} else if (index == 2) {
 
-					o = getObject(value);
+//					o = getObject(value);
+					o = value;
 				} else {
-					if (value.compareTo("?") == 0) {
-						Statement statement = new StatementImpl(s, p, o);
-						list.add(statement);
-					} else {
-						c = (Resource)getContext(value);
-						Statement statement = new ContextStatementImpl(s, p, o, c);
-						list.add(statement);
-					}
+//					c = (Resource)getContext(value);
+					c = (Resource)value;
+					Statement statement = new ContextStatementImpl(s, p, o, c);
+					list.add(statement);
 				}
 				index++;
 			}
