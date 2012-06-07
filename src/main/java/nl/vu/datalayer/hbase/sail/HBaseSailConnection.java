@@ -130,7 +130,7 @@ public class HBaseSailConnection extends NotifyingSailConnectionBase {
 	
 	
 	protected CloseableIteration<? extends Statement, SailException> getStatementsInternal(
-			Resource arg0, URI arg1, Value arg2, boolean arg3, Resource... arg4)
+			Resource arg0, URI arg1, Value arg2, boolean arg3, Set<URI> arg4)
 			throws SailException {
 		try {	
 //			String s = null;
@@ -160,14 +160,14 @@ public class HBaseSailConnection extends NotifyingSailConnectionBase {
 //				o = "?";
 //			}
 //
-//			if (arg4 != null) {
-//				for (Resource r : arg4) {
-//					g.add(r);
-//				}
-//			}
-//			else {
-//				g.add(null);
-//			}
+			if (arg4 != null && arg4.size() != 0) {
+				for (Resource r : arg4) {
+					g.add(r);
+				}
+			}
+			else {
+				g.add(null);
+			}
 			
 			ArrayList<Statement> myList = new ArrayList();
 			for (Value graph : g) {
@@ -462,23 +462,11 @@ public class HBaseSailConnection extends NotifyingSailConnectionBase {
 					index += 1;
 				}
 				
-				if (contexts.size() == 0) {
-					CloseableIteration ci = getStatementsInternal(subj, pred, obj, false, null);
+				CloseableIteration ci = getStatementsInternal(subj, pred, obj, false, contexts);
 					
-					while (ci.hasNext()) {
-						Statement statement = (Statement)ci.next();
-						result.add(statement);
-					}
-				}
-				else {
-					for (URI graph : contexts) {
-						CloseableIteration ci = getStatementsInternal(subj, pred, obj, false, graph);
-						
-						while (ci.hasNext()) {
-							Statement statement = (Statement)ci.next();
-							result.add(statement);
-						}
-					}
+				while (ci.hasNext()) {
+					Statement statement = (Statement)ci.next();
+					result.add(statement);
 				}
 			}
 		}
