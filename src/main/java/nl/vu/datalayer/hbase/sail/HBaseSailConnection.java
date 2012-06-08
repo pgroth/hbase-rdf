@@ -537,6 +537,7 @@ public class HBaseSailConnection extends NotifyingSailConnectionBase {
 			catch (Exception e) {	
 			}
 			
+			System.out.println("PARSING RETRIEVED SENTENCES");
 			Iterator it = statements.iterator();
 			while (it.hasNext()) {
 				Statement statement = (Statement)it.next();
