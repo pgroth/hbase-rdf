@@ -479,8 +479,6 @@ public class HBaseSailConnection extends NotifyingSailConnectionBase {
 				
 				CloseableIteration ci = getStatementsInternal(subj, pred, obj, false, contexts);
 				
-				System.out.println("GOT THE STATEMENTS");
-				
 				while (ci.hasNext()) {
 					Statement statement = (Statement)ci.next();
 					result.add(statement);
