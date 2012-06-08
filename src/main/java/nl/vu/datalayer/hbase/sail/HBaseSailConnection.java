@@ -534,24 +534,22 @@ public class HBaseSailConnection extends NotifyingSailConnectionBase {
 					index++;
 				}
 			}
-			catch (Exception e) {	
+			catch (Exception e) {
+				context = new Resource[1];
+				context[0] = new URIImpl("http://hbase.sail.vu.nl");
 			}
 			
 			Iterator it = statements.iterator();
 			while (it.hasNext()) {
 				Statement statement = (Statement)it.next();
 //				Resource[] context = {new URIImpl("http://hbase.sail.vu.nl")};
-				if (statement.getSubject() != null) {
+				if (statement != null) {
 					memStoreCon.addStatement(statement.getSubject(), statement.getPredicate(), statement.getObject(), context);
 				}
 			}
 			
-			System.out.println("ADDED STATEMENTS TO MEMORY STORE");
-			
 			CloseableIteration<? extends BindingSet, QueryEvaluationException> ci = memStoreCon.evaluate(tupleExpr, dataset, bindings, includeInferred);
 			CloseableIteration<? extends BindingSet, QueryEvaluationException> cj = memStoreCon.evaluate(tupleExpr, dataset, bindings, includeInferred);
-			
-			System.out.println("QUERIED MEM STORE");
 			
 			List<String> bindingList = new ArrayList<String>();
 			int index = 0;
@@ -570,7 +568,6 @@ public class HBaseSailConnection extends NotifyingSailConnectionBase {
 				}
 			}
 			
-			System.out.println("PARSED ANSWER");
 //			System.out.println("Results retrieved from memory store: " + index);
 //			System.out.println("Bindings retrieved from memory store: " + bindingList.size());
 			
@@ -584,8 +581,6 @@ public class HBaseSailConnection extends NotifyingSailConnectionBase {
 //				ressize += 1;
 //			}
 //			System.out.println("TupleQueryResult size: " + ressize);
-			
-			System.out.println("THE END");
 			
 			return result;
 			
