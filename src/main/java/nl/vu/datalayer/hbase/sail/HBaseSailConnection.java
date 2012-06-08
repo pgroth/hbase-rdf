@@ -522,14 +522,28 @@ public class HBaseSailConnection extends NotifyingSailConnectionBase {
 		
 		try {
 			ArrayList<Statement> statements = evaluateInternal(tupleExpr, dataset);
-			System.out.println("POST EVAL STATEMENTS");
 //			System.out.println("Statements retrieved: " + statements.size());
+			
+			Resource[] context = null;
+			try {
+				Set<URI> contexts = dataset.getNamedGraphs();
+				context = new Resource[contexts.size()];
+				int index = 0;
+				for (URI cont : contexts) {
+					context[index] = cont;
+					index++;
+				}
+			}
+			catch (Exception e) {	
+			}
 			
 			Iterator it = statements.iterator();
 			while (it.hasNext()) {
 				Statement statement = (Statement)it.next();
-				Resource[] context = {new URIImpl("http://hbase.sail.vu.nl")};
-				memStoreCon.addStatement(statement.getSubject(), statement.getPredicate(), statement.getObject(), context);
+//				Resource[] context = {new URIImpl("http://hbase.sail.vu.nl")};
+				if (statement.getSubject() != null) {
+					memStoreCon.addStatement(statement.getSubject(), statement.getPredicate(), statement.getObject(), context);
+				}
 			}
 			
 			CloseableIteration<? extends BindingSet, QueryEvaluationException> ci = memStoreCon.evaluate(tupleExpr, dataset, bindings, includeInferred);
