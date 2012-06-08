@@ -522,6 +522,7 @@ public class HBaseSailConnection extends NotifyingSailConnectionBase {
 		
 		try {
 			ArrayList<Statement> statements = evaluateInternal(tupleExpr, dataset);
+			System.out.println("POST EVAL STATEMENTS");
 //			System.out.println("Statements retrieved: " + statements.size());
 			
 			Iterator it = statements.iterator();
