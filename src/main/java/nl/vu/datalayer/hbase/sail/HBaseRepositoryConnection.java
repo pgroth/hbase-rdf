@@ -397,12 +397,15 @@ public class HBaseRepositoryConnection extends SailRepositoryConnection {
 //						((HBaseRepositoryConnection)this.getConnection()).getHBaseSailConnection().evaluateInternal(getParsedQuery().getTupleExpr(), getDataset(), getBindings(), getIncludeInferred()));
 
 				int ressize = 0;
-				handler.startQueryResult(result.getBindingNames());
-				while (result.hasNext()) {
-					BindingSet binding = result.next();
-//					System.out.println("x = " + binding.getValue("x").stringValue());
-					handler.handleSolution(binding);
-					ressize += 1;
+				
+				if (result != null) {
+					handler.startQueryResult(result.getBindingNames());
+					while (result.hasNext()) {
+						BindingSet binding = result.next();
+	//					System.out.println("x = " + binding.getValue("x").stringValue());
+						handler.handleSolution(binding);
+						ressize += 1;
+					}
 				}
 				
 				handler.endQueryResult();

@@ -423,15 +423,11 @@ public class HBaseSailConnection extends NotifyingSailConnectionBase {
 				contexts = new HashSet();
 			}
 			
-			System.out.println("GOT THE CONTEXTS");
-			
 			if (contexts != null && contexts.size() != 0) {
 				for (URI gr : contexts) {
 					System.out.println("CONTEXT FOUND: " + gr.stringValue());
 				}
 			}
-			
-			System.out.println("GOT THE CONTEXTS (II)");
 			
 			
 			Iterator it = statements.iterator();
@@ -481,8 +477,6 @@ public class HBaseSailConnection extends NotifyingSailConnectionBase {
 					index += 1;
 				}
 				
-				System.out.println("QUERY IS PARSED");
-				
 				CloseableIteration ci = getStatementsInternal(subj, pred, obj, false, contexts);
 				
 				System.out.println("GOT THE STATEMENTS");
@@ -491,8 +485,6 @@ public class HBaseSailConnection extends NotifyingSailConnectionBase {
 					Statement statement = (Statement)ci.next();
 					result.add(statement);
 				}
-				
-				System.out.println("ADDED THE STATEMENTS");
 			}
 		}
 		catch (Exception e) {
