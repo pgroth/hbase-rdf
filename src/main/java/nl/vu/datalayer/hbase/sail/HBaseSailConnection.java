@@ -470,12 +470,18 @@ public class HBaseSailConnection extends NotifyingSailConnectionBase {
 					index += 1;
 				}
 				
+				System.out.println("QUERY IS PARSED");
+				
 				CloseableIteration ci = getStatementsInternal(subj, pred, obj, false, contexts);
-					
+				
+				System.out.println("GOT THE STATEMENTS");
+				
 				while (ci.hasNext()) {
 					Statement statement = (Statement)ci.next();
 					result.add(statement);
 				}
+				
+				System.out.println("ADDED THE STATEMENTS");
 			}
 		}
 		catch (Exception e) {
