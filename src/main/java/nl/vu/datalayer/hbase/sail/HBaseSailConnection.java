@@ -543,9 +543,12 @@ public class HBaseSailConnection extends NotifyingSailConnectionBase {
 			while (it.hasNext()) {
 				Statement statement = (Statement)it.next();
 //				Resource[] context = {new URIImpl("http://hbase.sail.vu.nl")};
-				System.out.println(statement.getSubject().stringValue());
-				if (statement != null) {
+//				System.out.println(statement.getSubject().stringValue());
+				try {
 					memStoreCon.addStatement(statement.getSubject(), statement.getPredicate(), statement.getObject(), context);
+				}
+				catch (Exception e) {
+					System.out.println("THE FOLLOWING STATEMENT COULD NOT BE ADDED TO THE MEMORY STORE: " + statement.toString());
 				}
 			}
 			
