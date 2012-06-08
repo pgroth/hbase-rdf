@@ -416,11 +416,15 @@ public class HBaseSailConnection extends NotifyingSailConnectionBase {
 			
 			Set<URI> contexts = context.getNamedGraphs();
 			
+			System.out.println("GOT THE CONTEXTS");
+			
 			if (contexts != null && contexts.size() != 0) {
 				for (URI gr : contexts) {
 					System.out.println("CONTEXT FOUND: " + gr.stringValue());
 				}
 			}
+			
+			System.out.println("GOT THE CONTEXTS (II)");
 			
 			
 			Iterator it = statements.iterator();
