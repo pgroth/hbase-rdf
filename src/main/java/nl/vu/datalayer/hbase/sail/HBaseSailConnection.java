@@ -543,7 +543,7 @@ public class HBaseSailConnection extends NotifyingSailConnectionBase {
 			while (it.hasNext()) {
 				Statement statement = (Statement)it.next();
 //				Resource[] context = {new URIImpl("http://hbase.sail.vu.nl")};
-				System.out.println(statement.toString());
+				System.out.println(statement.getSubject().stringValue());
 				if (statement != null) {
 					memStoreCon.addStatement(statement.getSubject(), statement.getPredicate(), statement.getObject(), context);
 				}
