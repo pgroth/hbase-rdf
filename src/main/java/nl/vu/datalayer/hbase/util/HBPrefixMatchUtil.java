@@ -154,10 +154,12 @@ public class HBPrefixMatchUtil implements IHBaseUtil {
 				parseKey(r.getRow(), startKey.length, sizeOfInterest, batchGets);
 			}
 			results.close();
+			table.close();
 			long searchTime = System.currentTimeMillis() - startSearch;
 
 			long start = System.currentTimeMillis();
 			Result []id2StringResults = id2StringTable.get(batchGets);
+			id2StringTable.close();
 			id2StringOverhead = System.currentTimeMillis()-start;
 			
 			//System.out.println("Search time: "+searchTime+"; Id2StringOverhead: "+id2StringOverhead+"; String2IdOverhead: "+string2IdOverhead);
@@ -377,8 +379,7 @@ public class HBPrefixMatchUtil implements IHBaseUtil {
 			string2IdOverhead += System.currentTimeMillis()-start;
 			
 			if (value == null){
-				byte []rowKey = result.getRow();
-				System.err.println("Quad element could not be found "+(rowKey == null ? null : hexaString(rowKey)));
+				System.err.println("Quad element could not be found: "+new String(get.getRow())+"\n"+hexaString(get.getRow()));
 				return null;
 			}
 			
@@ -390,6 +391,7 @@ public class HBPrefixMatchUtil implements IHBaseUtil {
 			else
 				Bytes.putBytes(key, offset, value, 0, value.length);
 		}	
+		table.close();
 		if (numerical != null){
 			Bytes.putBytes(key, HBPrefixMatchSchema.OFFSETS[tableIndex][2], numerical, 0, numerical.length);
 		}
