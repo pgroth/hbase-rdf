@@ -18,8 +18,9 @@ public interface IHBaseUtil {
 	/**
 	 * Solves a simple query in which un-bound variable are expected to be null
 	 * 
-	 * @param quad
-	 * @return
+	 * @param quad - array of Value objects with null elements in un-bound positions
+	 * @return list of results
+	 * 			null - in case of errors
 	 * @throws IOException
 	 */
 	public ArrayList<ArrayList<Value>> getResults(Value []quad) throws IOException;

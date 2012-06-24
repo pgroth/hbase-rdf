@@ -33,7 +33,6 @@ public class HBPrefixMatchSchema implements IHBaseSchema {
 	public static final byte [] COLUMN_NAME = "".getBytes();
 	
 	public static final String []TABLE_NAMES = {"SPOC", "POCS", "OCSP", "CSPO", "CPSO", "OSPC"};
-	//public static final String []TABLE_NAMES = {"SPOCLUBM", "POCSLUBM", "OCSPLUBM", "CSPOLUBM", "CPSOLUBM", "OSPCLUBM"};
 	
 	//3 BaseIds + 1 TypedId (in the Object position of each table)
 	public static final int KEY_LENGTH = 33;
@@ -77,7 +76,7 @@ public class HBPrefixMatchSchema implements IHBaseSchema {
 	 * Histogram that stores the frequency of the last byte in each quad element 
 	 * used for proper splits for the table String2Id
 	 */
-	private SortedMap<Short, Long> prefixCounters = null;
+	//private SortedMap<Short, Long> prefixCounters = null;
 	
 	/**
 	 * Number of non-numerical elements: includes URIs, bNodes and non-numerical Literals
@@ -107,12 +106,11 @@ public class HBPrefixMatchSchema implements IHBaseSchema {
 	 */
 	public void setTableSplitInfo(long totalNumberOfStrings, long numericalParam,
 									int numPartitions, long startPartitionParam, 
-									SortedMap<Short, Long> prefixCounter,
 									boolean onlyTriplesParam){
 		startPartition = startPartitionParam;
 		numInputPartitions = numPartitions;
 		totalStringCount = totalNumberOfStrings;
-		prefixCounters = prefixCounter;
+		//prefixCounters = prefixCounter;
 		numericalCount = numericalParam;
 		onlyTriples = onlyTriplesParam; 
 	}
@@ -131,31 +129,6 @@ public class HBPrefixMatchSchema implements IHBaseSchema {
 		numericalCount = numericalParam;
 		totalStringCount = totalNumberOfString;
 	}*/
-	
-	/**
-	 * Creates an HBase table with specified splits and optional compression for the values in the table
-	 * 
-	 * @param admin
-	 * @param tableName
-	 * @param splits
-	 * @param enableCompression
-	 * @throws IOException
-	 */
-	public static void createTable(HBaseAdmin admin, String tableName, byte [][]splits, boolean enableCompression) throws IOException{
-		if (admin.tableExists(tableName) == false){
-			HTableDescriptor desc = new HTableDescriptor(tableName);
-
-			HColumnDescriptor famDesc = new HColumnDescriptor(COLUMN_FAMILY);
-			famDesc.setBloomFilterType(StoreFile.BloomType.ROW);
-			famDesc.setMaxVersions(1);
-			if (enableCompression)//by default it is disabled
-				famDesc.setCompactionCompressionType(Algorithm.LZO);
-			desc.addFamily(famDesc);
-
-			System.out.println("Creating table: " + tableName);
-			admin.createTable(desc, splits);
-		}
-	}
 	
 	public void createCounterTable(HBaseAdmin admin) throws IOException{
 		
@@ -247,7 +220,68 @@ public class HBPrefixMatchSchema implements IHBaseSchema {
 		return lastCounter;
 	}
 	
+	@Override
+	public void create() throws Exception {
+		HBaseAdmin admin = ((NativeJavaConnection)con).getAdmin();
+	
+		//distribute the regions over the entire ID space for String2ID
+		byte[][] splits = getString2IdSplits();
+		
+		createTable(admin, STRING2ID+schemaSuffix, splits, false);
+		
+		splits = getNonNumericalSplits(NUM_REGIONS, 0);
+		
+		System.out.println("Id2String splits: ");
+		printSplits(splits);
+		
+		createTable(admin, ID2STRING+schemaSuffix, splits, true);
+		
+		createTable(admin, TABLE_NAMES[SPOC]+schemaSuffix, splits, false);
+		
+		createTable(admin, TABLE_NAMES[POCS]+schemaSuffix, splits, false);
+		
+		byte [][] objectSplits = getObjectPrefixSplits(NUM_REGIONS);
+		printSplits(objectSplits);
+		createTable(admin, TABLE_NAMES[OSPC]+schemaSuffix, objectSplits, false);
+		
+		if (onlyTriples == false){
+			createTable(admin, TABLE_NAMES[CSPO]+schemaSuffix, splits, false);
+			createTable(admin, TABLE_NAMES[CPSO]+schemaSuffix, splits, false);	
+			
+			createTable(admin, TABLE_NAMES[OCSP]+schemaSuffix, objectSplits, false);
+		}
+	}
+	
 	/**
+	 * Creates an HBase table with specified splits and optional compression for the values in the table
+	 * 
+	 * @param admin
+	 * @param tableName
+	 * @param splits
+	 * @param enableCompression
+	 * @throws IOException
+	 */
+	public static void createTable(HBaseAdmin admin, String tableName, byte [][]splits, boolean enableCompression) throws IOException{
+		if (admin.tableExists(tableName) == false){
+			HTableDescriptor desc = new HTableDescriptor(tableName);
+			HColumnDescriptor famDesc = new HColumnDescriptor(COLUMN_FAMILY);
+			
+			famDesc.setBloomFilterType(StoreFile.BloomType.ROW);
+			famDesc.setMaxVersions(1);
+			if (enableCompression)//by default it is disabled
+				famDesc.setCompactionCompressionType(Algorithm.LZO);
+			desc.addFamily(famDesc);
+			desc.setMaxFileSize(10*1024*1024*1024);//set maximum StoreFile size to a high value-10GB
+												//so that the splits are not triggered automatically by HBase
+
+			System.out.println("Creating table: " + tableName);
+			admin.createTable(desc, splits);
+		}
+	}
+	
+	/**
+	 * Divide the space between startKey and endKey into an equal amount of regions
+	 * 
 	 * @param startKey
 	 * @param endKey
 	 * @param numRegions
@@ -276,19 +310,103 @@ public class HBPrefixMatchSchema implements IHBaseSchema {
 		return splits;
 	}
 	
+	
+	/**
+	 * Splits the space between startPartition and lastPartition into equal parts
+	 * 
+	 * @param numRegions
+	 * @param startOffset - 0 or 1
+	 * @return
+	 */
+	final public byte [][]getNonNumericalSplits(int numRegions, int startOffset){
+		byte []startKey = new byte[KEY_LENGTH];
+		byte []endKey = new byte[KEY_LENGTH];
+		Arrays.fill(endKey, startOffset+Long.SIZE/8, KEY_LENGTH, (byte)0xff);
+		
+		long startKeyPrefix = startPartition << 24;
+		Bytes.putLong(startKey, startOffset, startKeyPrefix);
+		long endKeyPrefix = ((startPartition+numInputPartitions-1) << 24) | 0xffffffL;;
+		Bytes.putLong(endKey, startOffset, endKeyPrefix);
+		
+		System.out.println("Start: "+String.format("%x", startKeyPrefix)+"; End: "+String.format("%x", endKeyPrefix));
+		
+		return getSplits(startKey, endKey, numRegions);
+	}
+	
+	/**
+	 * Splits the space between 0x80 and 0xff in equal parts
+	 * 
+	 * @param numRegions
+	 * @return
+	 */
+	final public byte [][]getNumericalSplits(int numRegions){
+		byte []startKey = new byte[KEY_LENGTH];
+		startKey[0] = (byte)0x80;		
+		byte []endKey = new byte[KEY_LENGTH];
+		Arrays.fill(endKey, (byte)0xff);
+		
+		return getSplits(startKey, endKey, numRegions);
+	}
+	
+	/**
+	 * @param numRegions
+	 * @return
+	 */
+	final private byte [][]getObjectPrefixSplits(int numRegions){
+		int numericalRegions = (int)Math.round((double)numRegions*((double)numericalCount/(double)(totalStringCount+numericalCount)));
+		
+		byte [][]nonNumSplits = getNonNumericalSplits(numRegions-numericalRegions, 1);
+		byte [][]numSplits = getNumericalSplits(numericalRegions);
+		
+		byte [][]splits = new byte[numRegions-1][];
+		for (int i = 0; i < nonNumSplits.length; i++) {
+			splits[i] = nonNumSplits[i];
+		}
+		
+		if (nonNumSplits.length < numRegions-1){
+			splits[nonNumSplits.length] = new byte[KEY_LENGTH];
+			splits[nonNumSplits.length][0] = (byte)0x80;//place the key between the numerical and non-numerical splits
+			for (int i = 0; i < numSplits.length; i++) {
+				splits[i+nonNumSplits.length+1] = numSplits[i];
+			}
+		}
+		return splits;
+	}
+	
+	final private void printSplits(byte [][]splits){
+		System.out.println("Number of splits: "+splits.length);
+		for (int i = 0; i < splits.length; i++) {
+			for (int j = 0; j < splits[i].length; j++) {
+				System.out.print(String.format("%02x ", splits[i][j]));
+			}
+			System.out.println();
+		}
+	}
+
+	final private byte[][] getString2IdSplits() {
+		byte []startKey = new byte[KEY_LENGTH];
+		byte []endKey = new byte[KEY_LENGTH];
+		Arrays.fill(endKey, 0, KEY_LENGTH, (byte)0xff);
+		byte [][]splits = getSplits(startKey, endKey, NUM_REGIONS);
+		System.out.println(" String2Id splits: ");
+		printSplits(splits);
+		return splits;
+	}
+
+	
 	/**
 	 * 
 	 * @param start
 	 * @param end
 	 * @param portion
 	 */
-	public static BigInteger getAddress(BigInteger range, BigInteger startAddress, long chunkCount, long totalCount ){
+	/*public static BigInteger getAddress(BigInteger range, BigInteger startAddress, long chunkCount, long totalCount ){
 		BigInteger chunkSize = range.multiply(BigInteger.valueOf(chunkCount)).divide(BigInteger.valueOf(totalCount));
 		
 		return startAddress.add(chunkSize);
 	}
 	
-	public static byte [] convertBigIntegerToAddress(BigInteger address, int length){
+	/*public static byte [] convertBigIntegerToAddress(BigInteger address, int length){
 		byte []ret = address.toByteArray();
 		int offset = ret.length-length;
 		
@@ -300,7 +418,7 @@ public class HBPrefixMatchSchema implements IHBaseSchema {
 		}
 		else
 			return ret;
-	}
+	}*/
 	
 	
 	/**
@@ -309,7 +427,7 @@ public class HBPrefixMatchSchema implements IHBaseSchema {
 	 * @param numRegions
 	 * @return
 	 */
-	public byte [][] getString2IdSplits(int numRegions){
+	/*public byte [][] getString2IdSplits(int numRegions){
 		
 		//divide all elements to the desired number of regions, so that a proper load balance is maintained
 		if (totalStringCount < numRegions){
@@ -382,110 +500,6 @@ public class HBPrefixMatchSchema implements IHBaseSchema {
 			ret = byteSplits;
 		
 		return ret;
-	}
+	}*/
 	
-	/**
-	 * Splits the space between 0x80 and 0xff in equal parts
-	 * 
-	 * @param numRegions
-	 * @param startOffset - 0 or 1
-	 * @return
-	 */
-	public byte [][]getNonNumericalSplits(int numRegions, int startOffset){
-		byte []startKey = new byte[KEY_LENGTH];
-		byte []endKey = new byte[KEY_LENGTH];
-		Arrays.fill(endKey, startOffset+Long.SIZE/8, KEY_LENGTH, (byte)0xff);
-		
-		long startKeyPrefix = startPartition << 24;
-		Bytes.putLong(startKey, startOffset, startKeyPrefix);
-		long endKeyPrefix = ((startPartition+numInputPartitions-1) << 24) | 0xffffffL;;
-		Bytes.putLong(endKey, startOffset, endKeyPrefix);
-		
-		System.out.println("Start: "+String.format("%x", startKeyPrefix)+"; End: "+String.format("%x", endKeyPrefix));
-		
-		return getSplits(startKey, endKey, numRegions);
-	}
-	
-	/**
-	 * @param numRegions
-	 * @return
-	 */
-	public byte [][]getNumericalSplits(int numRegions){
-		byte []startKey = new byte[KEY_LENGTH];
-		startKey[0] = (byte)0x80;		
-		byte []endKey = new byte[KEY_LENGTH];
-		Arrays.fill(endKey, (byte)0xff);
-		
-		return getSplits(startKey, endKey, numRegions);
-	}
-	
-	/**
-	 * @param numRegions
-	 * @return
-	 */
-	public byte [][]getObjectPrefixSplits(int numRegions){
-		int numericalRegions = (int)Math.round((double)numRegions*((double)numericalCount/(double)(totalStringCount+numericalCount)));
-		
-		byte [][]nonNumSplits = getNonNumericalSplits(numRegions-numericalRegions, 1);
-		byte [][]numSplits = getNumericalSplits(numericalRegions);
-		
-		byte [][]splits = new byte[numRegions-1][];
-		for (int i = 0; i < nonNumSplits.length; i++) {
-			splits[i] = nonNumSplits[i];
-		}
-		
-		if (nonNumSplits.length < numRegions-1){
-			splits[nonNumSplits.length] = new byte[KEY_LENGTH];
-			splits[nonNumSplits.length][0] = (byte)0x80;
-			for (int i = 0; i < numSplits.length; i++) {
-				splits[i+nonNumSplits.length+1] = numSplits[i];
-			}
-		}
-		return splits;
-	}
-	
-	private void printSplits(byte [][]splits){
-		System.out.println("Number of splits: "+splits.length);
-		for (int i = 0; i < splits.length; i++) {
-			for (int j = 0; j < splits[i].length; j++) {
-				System.out.print(String.format("%02x ", splits[i][j]));
-			}
-			System.out.println();
-		}
-	}
-
-	@Override
-	public void create() throws Exception {
-		HBaseAdmin admin = ((NativeJavaConnection)con).getAdmin();
-	
-		//distribute the regions over the entire ID space for String2ID
-		byte [][]splits = getString2IdSplits(NUM_REGIONS);
-		System.out.println(" String2Id splits: ");
-		printSplits(splits);
-		
-		createTable(admin, STRING2ID+schemaSuffix, splits, false);
-		
-		splits = getNonNumericalSplits(NUM_REGIONS, 0);
-		
-		System.out.println("Id2String splits: ");
-		printSplits(splits);
-		
-		createTable(admin, ID2STRING+schemaSuffix, splits, true);
-		
-		createTable(admin, TABLE_NAMES[SPOC]+schemaSuffix, splits, false);
-		
-		createTable(admin, TABLE_NAMES[POCS]+schemaSuffix, splits, false);
-		
-		byte [][] objectSplits = getObjectPrefixSplits(NUM_REGIONS);
-		printSplits(objectSplits);
-		createTable(admin, TABLE_NAMES[OSPC]+schemaSuffix, objectSplits, false);
-		
-		if (onlyTriples == false){
-			createTable(admin, TABLE_NAMES[CSPO]+schemaSuffix, splits, false);
-			createTable(admin, TABLE_NAMES[CPSO]+schemaSuffix, splits, false);	
-			
-			createTable(admin, TABLE_NAMES[OCSP]+schemaSuffix, objectSplits, false);
-		}
-	}
-
 }

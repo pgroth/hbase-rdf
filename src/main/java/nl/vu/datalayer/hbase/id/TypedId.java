@@ -3,6 +3,8 @@ package nl.vu.datalayer.hbase.id;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 
+import nl.vu.datalayer.hbase.exceptions.NumericalRangeException;
+
 import org.apache.hadoop.hbase.util.Bytes;
 import org.openrdf.model.Literal;
 import org.openrdf.model.URI;
