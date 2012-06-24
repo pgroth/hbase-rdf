@@ -24,7 +24,7 @@ public class TripleToResourceLocal extends Configured implements Tool {
 		j1.set("outputPath", "./");
 		RunningJob runningJ1 = JobClient.runJob(j1);
 		*/
-		BulkLoad.retrieveCounters(j1);
+		BulkLoad.retrieveTripleToResourceCounters(j1);
 		
 		Path convertedTripletsPath = new Path("./"+ResourceToTriple.TEMP_TRIPLETS_DIR);
 		Job j2 = BulkLoad.createResourceToTripleJob(resourceIds, convertedTripletsPath);	

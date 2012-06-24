@@ -3,6 +3,8 @@ package nl.vu.datalayer.hbase.id;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
+import nl.vu.datalayer.hbase.exceptions.NumericalRangeException;
+
 import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Test;
