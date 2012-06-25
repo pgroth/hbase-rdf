@@ -268,11 +268,13 @@ public class HBPrefixMatchSchema implements IHBaseSchema {
 			
 			famDesc.setBloomFilterType(StoreFile.BloomType.ROW);
 			famDesc.setMaxVersions(1);
-			if (enableCompression)//by default it is disabled
+			if (enableCompression){//by default it is disabled
 				famDesc.setCompactionCompressionType(Algorithm.LZO);
+				famDesc.setCompressionType(Algorithm.LZO);
+			}
 			desc.addFamily(famDesc);
-			desc.setMaxFileSize(10*1024*1024*1024);//set maximum StoreFile size to a high value-10GB
-												//so that the splits are not triggered automatically by HBase
+			desc.setMaxFileSize(1024*1024*1024);//set maximum StoreFile size to a high value-1GB
+												//since we're dealing with a lot of data
 
 			System.out.println("Creating table: " + tableName);
 			admin.createTable(desc, splits);
