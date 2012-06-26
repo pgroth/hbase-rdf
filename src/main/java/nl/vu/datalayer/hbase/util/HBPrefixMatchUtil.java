@@ -263,10 +263,13 @@ public class HBPrefixMatchUtil implements IHBaseUtil {
 		int sizeOfInterest = HBPrefixMatchSchema.KEY_LENGTH - startKeyLength;
 
 		ArrayList<Get> batchGets = new ArrayList<Get>();
+		//int i=0;
 		while ((r = results.next()) != null) {
+			//i++;
 			parseKey(r.getRow(), startKeyLength, sizeOfInterest, batchGets);
 		}
 		results.close();
+		//System.out.println("Range scan returned: "+i+" results");
 		return batchGets;
 	}
 
@@ -330,7 +333,7 @@ public class HBPrefixMatchUtil implements IHBaseUtil {
 		return id;
 	}
 	
-	private void parseKey(byte []key, int startIndex, int sizeOfInterest, ArrayList<Get> batchGets) throws IOException{
+	final private void parseKey(byte []key, int startIndex, int sizeOfInterest, ArrayList<Get> batchGets) throws IOException{
 		
 		int elemNo = sizeOfInterest/BaseId.SIZE;
 		ArrayList<ByteArray> currentQuad = new ArrayList<ByteArray>(elemNo);
@@ -386,29 +389,36 @@ public class HBPrefixMatchUtil implements IHBaseUtil {
 		currentTableIndex = pattern2Table.get(currentPattern);
 		
 		//Query the String2Id table
+		byte []key = new byte[keySize];
+		if (numericalElement != null && keySize==TypedId.SIZE){//we only have a numerical in our key
+			Bytes.putBytes(key, HBPrefixMatchSchema.OFFSETS[currentTableIndex][2], numericalElement, 0, numericalElement.length);
+		}
+		else{
+			key = buildRangeScanKeyFromMappedIds(string2IdGets, key);
+		}
+		
+		return key;
+	}
+
+	final private byte[] buildRangeScanKeyFromMappedIds(ArrayList<Get> string2IdGets, byte []key) throws ElementNotFoundException, IOException {
 		long start = System.currentTimeMillis();
 		HTableInterface table = con.getTable(HBPrefixMatchSchema.STRING2ID+schemaSuffix);
 		Result []results = table.get(string2IdGets);
 		table.close();
 		string2IdOverhead += System.currentTimeMillis()-start;
 		
-		return buildRangeScanKeyFromResults(results);
-	}
-
-	final private byte[] buildRangeScanKeyFromResults(Result[] results) throws ElementNotFoundException {
-		byte []key = new byte[keySize];
 		for (Result result : results) {
-			
-			byte []value = result.getValue(HBPrefixMatchSchema.COLUMN_FAMILY, HBPrefixMatchSchema.COLUMN_NAME);
-			if (value == null){
-				throw new ElementNotFoundException("Quad element could not be found: "+new String(result.getRow())+"\n"+hexaString(result.getRow()));
+
+			byte[] value = result.getValue(HBPrefixMatchSchema.COLUMN_FAMILY, HBPrefixMatchSchema.COLUMN_NAME);
+			if (value == null) {
+				throw new ElementNotFoundException("Quad element could not be found: " + new String(result.toString()) + "\n" + (result.getRow() == null ? null : hexaString(result.getRow())));
 			}
-			
+
 			int spocIndex = spocOffsetMap.get(new ByteArray(result.getRow()));
 			int offset = HBPrefixMatchSchema.OFFSETS[currentTableIndex][spocIndex];
-			
+
 			if (spocIndex == 2)
-				Bytes.putBytes(key, offset+1, value, 0, value.length);
+				Bytes.putBytes(key, offset + 1, value, 0, value.length);
 			else
 				Bytes.putBytes(key, offset, value, 0, value.length);
 		}	
