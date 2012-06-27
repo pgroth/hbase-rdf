@@ -13,6 +13,7 @@ import java.util.HashMap;
 import java.util.Properties;
 
 import nl.vu.datalayer.hbase.connection.HBaseConnection;
+import nl.vu.datalayer.hbase.connection.NativeJavaConnection;
 import nl.vu.datalayer.hbase.exceptions.ElementNotFoundException;
 import nl.vu.datalayer.hbase.exceptions.NumericalRangeException;
 import nl.vu.datalayer.hbase.id.BaseId;
@@ -101,16 +102,32 @@ public class HBPrefixMatchUtil implements IHBaseUtil {
 		Properties prop = new Properties();
 		try{
 			prop.load(new FileInputStream("config.properties"));
+			schemaSuffix = prop.getProperty(HBPrefixMatchSchema.SUFFIX_PROPERTY, "");	
+			
+			if (con instanceof NativeJavaConnection){
+				initTablePool((NativeJavaConnection)con);
+			}
 		}
 		catch (IOException e) {
 			//continue to use the default properties
 		}
-		schemaSuffix = prop.getProperty(HBPrefixMatchSchema.SUFFIX_PROPERTY, "");	
+		
 		try {
 			mDigest = MessageDigest.getInstance("MD5");
 		} catch (NoSuchAlgorithmException e) {
 			e.printStackTrace();
 		}
+	}
+
+	private void initTablePool(NativeJavaConnection con) throws IOException {
+		String []tableNames = new String[HBPrefixMatchSchema.TABLE_NAMES.length+2];
+		tableNames[0] = HBPrefixMatchSchema.ID2STRING + schemaSuffix;
+		tableNames[1] = HBPrefixMatchSchema.ID2STRING + schemaSuffix;
+		for (int i = 0; i < HBPrefixMatchSchema.TABLE_NAMES.length; i++) {
+			tableNames[i+2] = HBPrefixMatchSchema.TABLE_NAMES[i]+schemaSuffix;
+		}
+		
+		con.initTables(tableNames);
 	}
 	
 	private void buildPattern2TableHashMap(){
