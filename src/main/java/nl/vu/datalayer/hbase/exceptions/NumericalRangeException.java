@@ -1,4 +1,4 @@
-package nl.vu.datalayer.hbase.id;
+package nl.vu.datalayer.hbase.exceptions;
 
 public class NumericalRangeException extends Exception {
 

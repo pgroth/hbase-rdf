@@ -49,7 +49,11 @@ public class PrefixMatchRemoteHTable extends RemoteHTable {
 		return results;
 	}
 
-	
+	@Override
+	public void close() throws IOException {
+		//do nothing so that the client is not closed
+		//when the client has to be closed we should close it explicitly
+	}
 	
 
 }

@@ -35,7 +35,7 @@ public class BaseId extends Id implements WritableComparable<BaseId> {
 	}
 
 	@Override
-	public int hashCode() {
+	public int hashCode() {//used for partitioning
 		return Bytes.toInt(id, id.length-4, 4);
 	}
 

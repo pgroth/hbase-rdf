@@ -42,4 +42,9 @@ public class RESTConnection extends HBaseConnection {
 		return new PrefixMatchRemoteHTable(client, tableName);
 	}
 
+	@Override
+	public void close() throws IOException {
+		client.shutdown();
+	}
+	
 }

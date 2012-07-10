@@ -4,6 +4,7 @@ import info.aduna.iteration.CloseableIteration;
 import info.aduna.iteration.CloseableIteratorIteration;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
@@ -130,48 +131,51 @@ public class HBaseSailConnection extends NotifyingSailConnectionBase {
 	
 	
 	protected CloseableIteration<? extends Statement, SailException> getStatementsInternal(
-			Resource arg0, URI arg1, Value arg2, boolean arg3, Resource... arg4)
+			Resource arg0, URI arg1, Value arg2, boolean arg3, Set<URI> contexts)
 			throws SailException {
 		try {	
-			String s = null;
-			String p = null;
-			String o = null;
-			ArrayList<String> g = new ArrayList();
+//			String s = null;
+//			String p = null;
+//			String o = null;
 			
-			if (arg0 != null) {
-				s = arg0.stringValue();
-			}
-			else {
-				s = "?";
-			}
+			ArrayList<Value> g = new ArrayList();
 			
-			if (arg1 != null) {
-				p = arg1.stringValue();
-			}
-			else {
-				p = "?";
-			}
-			
-			if (arg2 != null) {
-				o = arg2.stringValue();
-			}
-			else {
-				o = "?";
-			}
-
-			if (arg4 != null) {
-				for (Resource r : arg4) {
-					g.add(r.stringValue());
+//			if (arg0 != null) {
+//				s = arg0.stringValue();
+//			}
+//			else {
+//				s = "?";
+//			}
+//			
+//			if (arg1 != null) {
+//				p = arg1.stringValue();
+//			}
+//			else {
+//				p = "?";
+//			}
+//			
+//			if (arg2 != null) {
+//				o = arg2.stringValue();
+//			}
+//			else {
+//				o = "?";
+//			}
+//
+			if (contexts != null && contexts.size() != 0) {
+				for (Resource r : contexts) {
+					g.add(r);
 				}
 			}
 			else {
-				g.add("?");
+				g.add(null);
 			}
 			
 			ArrayList<Statement> myList = new ArrayList();
-			for (String graph : g) {
-				String []triple = {s, p, o, graph};
-				ArrayList<ArrayList<String>> triples = hbase.util.getRow(triple);
+			for (Value graph : g) {
+				System.out.println("HBase Query: " + arg0 + " - " + arg1 + " - " + arg2 + " - " + graph);
+				
+				Value []query = {arg0, arg1, arg2, graph};
+				ArrayList<ArrayList<Value>> result = hbase.util.getResults(query);
 				
 //				for (ArrayList<String> tr : triples) {
 //					for (String st : tr) {
@@ -182,7 +186,7 @@ public class HBaseSailConnection extends NotifyingSailConnectionBase {
 				
 	//			System.out.println("Raw triples: " + triples);
 				
-				myList.addAll(reconstructTriples(triples, triple));
+				myList.addAll(reconstructTriples(result, query));
 			}
 				
 //			System.out.println("Triples retrieved:");
@@ -205,10 +209,10 @@ public class HBaseSailConnection extends NotifyingSailConnectionBase {
 		return null;
 	}
 	
-	protected ArrayList<Statement> reconstructTriples(ArrayList<ArrayList<String>> result, String[] triple) throws SailException {
+	protected ArrayList<Statement> reconstructTriples(ArrayList<ArrayList<Value>> result, Value[] triple) throws SailException {
 		ArrayList<Statement> list = new ArrayList();
 		
-		for (ArrayList<String> arrayList : result) {
+		for (ArrayList<Value> arrayList : result) {
 			int index = 0;
 			
 			Resource s = null;
@@ -216,24 +220,23 @@ public class HBaseSailConnection extends NotifyingSailConnectionBase {
 			Value o = null;
 			Resource c = null;
 			
-			for (String value : arrayList) {
+			for (Value value : arrayList) {
 				if (index == 0) {
-					s = (Resource)getSubject(value);
+//					s = (Resource)getSubject(value);
+					s = (Resource)value;
 				}
 				else if (index == 1) {
-					p = (URI) getPredicate(value);
+//					p = (URI) getPredicate(value);
+					p = (URI)value;
 				} else if (index == 2) {
 
-					o = getObject(value);
+//					o = getObject(value);
+					o = value;
 				} else {
-					if (value.compareTo("?") == 0) {
-						Statement statement = new StatementImpl(s, p, o);
-						list.add(statement);
-					} else {
-						c = (Resource)getContext(value);
-						Statement statement = new ContextStatementImpl(s, p, o, c);
-						list.add(statement);
-					}
+//					c = (Resource)getContext(value);
+					c = (Resource)value;
+					Statement statement = new ContextStatementImpl(s, p, o, c);
+					list.add(statement);
 				}
 				index++;
 			}
@@ -395,20 +398,34 @@ public class HBaseSailConnection extends NotifyingSailConnectionBase {
 	 * @return
 	 * @throws SailException
 	 */
-	protected ArrayList<Statement> evaluateInternal(TupleExpr arg0) throws SailException {
+	protected ArrayList<Statement> evaluateInternal(TupleExpr arg0, Dataset context) throws SailException {
 		ArrayList<Statement> result = new ArrayList();
 		
 		try {
 			ArrayList<ArrayList<Var>> statements = HBaseQueryVisitor.convertToStatements(arg0, null, null);
 //			System.out.println("StatementPatterns: " + statements.size());
 			
-			ArrayList<Var> contexts = HBaseQueryVisitor.getContexts(arg0);
-			ArrayList<Resource> cons = new ArrayList();
-			Iterator qt = contexts.iterator();
-			while (qt.hasNext()) {
-				Var context = (Var)qt.next();
-				if (context != null) {
-					System.out.println(context.toString());
+//			ArrayList<Var> contexts = HBaseQueryVisitor.getContexts(arg0);
+//			ArrayList<Resource> cons = new ArrayList();
+//			Iterator qt = contexts.iterator();
+//			while (qt.hasNext()) {
+//				Var context = (Var)qt.next();
+//				if (context != null) {
+//					System.out.println(context.toString());
+//				}
+//			}
+			
+			Set<URI> contexts;
+			try {
+				contexts = context.getNamedGraphs();
+			}
+			catch (Exception e) {
+				contexts = new HashSet();
+			}
+			
+			if (contexts != null && contexts.size() != 0) {
+				for (URI gr : contexts) {
+					System.out.println("CONTEXT FOUND: " + gr.stringValue());
 				}
 			}
 			
@@ -460,7 +477,7 @@ public class HBaseSailConnection extends NotifyingSailConnectionBase {
 					index += 1;
 				}
 				
-				CloseableIteration ci = getStatementsInternal(subj, pred, obj, false, null);
+				CloseableIteration ci = getStatementsInternal(subj, pred, obj, false, contexts);
 				
 				while (ci.hasNext()) {
 					Statement statement = (Statement)ci.next();
@@ -484,81 +501,7 @@ public class HBaseSailConnection extends NotifyingSailConnectionBase {
 	protected CloseableIteration<? extends BindingSet, QueryEvaluationException> evaluateInternal(
 			TupleExpr arg0, Dataset arg1, BindingSet arg2, boolean arg3)
 			throws SailException {
-		ArrayList<MapBindingSet> result = new ArrayList();
-		Set<String> bindingSet = arg2.getBindingNames();
-		
-		try {
-			ArrayList<ArrayList<Var>> statements = HBaseQueryVisitor.convertToStatements(arg0, null, null);
-			ArrayList<Var> contexts = HBaseQueryVisitor.getContexts(arg0);
-			
-			for (Var con : contexts) {
-				System.out.println("CONTEXT: " + con.toString());
-			}
-			
-			Iterator it = statements.iterator();
-			while (it.hasNext()) {
-				ArrayList<Var> sp = (ArrayList<Var>)it.next();
-
-				String[] variables = {"", "", ""};
-				MapBindingSet mapBindingSet  = new MapBindingSet();
-				
-				Resource subj = null;
-				URI pred = null;
-				Value obj = null;
-				Iterator jt = sp.iterator();
-				int index = 0;
-				
-				while (jt.hasNext()) {
-					Var var = (Var)jt.next();
-					
-					if (index == 0) {
-						if (var.hasValue()) {
-				            subj = (Resource)getSubject(var.getValue().stringValue());
-				        } else if (var.isAnonymous()) {
-				        	subj = (Resource)getSubject(var.getName()); 
-				        	
-				        }
-					}
-					else if (index == 1) {
-						if (var.hasValue()) {
-				            pred = (URI)getPredicate(var.getValue().stringValue());
-				        }
-						
-					}
-					else {
-						if (var.hasValue()) {
-				            obj = (Value)getObject(var.getValue().stringValue());
-				        } else if (var.isAnonymous()) {
-				        	obj = (Value)getObject(var.getName());
-				        }
-					}
-					index += 1;
-				}
-				
-				CloseableIteration ci = getStatementsInternal(subj, pred, obj, false, null);
-				
-				while (ci.hasNext()) {
-					Statement statement = (Statement)ci.next();
-					Value[] values = {statement.getSubject(), statement.getPredicate(), statement.getObject()};
-					
-					for (int i = 0; i < 3; i ++) {
-						if (variables[i] != "" && bindingSet.contains(variables[i])) {
-							mapBindingSet.addBinding(variables[i], values[i]);
-						}
-					}
-				}
-				result.add(mapBindingSet);
-			}
-		}
-		catch (Exception e) {
-			e.printStackTrace();
-			throw new SailException(e);
-		}
-		
-		Iterator it = result.iterator();
-		CloseableIteration<MapBindingSet, QueryEvaluationException> ci = new CloseableIteratorIteration<MapBindingSet, QueryEvaluationException>(it);
-		
-		return ci;
+		return null;
 	}
 	
 	
@@ -575,17 +518,38 @@ public class HBaseSailConnection extends NotifyingSailConnectionBase {
 	 */
 	public TupleQueryResult query(TupleExpr tupleExpr, Dataset dataset, BindingSet bindings, boolean includeInferred) throws SailException {
 //		System.out.println("Evaluating query");
-		System.out.println("EVALUATE:" + tupleExpr.toString());
+//		System.out.println("EVALUATE:" + tupleExpr.toString());
 		
 		try {
-			ArrayList<Statement> statements = evaluateInternal(tupleExpr);
+			ArrayList<Statement> statements = evaluateInternal(tupleExpr, dataset);
 //			System.out.println("Statements retrieved: " + statements.size());
+			
+			Resource[] context = null;
+			try {
+				Set<URI> contexts = dataset.getNamedGraphs();
+				context = new Resource[contexts.size()];
+				int index = 0;
+				for (URI cont : contexts) {
+					context[index] = cont;
+					index++;
+				}
+			}
+			catch (Exception e) {
+				context = new Resource[1];
+				context[0] = new URIImpl("http://hbase.sail.vu.nl");
+			}
 			
 			Iterator it = statements.iterator();
 			while (it.hasNext()) {
 				Statement statement = (Statement)it.next();
-				Resource[] context = {new URIImpl("http://hbase.sail.vu.nl")};
-				memStoreCon.addStatement(statement.getSubject(), statement.getPredicate(), statement.getObject(), context);
+//				Resource[] context = {new URIImpl("http://hbase.sail.vu.nl")};
+//				System.out.println(statement.getSubject().stringValue());
+				try {
+					memStoreCon.addStatement(statement.getSubject(), statement.getPredicate(), statement.getObject(), context);
+				}
+				catch (Exception e) {
+					System.out.println("THE FOLLOWING STATEMENT COULD NOT BE ADDED TO THE MEMORY STORE: " + statement.toString());
+				}
 			}
 			
 			CloseableIteration<? extends BindingSet, QueryEvaluationException> ci = memStoreCon.evaluate(tupleExpr, dataset, bindings, includeInferred);
@@ -607,6 +571,7 @@ public class HBaseSailConnection extends NotifyingSailConnectionBase {
 					}
 				}
 			}
+			
 //			System.out.println("Results retrieved from memory store: " + index);
 //			System.out.println("Bindings retrieved from memory store: " + bindingList.size());
 			
@@ -632,4 +597,11 @@ public class HBaseSailConnection extends NotifyingSailConnectionBase {
 		}
 	}
 
+	@Override
+	protected CloseableIteration<? extends Statement, SailException> getStatementsInternal(
+			Resource arg0, URI arg1, Value arg2, boolean arg3, Resource... arg4)
+			throws SailException {
+		// TODO Auto-generated method stub
+		return null;
+	}
 }

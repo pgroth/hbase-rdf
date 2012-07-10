@@ -3,11 +3,13 @@ package nl.vu.datalayer.hbase;
 import java.io.BufferedReader;
 import java.io.DataInputStream;
 import java.io.FileInputStream;
+import java.io.IOException;
 import java.io.InputStreamReader;
 import java.util.ArrayList;
 
 import nl.vu.datalayer.hbase.connection.HBaseConnection;
 import nl.vu.datalayer.hbase.schema.HBPrefixMatchSchema;
+import nl.vu.datalayer.hbase.util.IHBaseUtil;
 
 import org.openrdf.model.Value;
 import org.openrdf.model.ValueFactory;
@@ -15,6 +17,34 @@ import org.openrdf.model.impl.ValueFactoryImpl;
 import org.openrdf.rio.ntriples.NTriplesUtil;
 
 public class RetrieveQuads {
+	
+	public static void recursiveResolveQuads(Value []valQuad, IHBaseUtil util) throws IOException{
+		
+		long start = System.currentTimeMillis();
+		ArrayList<ArrayList<Value>> results = util.getResults(valQuad);
+		long end = System.currentTimeMillis();
+		System.out.println("Inner query: "+results.size()+" quads retrieved in: "+(end-start)+" ms");
+		
+		ArrayList<Value> objects = new ArrayList<Value>();
+		for (ArrayList<Value> arrayList : results ) {
+			int i=0;
+			for (Value val : arrayList) {
+				System.out.print((val == null ? null : val.toString())+" ");
+				if (i == 2){
+					objects.add(val);
+				}
+				i++;
+			}
+			System.out.println();
+		}
+		System.out.println("----------------");
+		
+		/*for (Value value : objects) {
+			Value []newArray = {value, null, null, null};
+			recursiveResolveQuads(newArray, util);
+		}*/
+		
+	}
 
 	/**
 	 * @param args
@@ -58,20 +88,14 @@ public class RetrieveQuads {
 					if (!quad[i].equals("?"))
 						valQuad[i] = NTriplesUtil.parseValue(quad[i], valFactory);
 				}
+				recursiveResolveQuads(valQuad, sol.util);
 				
-				ArrayList<ArrayList<Value>> results = sol.util.getResults(valQuad);
 				long end = System.currentTimeMillis();
-				System.out.println(results.size()+" quads retrieved in: "+(end-start)+" ms");
-				
-				for (ArrayList<Value> arrayList : results ) {
-					for (Value val : arrayList) {
-						System.out.print(val.toString()+" ");
-					}
-					System.out.println();
-				}
+				System.out.println("Outer loop: Quads retrieved in: "+(end-start)+" ms");
 				
 				System.out.println();
 			}
+			
 			
 			con.close();
 		}
