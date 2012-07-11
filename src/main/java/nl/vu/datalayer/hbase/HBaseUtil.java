@@ -94,6 +94,7 @@ public class HBaseUtil {
 		row.add(Bytes.toBytes(columnFam.replaceAll("[^A-Za-z0-9 ]", "")),
 				Bytes.toBytes(columnName.replaceAll("[^A-Za-z0-9 ]", "")), Bytes.toBytes(val));
 		table.put(row);
+		table.close();
 
 		// store full predicate URI
 		String pred;
@@ -108,6 +109,7 @@ public class HBaseUtil {
 		row = new Put(Bytes.toBytes(pred.replaceAll("[^A-Za-z0-9 ]", "")));
 		row.add(Bytes.toBytes("URI"), Bytes.toBytes(""), Bytes.toBytes(pred));
 		table.put(row);
+		table.close();
 	}
 
 	public ArrayList<ArrayList<String>> getRow(String URI, String tableName) throws IOException {
@@ -122,7 +124,7 @@ public class HBaseUtil {
 
 		for (Iterator<KeyValue> it = rawList.iterator(); it.hasNext();) {
 			KeyValue k = it.next();
-			ArrayList<String> triple = new ArrayList();
+			ArrayList<String> triple = new ArrayList<String>();
 
 			String pred = Bytes.toString(k.getFamily());
 			if (pred.compareTo("literal") == 0) {
@@ -135,6 +137,8 @@ public class HBaseUtil {
 
 			list.add(triple);
 		}
+
+		table.close();
 
 		return list;
 	}
@@ -153,6 +157,7 @@ public class HBaseUtil {
 			KeyValue k = it.next();
 			URI = Bytes.toString(k.getValue());
 		}
+		table.close();
 
 		return URI;
 	}

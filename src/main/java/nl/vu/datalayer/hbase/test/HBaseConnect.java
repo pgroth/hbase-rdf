@@ -29,6 +29,7 @@ public class HBaseConnect {
 		desc.addFamily(meta);
 		desc.addFamily(prefix);
 		hbase.createTable(desc);
+		hbase.close();
 
 		// This instantiates an HTable object that connects you to
 		// the "myLittleHBaseTable" table.
