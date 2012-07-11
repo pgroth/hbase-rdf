@@ -228,7 +228,6 @@ public class HBPrefixMatchUtil implements IHBaseUtil {
 			scan.setCaching(100);
 
 			// Collect the results
-			System.out.println("b");
 			String tableName = HBPrefixMatchSchema.TABLE_NAMES[currentTableIndex] + schemaSuffix;
 			HTableInterface table = con.getTable(tableName);
 			ResultScanner resultScanner = table.getScanner(scan);
@@ -238,9 +237,10 @@ public class HBPrefixMatchUtil implements IHBaseUtil {
 				results.add(result);
 			resultScanner.close();
 			table.close();
-			System.out.println("b");
 
 			// Pick one result at random
+			if (results.isEmpty())
+				return null;
 			Result r = results.get(random.nextInt(results.size()));
 
 			// Decode it
@@ -334,8 +334,7 @@ public class HBPrefixMatchUtil implements IHBaseUtil {
 
 			// See if there is at least one result
 			long count = 0;
-			Result r = null;
-			while ((r = results.next()) != null && count < hardLimit)
+			while (results.next() != null && count < hardLimit)
 				count++;
 
 			// Close everything
