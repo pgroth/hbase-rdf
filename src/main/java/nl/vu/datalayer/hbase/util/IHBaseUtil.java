@@ -9,34 +9,50 @@ import org.openrdf.model.Value;
 public interface IHBaseUtil {
 	/**
 	 * Retrieve parsed triple/quad
-	 * @param triple/quad
+	 * 
+	 * @param triple
+	 *            /quad
 	 * @return
 	 * @throws IOException
 	 */
-	public ArrayList<ArrayList<String>> getRow(String []triple) throws IOException;
-	
+	public ArrayList<ArrayList<String>> getRow(String[] triple) throws IOException;
+
 	/**
 	 * Solves a simple query in which un-bound variable are expected to be null
 	 * 
-	 * @param quad - array of Value objects with null elements in un-bound positions
-	 * @return list of results
-	 * 			null - in case of errors
+	 * @param quad
+	 *            - array of Value objects with null elements in un-bound
+	 *            positions
+	 * @return list of results null - in case of errors
 	 * @throws IOException
 	 */
-	public ArrayList<ArrayList<Value>> getResults(Value []quad) throws IOException;
-	
+	public ArrayList<ArrayList<Value>> getResults(Value[] quad) throws IOException;
+
 	/**
 	 * Triple with "?" elements in the unbound positions
+	 * 
 	 * @param triple
 	 * @return
 	 * @throws IOException
 	 */
 	public String getRawCellValue(String subject, String predicate, String object) throws IOException;
-	
+
 	/**
 	 * Populate the database with the statements
+	 * 
 	 * @param statements
 	 * @throws Exception
 	 */
 	public void populateTables(ArrayList<Statement> statements) throws Exception;
+
+	/**
+	 * Test if a given quad with un-bound positions matches other quads in the
+	 * data set
+	 * 
+	 * @param quad
+	 *            - array of Value objects with null elements in un-bound
+	 *            positions
+	 * @return true if there is at least one quad that matches, false otherwise
+	 */
+	public boolean hasResults(Value[] quad) throws IOException;
 }
