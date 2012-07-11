@@ -1,6 +1,7 @@
 package nl.vu.datalayer.hbase.sail;
 
 import java.util.ArrayList;
+
 import org.openrdf.query.algebra.StatementPattern;
 import org.openrdf.query.algebra.TupleExpr;
 import org.openrdf.query.algebra.Var;

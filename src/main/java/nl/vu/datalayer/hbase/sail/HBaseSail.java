@@ -1,14 +1,12 @@
 package nl.vu.datalayer.hbase.sail;
 
 import java.io.IOException;
-import java.util.ArrayList;
 
 import nl.vu.datalayer.hbase.HBaseClientSolution;
 import nl.vu.datalayer.hbase.HBaseFactory;
 import nl.vu.datalayer.hbase.connection.HBaseConnection;
 import nl.vu.datalayer.hbase.schema.HBPrefixMatchSchema;
 
-import org.openrdf.model.Statement;
 import org.openrdf.model.ValueFactory;
 import org.openrdf.model.impl.ValueFactoryImpl;
 import org.openrdf.sail.NotifyingSailConnection;

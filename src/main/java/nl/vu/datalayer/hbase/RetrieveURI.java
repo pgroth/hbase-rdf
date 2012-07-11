@@ -9,10 +9,10 @@ import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.Iterator;
 
+import nl.vu.datalayer.hbase.connection.HBaseConnection;
 import nl.vu.datalayer.hbase.schema.HBasePredicateCFSchema;
 import nl.vu.datalayer.hbase.schema.IHBaseSchema;
 import nl.vu.datalayer.hbase.util.HBasePredicateCFUtil;
-import nl.vu.datalayer.hbase.connection.HBaseConnection;
 
 
 public class RetrieveURI {

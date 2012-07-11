@@ -7,7 +7,6 @@ import java.io.UnsupportedEncodingException;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 
-import nl.vu.datalayer.hbase.schema.HBPrefixMatchSchema;
 import nl.vu.datalayer.hbase.util.HBPrefixMatchUtil;
 
 import org.apache.hadoop.io.WritableComparable;

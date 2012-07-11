@@ -5,8 +5,8 @@ import java.io.DataInputStream;
 import java.io.FileInputStream;
 import java.io.InputStreamReader;
 
-import nl.vu.datalayer.hbase.schema.HBHexastoreSchema;
 import nl.vu.datalayer.hbase.connection.HBaseConnection;
+import nl.vu.datalayer.hbase.schema.HBHexastoreSchema;
 
 public class RetrieveTriples {
 	

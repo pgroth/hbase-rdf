@@ -2,7 +2,6 @@ package nl.vu.datalayer.hbase.test;
 
 import nl.vu.datalayer.hbase.id.TypedId;
 
-import org.apache.hadoop.io.Text;
 import org.openrdf.model.BNode;
 import org.openrdf.model.Literal;
 import org.openrdf.model.URI;

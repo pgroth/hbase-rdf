@@ -2,7 +2,6 @@ package nl.vu.datalayer.hbase.sail;
 
 import org.openrdf.repository.RepositoryException;
 import org.openrdf.repository.sail.SailRepository;
-import org.openrdf.sail.Sail;
 import org.openrdf.sail.SailException;
 
 public class HBaseSailRepository extends SailRepository {

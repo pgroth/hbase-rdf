@@ -1,8 +1,5 @@
 package nl.vu.datalayer.hbase.test;
 
-import java.nio.ByteBuffer;
-
-import org.apache.hadoop.io.Text;
 
 public class TextTest {
 	
