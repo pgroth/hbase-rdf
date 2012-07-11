@@ -10,7 +10,9 @@ import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Properties;
+import java.util.Random;
 
 import nl.vu.datalayer.hbase.connection.HBaseConnection;
 import nl.vu.datalayer.hbase.connection.NativeJavaConnection;
@@ -206,6 +208,63 @@ public class HBPrefixMatchUtil implements IHBaseUtil {
 	 * (non-Javadoc)
 	 * 
 	 * @see
+	 * nl.vu.datalayer.hbase.util.IHBaseUtil#getResults(org.openrdf.model.Value
+	 * [])
+	 */
+	// we expect the pattern in the order SPOC
+	@Override
+	public ArrayList<Value> getSingleResult(Value[] quad, Random random) throws IOException {
+		try {
+			retrievalInit();
+
+			// Get start key
+			byte[] startKey = buildRangeScanKeyFromQuad(quad);
+
+			// Prepare scanner
+			Filter prefixFilter = new PrefixFilter(startKey);
+			Filter keyOnlyFilter = new KeyOnlyFilter();
+			Filter filterList = new FilterList(FilterList.Operator.MUST_PASS_ALL, prefixFilter, keyOnlyFilter);
+			Scan scan = new Scan(startKey, filterList);
+			scan.setCaching(100);
+
+			// Collect the results
+			System.out.println("b");
+			String tableName = HBPrefixMatchSchema.TABLE_NAMES[currentTableIndex] + schemaSuffix;
+			HTableInterface table = con.getTable(tableName);
+			ResultScanner resultScanner = table.getScanner(scan);
+			List<Result> results = new ArrayList<Result>();
+			Result result = null;
+			while ((result = resultScanner.next()) != null)
+				results.add(result);
+			resultScanner.close();
+			table.close();
+			System.out.println("b");
+
+			// Pick one result at random
+			Result r = results.get(random.nextInt(results.size()));
+
+			// Decode it
+			ArrayList<Get> batchIdGets = new ArrayList<Get>();
+			int sizeOfInterest = HBPrefixMatchSchema.KEY_LENGTH - startKey.length;
+			parseKey(r.getRow(), startKey.length, sizeOfInterest, batchIdGets);
+			Result[] id2StringResults = doBatchId2String(batchIdGets);
+			updateId2ValueMap(id2StringResults);
+			ArrayList<ArrayList<Value>> decodedResults = buildSPOCOrderResults();
+
+			return decodedResults.get(0);
+		} catch (NumericalRangeException e) {
+			System.err.println("Bound variable numerical not in expected range: " + e.getMessage());
+			return null;
+		} catch (ElementNotFoundException e) {
+			System.err.println(e.getMessage());
+			return null;
+		}
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @see
 	 * nl.vu.datalayer.hbase.util.IHBaseUtil#hasResults(org.openrdf.model.Value
 	 * [])
 	 */
@@ -231,12 +290,10 @@ public class HBPrefixMatchUtil implements IHBaseUtil {
 
 			// See if there is at least one result
 			boolean quadHasResults = (results.next() != null);
-			System.out.println(quadHasResults);
 
 			// Close everything
 			results.close();
 			table.close();
-
 			return quadHasResults;
 
 		} catch (NumericalRangeException e) {
@@ -245,6 +302,54 @@ public class HBPrefixMatchUtil implements IHBaseUtil {
 		} catch (ElementNotFoundException e) {
 			System.err.println(e.getMessage());
 			return false;
+		}
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @see
+	 * nl.vu.datalayer.hbase.util.IHBaseUtil#countResults(org.openrdf.model.
+	 * Value[], long)
+	 */
+	@Override
+	public long countResults(Value[] quad, long hardLimit) throws IOException {
+		try {
+			retrievalInit();
+
+			// Get start key
+			byte[] startKey = buildRangeScanKeyFromQuad(quad);
+
+			// Prepare scanner
+			Filter prefixFilter = new PrefixFilter(startKey);
+			Filter keyOnlyFilter = new KeyOnlyFilter();
+			Filter filterList = new FilterList(FilterList.Operator.MUST_PASS_ALL, prefixFilter, keyOnlyFilter);
+			Scan scan = new Scan(startKey, filterList);
+			scan.setCaching(100);
+
+			// Start scanner
+			String tableName = HBPrefixMatchSchema.TABLE_NAMES[currentTableIndex] + schemaSuffix;
+			HTableInterface table = con.getTable(tableName);
+			ResultScanner results = table.getScanner(scan);
+
+			// See if there is at least one result
+			long count = 0;
+			Result r = null;
+			while ((r = results.next()) != null && count < hardLimit)
+				count++;
+
+			// Close everything
+			results.close();
+			table.close();
+
+			return count;
+
+		} catch (NumericalRangeException e) {
+			System.err.println("Bound variable numerical not in expected range: " + e.getMessage());
+			return 0;
+		} catch (ElementNotFoundException e) {
+			System.err.println(e.getMessage());
+			return 0;
 		}
 	}
 

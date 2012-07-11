@@ -2,6 +2,7 @@ package nl.vu.datalayer.hbase.util;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Random;
 
 import org.openrdf.model.Statement;
 import org.openrdf.model.Value;
@@ -55,4 +56,28 @@ public interface IHBaseUtil {
 	 * @return true if there is at least one quad that matches, false otherwise
 	 */
 	public boolean hasResults(Value[] quad) throws IOException;
+
+	/**
+	 * Return a single matching quad picked at random
+	 * 
+	 * @param quad
+	 *            the pattern (un-bound positions are null)
+	 * @param random
+	 *            the random number generator to use
+	 * @return
+	 * @throws IOException
+	 */
+	public ArrayList<Value> getSingleResult(Value[] quad, Random random) throws IOException;
+
+	/**
+	 * Return the number of quads matching the quad pattern
+	 * 
+	 * @param quad
+	 * @param hardLimit
+	 *            maximum number of quads to be counted for, used to stop
+	 *            counting after a while
+	 * @return
+	 * @throws IOException
+	 */
+	public long countResults(Value[] quad, long hardLimit) throws IOException;
 }

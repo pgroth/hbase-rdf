@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Random;
 
 import nl.vu.datalayer.hbase.connection.HBaseConnection;
 import nl.vu.datalayer.hbase.schema.HBasePredicateCFSchema;
@@ -139,6 +140,32 @@ public class HBasePredicateCFUtil implements IHBaseUtil {
 	public boolean hasResults(Value[] quad) throws IOException {
 		// TODO Auto-generated method stub
 		return false;
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @see
+	 * nl.vu.datalayer.hbase.util.IHBaseUtil#getSingleResult(org.openrdf.model
+	 * .Value[], java.util.Random)
+	 */
+	@Override
+	public ArrayList<Value> getSingleResult(Value[] quad, Random random) throws IOException {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @see
+	 * nl.vu.datalayer.hbase.util.IHBaseUtil#countResults(org.openrdf.model.
+	 * Value[], long)
+	 */
+	@Override
+	public long countResults(Value[] quad, long hardLimit) throws IOException {
+		// TODO Auto-generated method stub
+		return 0;
 	}
 
 }
