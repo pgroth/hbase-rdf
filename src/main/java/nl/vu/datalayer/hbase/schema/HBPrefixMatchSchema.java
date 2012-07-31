@@ -8,6 +8,8 @@ import nl.vu.datalayer.hbase.connection.HBaseConnection;
 import nl.vu.datalayer.hbase.connection.NativeJavaConnection;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.Coprocessor;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HTableDescriptor;
@@ -22,6 +24,8 @@ import org.apache.hadoop.hbase.util.Bytes;
 
 public class HBPrefixMatchSchema implements IHBaseSchema {
 	
+	private static final String COPROCESSOR_CLASS_NAME = "nl.vu.datalayer.hbase.coprocessor.PrefixMatchGenerateSecondaryIndex";
+
 	private HBaseConnection con;	
 	
 	public static final String SCHEMA_NAME = "prefix-match";
@@ -59,11 +63,12 @@ public class HBPrefixMatchSchema implements IHBaseSchema {
 	public static final byte [] LAST_COUNTER_ROWKEY = "LastCounter".getBytes();
 	public static final long COUNTER_LIMIT = 0x000000ffffffffffL;
 	
-	//public static final String STRING2ID_TEST = "String2IdTest";
-	//public static final String ID2STRING_TEST = "Id2StringTest";
+	public static final byte WITHOUT_COPROCESSORS = 0;
+	public static final byte WITH_COPROCESSORS = 1;
+	private String coprocessorPath = null;
 	
 	//default number of initial regions
-	public static final int NUM_REGIONS = 64;
+	public static final int NUM_REGIONS = 14;//TODO should be retrieved from the cluster
 	
 	private int numInputPartitions;
 	private long startPartition;
@@ -88,10 +93,20 @@ public class HBPrefixMatchSchema implements IHBaseSchema {
 	
 	private String schemaSuffix;
 	
+	private byte coprocessorFlag = WITHOUT_COPROCESSORS;
+	
 	public HBPrefixMatchSchema(HBaseConnection con, String schemaSuffix) {
 		super();
 		this.con = con;
 		this.schemaSuffix = schemaSuffix;
+	}
+
+	public HBPrefixMatchSchema(HBaseConnection con, String schemaSuffix, String coprocessorPath) {
+		super();
+		this.con = con;
+		this.schemaSuffix = schemaSuffix;
+		this.coprocessorFlag = WITH_COPROCESSORS;
+		this.coprocessorPath = coprocessorPath;
 	}
 	
 	/**
@@ -113,21 +128,6 @@ public class HBPrefixMatchSchema implements IHBaseSchema {
 		onlyTriples = onlyTriplesParam; 
 	}
 	
-	/*public static void setId2StringTableSplitInfo(int numPartitions, long startPartitionParam){
-		startPartition = startPartitionParam;
-		numInputPartitions = numPartitions;
-	}
-	
-	public static void setString2IdTableSplitInfo(long totalNumberOfString, SortedMap<Short, Long> prefixCounter){
-		totalStringCount = totalNumberOfString;
-		prefixCounters = prefixCounter;
-	}
-	
-	public static void setObjectPrefixTableSplitInfo(long totalNumberOfString, long numericalParam){
-		numericalCount = numericalParam;
-		totalStringCount = totalNumberOfString;
-	}*/
-	
 	public void createCounterTable(HBaseAdmin admin) throws IOException{
 		
 		String fullName = COUNTER_TABLE+schemaSuffix;
@@ -145,7 +145,7 @@ public class HBPrefixMatchSchema implements IHBaseSchema {
 			Put p = new Put(FIRST_COUNTER_ROWKEY);
 			p.add(COLUMN_FAMILY, META_COL, Bytes.toBytes(0L));
 			
-			HTable h = new HTable(fullName);
+			HTable h = new HTable(((NativeJavaConnection)con).getConfiguration(), fullName);
 			h.put(p);
 			
 			p = new Put(LAST_COUNTER_ROWKEY);
@@ -218,37 +218,66 @@ public class HBPrefixMatchSchema implements IHBaseSchema {
 		return lastCounter;
 	}
 	
+	public void setCoprocessorPath(String coprocessorPath) {
+		this.coprocessorPath = coprocessorPath;
+	}
+	
 	@Override
-	public void create() throws Exception {
+	public void create() throws IOException {
 		HBaseAdmin admin = ((NativeJavaConnection)con).getAdmin();
 	
 		//distribute the regions over the entire ID space for String2ID
 		byte[][] splits = getString2IdSplits();
 		
-		createTable(admin, STRING2ID+schemaSuffix, splits, false);
+		createSimpleTable(admin, STRING2ID+schemaSuffix, splits, false);
 		
 		splits = getNonNumericalSplits(NUM_REGIONS, 0);
 		
 		System.out.println("Id2String splits: ");
 		printSplits(splits);
 		
-		createTable(admin, ID2STRING+schemaSuffix, splits, true);
+		createSimpleTable(admin, ID2STRING+schemaSuffix, splits, true);
 		
-		createTable(admin, TABLE_NAMES[SPOC]+schemaSuffix, splits, false);
-		
-		createTable(admin, TABLE_NAMES[POCS]+schemaSuffix, splits, false);
+		createSimpleTable(admin, TABLE_NAMES[POCS]+schemaSuffix, splits, false);
 		
 		byte [][] objectSplits = getObjectPrefixSplits(NUM_REGIONS);
 		printSplits(objectSplits);
-		createTable(admin, TABLE_NAMES[OSPC]+schemaSuffix, objectSplits, false);
+		createSimpleTable(admin, TABLE_NAMES[OSPC]+schemaSuffix, objectSplits, false);
 		
 		if (onlyTriples == false){
-			createTable(admin, TABLE_NAMES[CSPO]+schemaSuffix, splits, false);
-			createTable(admin, TABLE_NAMES[CPSO]+schemaSuffix, splits, false);	
+			createSimpleTable(admin, TABLE_NAMES[CSPO]+schemaSuffix, splits, false);
+			createSimpleTable(admin, TABLE_NAMES[CPSO]+schemaSuffix, splits, false);	
 			
-			createTable(admin, TABLE_NAMES[OCSP]+schemaSuffix, objectSplits, false);
+			createSimpleTable(admin, TABLE_NAMES[OCSP]+schemaSuffix, objectSplits, false);
+		}
+		
+		if (coprocessorFlag == WITH_COPROCESSORS){
+			createTableWithCoprocessor(admin, TABLE_NAMES[SPOC]+schemaSuffix, splits, coprocessorPath);
+		}
+		else{
+			createSimpleTable(admin, TABLE_NAMES[SPOC]+schemaSuffix, splits, false);
 		}
 	}
+	
+	/*public void createTable(HBaseAdmin admin, String tableName, byte [][]splits, 
+									boolean enableCompression,
+									byte coprocessorFlag) throws IOException{
+		if (admin.tableExists(tableName) == false){
+			switch (coprocessorFlag){
+			case WITH_COPROCESSORS:{
+				createTableWithCoprocessor(admin, tableName, splits, coprocessorPath);
+				break;
+			}
+			case WITHOUT_COPROCESSORS:{
+				createSimpleTable(admin, tableName, splits, enableCompression);
+				break;
+			}
+			default:{
+				throw new RuntimeException("Unknown coprocessor flag");
+			}
+			}
+		}
+	}*/
 	
 	/**
 	 * Creates an HBase table with specified splits and optional compression for the values in the table
@@ -259,25 +288,47 @@ public class HBPrefixMatchSchema implements IHBaseSchema {
 	 * @param enableCompression
 	 * @throws IOException
 	 */
-	public static void createTable(HBaseAdmin admin, String tableName, byte [][]splits, boolean enableCompression) throws IOException{
-		if (admin.tableExists(tableName) == false){
-			HTableDescriptor desc = new HTableDescriptor(tableName);
-			HColumnDescriptor famDesc = new HColumnDescriptor(COLUMN_FAMILY);
-			
-			famDesc.setBloomFilterType(StoreFile.BloomType.ROW);
-			famDesc.setMaxVersions(1);
-			if (enableCompression){//by default it is disabled
-				famDesc.setCompactionCompressionType(Algorithm.LZO);
-				famDesc.setCompressionType(Algorithm.LZO);
-			}
-			desc.addFamily(famDesc);
-			desc.setMaxFileSize(1024*1024*1024);//set maximum StoreFile size to a high value-1GB
-												//since we're dealing with a lot of data
+	public static void createSimpleTable(HBaseAdmin admin, String tableName, byte [][]splits, 
+									boolean enableCompression) throws IOException{
+		if (!admin.tableExists(tableName)){
+			HTableDescriptor desc = createTableDescriptor(tableName, enableCompression);
 
 			System.out.println("Creating table: " + tableName);
 			admin.createTable(desc, splits);
 		}
 	}
+	
+	public static void createTableWithCoprocessor(HBaseAdmin admin, String tableName, 
+							byte [][]splits, String coprocessorPath) throws IOException{
+		if (!admin.tableExists(tableName)){
+			HTableDescriptor desc = createTableDescriptor(tableName, false);
+			desc.setValue("SPLIT_POLICY", "org.apache.hadoop.hbase.regionserver.ConstantSizeRegionSplitPolicy");
+			desc.addCoprocessor(COPROCESSOR_CLASS_NAME, 
+					new Path(coprocessorPath),
+					Coprocessor.PRIORITY_USER, null);
+			
+			System.out.println("Creating table with coprocessor: " + tableName);
+			admin.createTable(desc, splits);
+		}
+	}
+
+	final private static HTableDescriptor createTableDescriptor(String tableName, boolean enableCompression) {
+		HTableDescriptor desc = new HTableDescriptor(tableName);
+		
+		HColumnDescriptor famDesc = new HColumnDescriptor(COLUMN_FAMILY);
+		
+		famDesc.setBloomFilterType(StoreFile.BloomType.ROW);
+		famDesc.setMaxVersions(1);
+		if (enableCompression){//by default it is disabled
+			famDesc.setCompactionCompressionType(Algorithm.LZO);
+			famDesc.setCompressionType(Algorithm.LZO);
+		}
+		desc.addFamily(famDesc);
+		
+		return desc;
+	}
+	
+	
 	
 	/**
 	 * Divide the space between startKey and endKey into an equal amount of regions

@@ -3,9 +3,11 @@ package nl.vu.datalayer.hbase.bulkload;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.StringReader;
 import java.util.ArrayList;
 
 import net.fortytwo.sesametools.nquads.NQuadsParser;
+import nl.vu.datalayer.hbase.exceptions.NonNumericalException;
 import nl.vu.datalayer.hbase.exceptions.NumericalRangeException;
 import nl.vu.datalayer.hbase.id.BaseId;
 import nl.vu.datalayer.hbase.id.DataPair;
@@ -15,7 +17,6 @@ import nl.vu.datalayer.hbase.schema.HBPrefixMatchSchema;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.io.LongWritable;
@@ -23,7 +24,6 @@ import org.apache.hadoop.io.SequenceFile;
 import org.apache.hadoop.io.SequenceFile.CompressionType;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.mapreduce.Counter;
-import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.lib.input.FileSplit;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.openrdf.model.BNode;
@@ -55,6 +55,9 @@ public class TripleToResource {
 		
 		private int partitionId;
 		private long localRowCount = 0;
+		private BaseId quadId = new BaseId();
+		private DataPair [] outputPairs = null;
+		private HBaseValue hbaseValue = null;
 		
 		@Override
 		protected void setup(Context context) throws IOException, InterruptedException {
@@ -68,17 +71,25 @@ public class TripleToResource {
 			partitionId = context.getConfiguration().getInt("mapred.task.partition", 0);
 			System.out.println("Finished configuration "+partitionId);
 			System.out.println( context.getTaskAttemptID() +  " - "+ ((FileSplit)context.getInputSplit()).getPath());
+			
+			outputPairs = new DataPair[4];
+			for (int i = 0; i < outputPairs.length; i++) {
+				outputPairs[i] = new DataPair();
+			}
+			hbaseValue = new HBaseValue();
 		}
 		
 		@Override
 		public void map(LongWritable key, Writable value, Context context) throws IOException, InterruptedException{
 			try {
 				Statement s = getNewStatement(value);
+				if (s == null)
+					return;
 				
-				BaseId quadId = new BaseId(partitionId, localRowCount);
+				quadId.set(partitionId, localRowCount);
 				localRowCount++;
 				
-				DataPair []outputPairs = createDataPairs(quadId);
+				createDataPairs(quadId);
 				
 				emitOutputPairs(context, s, outputPairs);
 				
@@ -92,9 +103,12 @@ public class TripleToResource {
 		}
 
 		final private void emitOutputPairs(Context context, Statement s, DataPair[] dataPairs) throws IOException, InterruptedException {
-			context.write(new HBaseValue(s.getSubject()), dataPairs[DataPair.S]);
-			context.write(new HBaseValue(s.getPredicate()), dataPairs[DataPair.P]);
-			context.write(new HBaseValue(s.getObject()), dataPairs[DataPair.O]);
+			hbaseValue.setValue(s.getSubject());
+			context.write(hbaseValue, dataPairs[DataPair.S]);
+			hbaseValue.setValue(s.getPredicate());
+			context.write(hbaseValue, dataPairs[DataPair.P]);
+			hbaseValue.setValue(s.getObject());
+			context.write(hbaseValue, dataPairs[DataPair.O]);
 			
 			Value quadContext;
 			if (s.getContext() == null){
@@ -103,20 +117,19 @@ public class TripleToResource {
 			else{
 				quadContext = s.getContext();
 			}
-			context.write(new HBaseValue(quadContext), dataPairs[DataPair.C]);
+			hbaseValue.setValue(quadContext);
+			context.write(hbaseValue, dataPairs[DataPair.C]);
 		}
 		
-		final private DataPair []createDataPairs(BaseId id){
-			DataPair []outputPair = new DataPair[4];
-			for (int i = 0; i < outputPair.length; i++) {
-				outputPair[i] = new DataPair(id, (byte)i);
+		final private void createDataPairs(BaseId id){
+			for (int i = 0; i < outputPairs.length; i++) {
+				outputPairs[i].set(id, (byte)i);
 			}
-			return outputPair;
 		}
 
 		final private Statement getNewStatement(Writable value) throws IOException, RDFParseException, RDFHandlerException {
-			InputStream in = new ByteArrayInputStream(value.toString().getBytes());
-			parser.parse(in, "");
+			parser.parse(new StringReader(value.toString()), "");
+			
 			if (statements.size() == 0){
 				return null;
 			}							
@@ -139,7 +152,6 @@ public class TripleToResource {
 	{
 			private int partitionId;
 			private long localRowCount = 0;
-			private static ValueFactory valFact;
 			
 			private static SequenceFile.Writer id2StringWriter;	
 			
@@ -148,14 +160,6 @@ public class TripleToResource {
 			 */
 			public static final String ELEMENT_TYPE_GROUP = "ElemsGroup";
 			
-			/**
-			 * Counter group that build a byte histogram* of the last characters of input keys
-			 * 
-			 * note: the histogram is not complete because hadoop limits the number of counters to 120: 
-			 * so 2 byte values are counted with the same counter, and we assume that they are equally distributed
-			 * TODO change in future releases when counter limit can be configured
-			 */
-			//public static final String HISTOGRAM_GROUP = "HistogramGroup";
 			public static final String NUMERICAL_GROUP = "NumericalGroup";		
 			
 			private String schemaSuffix;
@@ -167,40 +171,22 @@ public class TripleToResource {
 				Configuration config = context.getConfiguration();
 				partitionId = config.getInt("mapred.task.partition", 0);
 				schemaSuffix = config.get("schemaSuffix");
-				String outputPath = config.get("outputPath");
 				fs = FileSystem.get(config);
-	
-				valFact = new ValueFactoryImpl();
 	
 				Path sideEffectFile = new Path(FileOutputFormat.getWorkOutputPath(context), 
 						ID2STRING_DIR + String.format("/%05d", partitionId));
 				id2StringWriter = SequenceFile.createWriter(fs, config, sideEffectFile,
-				//new Path(outputPath+ID2STRING_DIR+"/"+context.getTaskAttemptID()),
-				//new Path("idStringAssoc"+String.format("/%05d", partitionId)),
 						ImmutableBytesWritable.class, HBaseValue.class, CompressionType.RECORD);
 			}
 			
 			@Override
 			protected void cleanup(Context context) throws IOException, InterruptedException {
-				//id2StringWriter.syncFs();
 				id2StringWriter.close();
 				
 				System.out.println("Closed file writer");
 				HBPrefixMatchSchema.updateCounter(partitionId, localRowCount, schemaSuffix);
 				System.out.println("Counter updated for partition "+partitionId);
 			}
-
-			//for testing purposes
-			public static void setValueVatory(ValueFactory valFactory){
-				valFact = valFactory;
-			}
-			
-			/*public void updateHistogram(Context context, Value literal){
-				byte []bytes = literal.stringValue().getBytes();
-				context.getCounter(HISTOGRAM_GROUP, 
-						String.format("%02x", (short)bytes[bytes.length-1] & 0xfe)).increment(1);
-				
-			}*/
 
 			@Override
 			public void reduce(HBaseValue key, Iterable<DataPair> values, Context context) throws IOException, InterruptedException {
@@ -226,7 +212,6 @@ public class TripleToResource {
 					return handleLiteral(context, elem);
 				}
 				else{//non-Literals
-					//context.getCounter(HISTOGRAM_GROUP, String.format("%02x", (short)elemBytes[elemBytes.length-1] & 0xfe)).increment(1);
 					return handleNonLiteral(context, elem);
 				}
 			}
@@ -237,14 +222,15 @@ public class TripleToResource {
 				Literal l = (Literal)elem;
 				if (l.getDatatype() == null){//the Literals with no datatype are considered Strings
 					return new TypedId(partitionId, localRowCount);
-					//updateHistogram(context, elem);
 				}
 				else{//we have a datatype
-					TypedId newId = TypedId.createNumerical(l);
-					if (newId == null){//non-numerical literal
+					TypedId newId;
+					try {
+						newId = TypedId.createNumerical(l);
+					} catch (NonNumericalException e) {
 						newId = new TypedId(partitionId, localRowCount);
-						//updateHistogram(context, elem);
 					}
+					
 					return newId;
 				}
 			}
@@ -266,9 +252,7 @@ public class TripleToResource {
 			final private void saveTypeIdToFile(TypedId newId, HBaseValue value, Context context) throws IOException{
 				if (newId.getType() != TypedId.NUMERICAL){
 					id2StringWriter.append(new ImmutableBytesWritable(newId.getContent()), value);
-					/*if (localRowCount % 1000 == 0){
-						id2StringWriter.syncFs();
-					}*/
+					
 					localRowCount++;
 					context.getCounter(NUMERICAL_GROUP, "NonNumericals").increment(1);
 				}
@@ -278,44 +262,5 @@ public class TripleToResource {
 			}
 	}
 
-	public static void main(String[] args) {		
-		Job j1;
-		try {
-			//Path p = new Path(new Path("/test1"), new Path(ID2STRING_DIR));
-			//System.out.println(p);
-		
-			if (args.length != 3){
-				System.out.println("Usage: TripleToResource <inputPath> <inputSizeEstimate in MB> <outputPath>");
-				return;
-			}
-			
-			Path input = new Path(args[0]);
-			String outputPath = args[2];
-			
-			Path resourceIds = new Path(outputPath+TripleToResource.RESOURCE_IDS_DIR);
-			
-			j1 = BulkLoad.createTripleToResourceJob(input, resourceIds, Integer.parseInt(args[1]));
-			
-			j1.getConfiguration().set("outputPath", outputPath);
-			j1.getConfiguration().set("schemaSuffix", "_TEST");
-			j1.waitForCompletion(true);
-			
-			Configuration conf = new Configuration();
-			FileSystem fs = FileSystem.get(conf);
-			Path source = new Path(resourceIds, "idStringAssoc");
-			Path id2String = new Path(outputPath+"/idStringAssoc");
-			FileUtil.copy(fs, source, fs, id2String, true, false, conf);
-			
-		} catch (NumberFormatException e) {
-			e.printStackTrace();
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
-		catch (InterruptedException e) {
-			e.printStackTrace();
-		} catch (ClassNotFoundException e) {
-			e.printStackTrace();
-		}
-
-	}
+	
 }

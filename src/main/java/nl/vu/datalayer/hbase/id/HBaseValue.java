@@ -7,11 +7,13 @@ import java.io.UnsupportedEncodingException;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 
+import nl.vu.datalayer.hbase.schema.HBPrefixMatchSchema;
 import nl.vu.datalayer.hbase.util.HBPrefixMatchUtil;
 
 import org.apache.hadoop.io.WritableComparable;
 import org.openrdf.model.BNode;
 import org.openrdf.model.Literal;
+import org.openrdf.model.Resource;
 import org.openrdf.model.URI;
 import org.openrdf.model.Value;
 import org.openrdf.model.impl.BNodeImpl;
@@ -154,6 +156,10 @@ public class HBaseValue implements WritableComparable<HBaseValue> {
 		return value.toString();
 	}
 	
+	public void setValue(Value value) {
+		this.value = value;
+	}
+	
 	public static void main(String[] args) {
 		MessageDigest mDigest;
 		try {
@@ -171,5 +177,7 @@ public class HBaseValue implements WritableComparable<HBaseValue> {
 		}
 		
 	}
+
+	
 
 }

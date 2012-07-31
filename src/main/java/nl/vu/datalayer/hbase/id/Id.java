@@ -27,4 +27,8 @@ public abstract class Id {
 	{
 		return id;
 	}
+
+	public void set(byte[] content) {
+		this.id = content;
+	}
 }

@@ -73,6 +73,11 @@ public class DataPair implements Writable{
 		DataPair pair = (DataPair)obj;
 		return (id.equals(pair.getId()) && position == pair.getPosition());
 	}
+
+	public void set(Id id, byte pos) {
+		this.id = id;
+		this.position = pos;
+	}
 	
 	
 }

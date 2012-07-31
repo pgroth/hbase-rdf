@@ -33,6 +33,12 @@ public class BaseId extends Id implements WritableComparable<BaseId> {
 	public BaseId(){
 		super();
 	}
+	
+	public void set(int partitionId, long localCounter){
+		long tripleID = ((long)partitionId)<<24;
+		tripleID |= localCounter & 0x0000000000ffffffL;
+		id = Bytes.toBytes(tripleID);
+	}
 
 	@Override
 	public int hashCode() {//used for partitioning

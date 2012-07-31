@@ -3,6 +3,7 @@ package nl.vu.datalayer.hbase.id;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 
+import nl.vu.datalayer.hbase.exceptions.NonNumericalException;
 import nl.vu.datalayer.hbase.exceptions.NumericalRangeException;
 
 import org.apache.hadoop.hbase.util.Bytes;
@@ -61,6 +62,10 @@ public class TypedId extends BaseId{
 		
 		//first bit 1 - NUMERICAL
 		//next 4 bits - numerical type
+		set(numericalType, content);
+	}
+	
+	public void set(int numericalType, byte []content){
 		id = content;
 		id[0] = (byte)((numericalType<<3) | 0x80);
 	}
@@ -70,7 +75,7 @@ public class TypedId extends BaseId{
 	 * @return
 	 * @throws NumericalRangeException
 	 */
-	public static TypedId createNumerical(Literal l) throws NumericalRangeException{//TODO
+	public static TypedId createNumerical(Literal l) throws NumericalRangeException, NonNumericalException{
 		URI datatype = l.getDatatype();
 		
 		byte []idSpace = new byte[SIZE];//prepare space also for storing the first byte
@@ -239,7 +244,7 @@ public class TypedId extends BaseId{
 			return new TypedId(XSD_DECIMAL, idSpace);
 		}
 		else
-			return null;
+			throw new NonNumericalException("Not a numerical");
 	}
 	
 
