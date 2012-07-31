@@ -58,6 +58,10 @@ public class NativeJavaConnection extends HBaseConnection {
 		return tablePool.getTable(tableName);
 	}
 	
+	public HTableInterface getTable(byte [] tableNameBytes) throws IOException{
+		return tablePool.getTable(tableNameBytes);
+	}
+	
 	public void close() throws IOException{
 		hbase.close();
 		tablePool.close();
