@@ -16,7 +16,7 @@ import org.openrdf.model.vocabulary.XMLSchema;
  * 
  *
  */
-public class TypedId extends BaseId{
+public class TypedId extends Id{
 	
 	public static final byte STRING = 0;
 	public static final byte NUMERICAL = 1;	
@@ -46,20 +46,19 @@ public class TypedId extends BaseId{
 	public static final int SIZE = 9;
 	
 	public TypedId(int partitionId, long rowCount) {
-		super(partitionId, rowCount);
-		
 		// first bit 0 - STRING
-		byte []first =  new byte[1];
-		id = Bytes.add(first, id);
+		id = new byte[SIZE];
+		
+		long tripleID = ((long)partitionId)<<24;
+		tripleID |= rowCount & 0x0000000000ffffffL;
+		Bytes.putLong(id, 1, tripleID);
 	}
 	
 	public TypedId(){
-		super();
+		id = new byte[SIZE];
 	}
 	
-	public TypedId(int numericalType, byte []content) {
-		super();
-		
+	public TypedId(int numericalType, byte []content) {		
 		//first bit 1 - NUMERICAL
 		//next 4 bits - numerical type
 		set(numericalType, content);
@@ -68,6 +67,13 @@ public class TypedId extends BaseId{
 	public void set(int numericalType, byte []content){
 		id = content;
 		id[0] = (byte)((numericalType<<3) | 0x80);
+	}
+	
+	public void set(int partitionId, long rowCount){
+		id[0] = 0;
+		long tripleID = ((long)partitionId)<<24;
+		tripleID |= rowCount & 0x0000000000ffffffL;
+		Bytes.putLong(id, 1, tripleID);
 	}
 	
 	/**
@@ -329,5 +335,10 @@ public class TypedId extends BaseId{
 			}
 		}
 		return super.toString();
+	}
+	
+	public static void main(String[] args) {
+		TypedId test = new TypedId();
+		System.out.println(test.id.length);
 	}
 }

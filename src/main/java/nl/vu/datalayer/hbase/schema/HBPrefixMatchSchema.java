@@ -68,7 +68,7 @@ public class HBPrefixMatchSchema implements IHBaseSchema {
 	private String coprocessorPath = null;
 	
 	//default number of initial regions
-	public static final int NUM_REGIONS = 14;//TODO should be retrieved from the cluster
+	public static final int NUM_REGIONS = 28;//TODO should be retrieved from the cluster
 	
 	private int numInputPartitions;
 	private long startPartition;
@@ -233,15 +233,15 @@ public class HBPrefixMatchSchema implements IHBaseSchema {
 		
 		splits = getNonNumericalSplits(NUM_REGIONS, 0);
 		
-		System.out.println("Id2String splits: ");
-		printSplits(splits);
+		//System.out.println("Id2String splits: ");
+		//printSplits(splits);
 		
 		createSimpleTable(admin, ID2STRING+schemaSuffix, splits, true);
 		
 		createSimpleTable(admin, TABLE_NAMES[POCS]+schemaSuffix, splits, false);
 		
 		byte [][] objectSplits = getObjectPrefixSplits(NUM_REGIONS);
-		printSplits(objectSplits);
+		//printSplits(objectSplits);
 		createSimpleTable(admin, TABLE_NAMES[OSPC]+schemaSuffix, objectSplits, false);
 		
 		if (onlyTriples == false){
@@ -379,7 +379,7 @@ public class HBPrefixMatchSchema implements IHBaseSchema {
 		long endKeyPrefix = ((startPartition+numInputPartitions-1) << 24) | 0xffffffL;;
 		Bytes.putLong(endKey, startOffset, endKeyPrefix);
 		
-		System.out.println("Start: "+String.format("%x", startKeyPrefix)+"; End: "+String.format("%x", endKeyPrefix));
+		//System.out.println("Start: "+String.format("%x", startKeyPrefix)+"; End: "+String.format("%x", endKeyPrefix));
 		
 		return getSplits(startKey, endKey, numRegions);
 	}
@@ -439,118 +439,9 @@ public class HBPrefixMatchSchema implements IHBaseSchema {
 		byte []endKey = new byte[KEY_LENGTH];
 		Arrays.fill(endKey, 0, KEY_LENGTH, (byte)0xff);
 		byte [][]splits = getSplits(startKey, endKey, NUM_REGIONS);
-		System.out.println(" String2Id splits: ");
-		printSplits(splits);
+		//System.out.println(" String2Id splits: ");
+		//printSplits(splits);
 		return splits;
 	}
-
-	
-	/**
-	 * 
-	 * @param start
-	 * @param end
-	 * @param portion
-	 */
-	/*public static BigInteger getAddress(BigInteger range, BigInteger startAddress, long chunkCount, long totalCount ){
-		BigInteger chunkSize = range.multiply(BigInteger.valueOf(chunkCount)).divide(BigInteger.valueOf(totalCount));
-		
-		return startAddress.add(chunkSize);
-	}
-	
-	/*public static byte [] convertBigIntegerToAddress(BigInteger address, int length){
-		byte []ret = address.toByteArray();
-		int offset = ret.length-length;
-		
-		if (offset < 0){
-			return Bytes.padHead(ret, Math.abs(offset));
-		}
-		else if (offset > 0){
-			return Bytes.tail(ret, length);
-		}
-		else
-			return ret;
-	}*/
-	
-	
-	/**
-	 * Computes the splits based on the histogram stored in prefixCounters 
-	 * 
-	 * @param numRegions
-	 * @return
-	 */
-	/*public byte [][] getString2IdSplits(int numRegions){
-		
-		//divide all elements to the desired number of regions, so that a proper load balance is maintained
-		if (totalStringCount < numRegions){
-			return null;
-		}
-		
-		long elementsPerRegion = (totalStringCount+numRegions)/numRegions;
-		byte [][]byteSplits = new byte[numRegions-1][];
-		long counterPerRegion = 0;
-		int splitIndex = 0;
-		
-		for (Map.Entry<Short, Long> entry : prefixCounters.entrySet()) {
-			System.out.println(entry.getKey());
-			
-			if (counterPerRegion + entry.getValue() < elementsPerRegion){
-				counterPerRegion += entry.getValue();
-			}
-			else{
-				long remaining = elementsPerRegion - counterPerRegion;
-				
-				//build the range of the key without the prefix bytes
-				int remainingLength = KEY_LENGTH-1;
-				byte []remainingRange = new byte[remainingLength];
-				Arrays.fill(remainingRange, (byte)0xff);
-				BigInteger range = new BigInteger(1, remainingRange);
-				byte []currentAddressBytes = new byte[remainingLength];
-				BigInteger currentAddress = new BigInteger(1, currentAddressBytes);
-					
-				long currentPrefixCount = 0;
-				if (remaining < elementsPerRegion){	
-					byteSplits[splitIndex] = new byte[KEY_LENGTH];
-					currentPrefixCount += remaining;
-					
-					currentAddress = getAddress(range, currentAddress, remaining, entry.getValue());
-					byte []addressBytes = convertBigIntegerToAddress(currentAddress, remainingLength);
-					
-					byteSplits[splitIndex][0] = entry.getKey().byteValue();
-					Bytes.putBytes(byteSplits[splitIndex], 1, addressBytes, 0, remainingLength);
-					splitIndex++;
-				}
-				
-				//divide the remaining splits with this prefix
-				long prefixRemaining = entry.getValue()-currentPrefixCount;
-				
-				while (prefixRemaining > elementsPerRegion){
-					byteSplits[splitIndex] = new byte[KEY_LENGTH];
-					
-					currentAddress = getAddress(range, currentAddress, elementsPerRegion, entry.getValue());
-					byte []addressBytes = convertBigIntegerToAddress(currentAddress, remainingLength);
-					
-					System.out.println(splitIndex);
-					byteSplits[splitIndex][0] = entry.getKey().byteValue();
-					Bytes.putBytes(byteSplits[splitIndex], 1, addressBytes, 0, remainingLength);
-					splitIndex++;
-					prefixRemaining -= elementsPerRegion;
-				}
-				
-				counterPerRegion = prefixRemaining;
-			}
-		}
-		
-		byte [][] ret;
-		if (splitIndex < numRegions-1){
-			ret = new byte[splitIndex][];
-			for (int i = 0; i < splitIndex; i++) {
-				ret[i] = byteSplits[i];
-			}
-		}
-		else
-			ret = byteSplits;
-		
-		return ret;
-	}*/
 	
 }

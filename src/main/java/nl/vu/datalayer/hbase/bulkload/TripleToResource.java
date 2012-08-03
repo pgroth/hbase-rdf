@@ -1,8 +1,6 @@
 package nl.vu.datalayer.hbase.bulkload;
 
-import java.io.ByteArrayInputStream;
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.StringReader;
 import java.util.ArrayList;
 
@@ -19,6 +17,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.SequenceFile;
 import org.apache.hadoop.io.SequenceFile.CompressionType;
@@ -29,10 +28,9 @@ import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.openrdf.model.BNode;
 import org.openrdf.model.Literal;
 import org.openrdf.model.Statement;
+import org.openrdf.model.URI;
 import org.openrdf.model.Value;
-import org.openrdf.model.ValueFactory;
 import org.openrdf.model.impl.URIImpl;
-import org.openrdf.model.impl.ValueFactoryImpl;
 import org.openrdf.rio.RDFHandlerException;
 import org.openrdf.rio.RDFParseException;
 import org.openrdf.rio.RDFParser;
@@ -45,6 +43,14 @@ public class TripleToResource {
 	public static final String DEFAULT_CONTEXT = "http://DEFAULT_CONTEXT";
 	
 	public static final String EXCEPTION_GROUP = "ExceptionGroup";
+	public static final int QUAD_MEDIAN_SIZE = 190;
+	public static final int QUAD_AVERAGE_SIZE = 234;
+	
+	public static long getMapOutputRecordSizeEstimate() {
+		long baseDataPairSize = BaseId.SIZE+Bytes.SIZEOF_BYTE+//serialized id
+								Bytes.SIZEOF_BYTE;//position
+		return QUAD_MEDIAN_SIZE+4*baseDataPairSize;
+	}
 	
 	public static class TripleToResourceMapper extends 
 				org.apache.hadoop.mapreduce.Mapper<LongWritable, Writable, HBaseValue, DataPair>
@@ -58,6 +64,7 @@ public class TripleToResource {
 		private BaseId quadId = new BaseId();
 		private DataPair [] outputPairs = null;
 		private HBaseValue hbaseValue = null;
+		private URI defaultContext = new URIImpl(DEFAULT_CONTEXT);
 		
 		@Override
 		protected void setup(Context context) throws IOException, InterruptedException {
@@ -112,7 +119,7 @@ public class TripleToResource {
 			
 			Value quadContext;
 			if (s.getContext() == null){
-				quadContext = new URIImpl(DEFAULT_CONTEXT);
+				quadContext = defaultContext;
 			}
 			else{
 				quadContext = s.getContext();
@@ -134,7 +141,7 @@ public class TripleToResource {
 				return null;
 			}							
 			Statement ret = statements.get(statements.size()-1);
-			if (statements.size() == 5000){
+			if (statements.size() == 100){
 				statements.clear();
 			}
 			
@@ -163,6 +170,8 @@ public class TripleToResource {
 			public static final String NUMERICAL_GROUP = "NumericalGroup";		
 			
 			private String schemaSuffix;
+			private TypedId newId = new TypedId();
+			private ImmutableBytesWritable sideEffectFileKey = new ImmutableBytesWritable();
 			
 			@Override
 			protected void setup(Context context) throws IOException, InterruptedException {
@@ -192,8 +201,8 @@ public class TripleToResource {
 			public void reduce(HBaseValue key, Iterable<DataPair> values, Context context) throws IOException, InterruptedException {
 				//generate a new id for the triple element represented by the key
 				try{
-					TypedId newId = generateTypedId(context, key.getUnderlyingValue());				
-					saveTypeIdToFile(newId, key, context);
+					generateTypedId(context, key.getUnderlyingValue());				
+					saveTypeIdToFile(key, context);
 					
 					//emit (elementID, <tripleID, position>) elements
 					for (DataPair dataPair : values) {
@@ -207,37 +216,34 @@ public class TripleToResource {
 				}
 			}
 
-			final private TypedId generateTypedId(Context context, Value elem) throws IOException, NumericalRangeException {
+			final private void generateTypedId(Context context, Value elem) throws IOException, NumericalRangeException {
 				if (elem instanceof Literal){//Literals				
-					return handleLiteral(context, elem);
+					handleLiteral(context, elem);
 				}
 				else{//non-Literals
-					return handleNonLiteral(context, elem);
+					handleNonLiteral(context, elem);
 				}
 			}
 			
-			final private TypedId handleLiteral(Context context, Value elem) throws IOException, NumericalRangeException{
+			final private void handleLiteral(Context context, Value elem) throws IOException, NumericalRangeException{
 				Counter c = context.getCounter(ELEMENT_TYPE_GROUP, "Literals"); 
 				c.increment(1);
 				Literal l = (Literal)elem;
 				if (l.getDatatype() == null){//the Literals with no datatype are considered Strings
-					return new TypedId(partitionId, localRowCount);
+					newId.set(partitionId, localRowCount);
 				}
 				else{//we have a datatype
-					TypedId newId;
 					try {
 						newId = TypedId.createNumerical(l);
 					} catch (NonNumericalException e) {
-						newId = new TypedId(partitionId, localRowCount);
+						newId.set(partitionId, localRowCount);
 					}
-					
-					return newId;
 				}
 			}
 			
-			final private TypedId handleNonLiteral(Context context, Value elem){
+			final private void handleNonLiteral(Context context, Value elem){
 				increaseNonLiteralCounters(elem, context);
-				return new TypedId(partitionId, localRowCount);
+				newId.set(partitionId, localRowCount);
 			}
 			
 			final private void increaseNonLiteralCounters(Value elem, Context context){
@@ -249,9 +255,10 @@ public class TripleToResource {
 				}
 			}	
 			
-			final private void saveTypeIdToFile(TypedId newId, HBaseValue value, Context context) throws IOException{
+			final private void saveTypeIdToFile(HBaseValue value, Context context) throws IOException{
 				if (newId.getType() != TypedId.NUMERICAL){
-					id2StringWriter.append(new ImmutableBytesWritable(newId.getContent()), value);
+					sideEffectFileKey.set(newId.getContent());
+					id2StringWriter.append(sideEffectFileKey, value);
 					
 					localRowCount++;
 					context.getCounter(NUMERICAL_GROUP, "NonNumericals").increment(1);

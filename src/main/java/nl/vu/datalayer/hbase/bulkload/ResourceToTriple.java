@@ -16,7 +16,11 @@ public class ResourceToTriple {
 	
 	public static final String TEMP_TRIPLETS_DIR = "/tempTriplets";
 	
-
+	public static long getMapOutputRecordSizeEstimate() { 
+		return TypedId.SIZE+Bytes.SIZEOF_BYTE+//id + length
+				BaseId.SIZE+Bytes.SIZEOF_BYTE+//id + length
+				Bytes.SIZEOF_BYTE;//position in Data Pair
+	}
 	
 	public static class ResourceToTripleMapper extends org.apache.hadoop.mapreduce.Mapper<TypedId, DataPair, BaseId, DataPair>
 	{

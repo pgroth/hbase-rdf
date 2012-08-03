@@ -3,6 +3,7 @@ package nl.vu.datalayer.hbase.id;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
+import nl.vu.datalayer.hbase.exceptions.NonNumericalException;
 import nl.vu.datalayer.hbase.exceptions.NumericalRangeException;
 
 import org.junit.Before;
@@ -34,6 +35,8 @@ public class TypedIdTestNumericals {
 		} catch (NumericalRangeException e) {
 			e.printStackTrace();
 			fail("NumericalRangeException thrown for "+sNumber);
+		} catch (NonNumericalException e) {
+			fail("NonNumericalException thrown for integer"+sNumber);
 		}
 	}
 	
@@ -46,6 +49,8 @@ public class TypedIdTestNumericals {
 		} catch (NumericalRangeException e) {
 			e.printStackTrace();
 			fail("NumericalRangeException thrown for "+sNumber);
+		} catch (NonNumericalException e) {
+			fail("NonNumericalException thrown for integer"+sNumber);
 		}
 	}
 	
@@ -58,6 +63,8 @@ public class TypedIdTestNumericals {
 		} catch (NumericalRangeException e) {
 			e.printStackTrace();
 			fail("NumericalRangeException thrown for "+sNumber);
+		} catch (NonNumericalException e) {
+			fail("NonNumericalException thrown for integer"+sNumber);
 		}
 	}
 	
@@ -70,6 +77,8 @@ public class TypedIdTestNumericals {
 		} catch (NumericalRangeException e) {
 			e.printStackTrace();
 			fail("NumericalRangeException thrown for "+sNumber);
+		} catch (NonNumericalException e) {
+			fail("NonNumericalException thrown for integer"+sNumber);
 		}
 		catch (NumberFormatException e) {
 			//let the test pass
@@ -89,6 +98,8 @@ public class TypedIdTestNumericals {
 			fail("NumericalRangeException not thrown for positiveInteger "+sNumber);
 		} catch (NumericalRangeException e) {
 			//let the test pass
+		} catch (NonNumericalException e) {
+			fail("NonNumericalException thrown for positiveInteger "+sNumber);
 		}
 	}
 	
@@ -101,6 +112,8 @@ public class TypedIdTestNumericals {
 		} catch (NumericalRangeException e) {
 			e.printStackTrace();
 			fail("NumericalRangeException thrown for "+sNumber);
+		} catch (NonNumericalException e) {
+			fail("NonNumericalException thrown for positiveInteger"+sNumber);
 		}
 	}
 	
@@ -115,6 +128,8 @@ public class TypedIdTestNumericals {
 			fail("NumericalRangeException not thrown for positiveInteger "+sNumber);
 		} catch (NumericalRangeException e) {
 			//let the test pass
+		} catch (NonNumericalException e) {
+			fail("NonNumericalException thrown for positiveInteger "+sNumber);
 		}
 	}
 	
@@ -129,6 +144,8 @@ public class TypedIdTestNumericals {
 		} catch (NumericalRangeException e) {
 			e.printStackTrace();
 			fail("NumericalRangeException thrown for "+sNumber);
+		} catch (NonNumericalException e) {
+			fail("NonNumericalException thrown for double "+sNumber);
 		}
 	}
 	
@@ -139,13 +156,14 @@ public class TypedIdTestNumericals {
 			String toTest = "\""+sNumber+"\"^^<http://www.w3.org/2001/XMLSchema#float>";
 			Value object = NTriplesUtil.parseValue(toTest, valFact);
 			TypedId id = TypedId.createNumerical((Literal)object);
-			assertTrue(id != null);
 			
 			Literal l = id.toLiteral();
 			assertTrue(l.toString().equals("\""+sNumber+"\"^^<http://www.w3.org/2001/XMLSchema#double>"));
 		} catch (NumericalRangeException e) {
 			e.printStackTrace();
 			fail("NumericalRangeException thrown for "+sNumber);
+		} catch (NonNumericalException e) {
+			fail("NonNumericalException thrown for float "+sNumber);
 		}
 	}
 	
@@ -160,6 +178,9 @@ public class TypedIdTestNumericals {
 		} catch (NumericalRangeException e) {
 			e.printStackTrace();
 			fail("NumericalRangeException thrown for "+sNumber);
+		} 
+		catch (NonNumericalException e) {
+			fail("NonNumericalException thrown for int "+sNumber);
 		}
 	}
 	
@@ -175,9 +196,9 @@ public class TypedIdTestNumericals {
 		} 
 		catch (NumericalRangeException e) {
 			fail("NumericalRangeException thrown for "+sNumber);
-		}
-		catch (NumberFormatException e) {
-			//let the test pass
+		} 
+		catch (NonNumericalException e) {
+			fail("NonNumericalException thrown for int "+sNumber);
 		}
 	}
 	
@@ -193,6 +214,9 @@ public class TypedIdTestNumericals {
 		}
 		catch (NumericalRangeException e) {
 			fail("NumericalRangeException thrown for "+sNumber);
+		}
+		catch (NonNumericalException e) {
+			fail("NonNumericalException thrown for int "+sNumber);
 		}
 		catch (NumberFormatException e) {//this will be thrown instead of NumericalRangeException
 										 //because it comes from Integer.parseInt
@@ -212,6 +236,9 @@ public class TypedIdTestNumericals {
 			e.printStackTrace();
 			fail("NumericalRangeException thrown for "+sNumber);
 		}
+		catch (NonNumericalException e) {
+			fail("NonNumericalException thrown for unsigned int "+sNumber);
+		}
 	}
 	
 	@Test
@@ -226,6 +253,9 @@ public class TypedIdTestNumericals {
 		} catch (NumericalRangeException e) {
 			//let the test pass
 		}
+		catch (NonNumericalException e) {
+			fail("NonNumericalException thrown for unsigned int "+sNumber);
+		}
 	}
 	
 	@Test
@@ -237,6 +267,9 @@ public class TypedIdTestNumericals {
 		} catch (NumericalRangeException e) {
 			e.printStackTrace();
 			fail("NumericalRangeException thrown for "+sNumber);
+		}
+		catch (NonNumericalException e) {
+			fail("NonNumericalException thrown for unsigned int "+sNumber);
 		}
 	}
 	
@@ -252,6 +285,9 @@ public class TypedIdTestNumericals {
 		} catch (NumericalRangeException e) {
 			//let the test pass
 		}
+		catch (NonNumericalException e) {
+			fail("NonNumericalException thrown for unsignedInt "+sNumber);
+		}
 	}
 	
 	//================================= XSD_unsignedShort Numericals ==========================
@@ -265,6 +301,9 @@ public class TypedIdTestNumericals {
 		} catch (NumericalRangeException e) {
 			e.printStackTrace();
 			fail("NumericalRangeException thrown for "+sNumber);
+		}
+		catch (NonNumericalException e) {
+			fail("NonNumericalException thrown for unsignedShort "+sNumber);
 		}
 	}
 	
@@ -280,6 +319,9 @@ public class TypedIdTestNumericals {
 		} catch (NumericalRangeException e) {
 			//let the test pass
 		}
+		catch (NonNumericalException e) {
+			fail("NonNumericalException thrown for unsignedShort "+sNumber);
+		}
 	}
 	
 	@Test
@@ -290,9 +332,12 @@ public class TypedIdTestNumericals {
 			Value object = NTriplesUtil.parseValue(toTest, valFact);
 			TypedId id = TypedId.createNumerical((Literal)object);
 			
-			fail("NumericalRangeException not thrown for unsignedInt "+sNumber);
+			fail("NumericalRangeException not thrown for unsignedShort "+sNumber);
 		} catch (NumericalRangeException e) {
 			//let the test pass
+		}
+		catch (NonNumericalException e) {
+			fail("NonNumericalException thrown for unsignedShort "+sNumber);
 		}
 	}
 	
@@ -308,6 +353,9 @@ public class TypedIdTestNumericals {
 			e.printStackTrace();
 			fail("NumericalRangeException thrown for "+sNumber);
 		}
+		catch (NonNumericalException e) {
+			fail("NonNumericalException thrown for unsignedByte "+sNumber);
+		}
 	}
 	
 	@Test
@@ -318,10 +366,14 @@ public class TypedIdTestNumericals {
 			Value object = NTriplesUtil.parseValue(toTest, valFact);
 			TypedId id = TypedId.createNumerical((Literal)object);
 			
-			fail("NumericalRangeException not thrown for unsignedInt "+sNumber);
+			fail("NumericalRangeException not thrown for unsignedByte "+sNumber);
 		} catch (NumericalRangeException e) {
 			//let the test pass
 		}
+		catch (NonNumericalException e) {
+			fail("NonNumericalException thrown for unsignedByte "+sNumber);
+		}
+		
 	}
 	
 	@Test
@@ -335,14 +387,15 @@ public class TypedIdTestNumericals {
 			fail("NumericalRangeException not thrown for unsignedInt "+sNumber);
 		} catch (NumericalRangeException e) {
 			//let the test pass
+		} catch (NonNumericalException e) {
+			fail("NonNumericalException thrown for unsignedByte "+sNumber);
 		}
 	}
 
 	@Ignore
-	private void testNumerical(String toTest) throws NumericalRangeException{
+	private void testNumerical(String toTest) throws NumericalRangeException, NonNumericalException{
 		Value object = NTriplesUtil.parseValue(toTest, valFact);
 		TypedId id = TypedId.createNumerical((Literal)object);
-		assertTrue(id != null);
 		
 		Literal l = id.toLiteral();
 		assertTrue(l.toString().equals(toTest));

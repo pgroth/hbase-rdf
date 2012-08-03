@@ -106,7 +106,7 @@ public class HBaseValue implements WritableComparable<HBaseValue> {
 			}
 			break;
 		}
-		default: throw new RuntimeException("Unknow value base type");
+		default: throw new RuntimeException("Unknown base type for HBaseValue");
 		}
 	}
 
@@ -159,25 +159,5 @@ public class HBaseValue implements WritableComparable<HBaseValue> {
 	public void setValue(Value value) {
 		this.value = value;
 	}
-	
-	public static void main(String[] args) {
-		MessageDigest mDigest;
-		try {
-			mDigest = MessageDigest.getInstance("MD5");
-			//byte []hash = mDigest.digest(new String("http://www.w3.org/1999/02/22-rdf-syntax-ns#type").getBytes("UTF-8"));
-			byte []hash = mDigest.digest(new String("http://people.w3.org/simon/foaf#i").getBytes("UTF-8"));
-			System.out.println(HBPrefixMatchUtil.hexaString(hash));
-			
-		} catch (NoSuchAlgorithmException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		} catch (UnsupportedEncodingException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-		
-	}
-
-	
 
 }

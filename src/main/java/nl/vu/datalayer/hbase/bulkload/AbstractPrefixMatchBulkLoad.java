@@ -7,6 +7,7 @@ import java.io.IOException;
 
 import nl.vu.datalayer.hbase.connection.HBaseConnection;
 import nl.vu.datalayer.hbase.connection.NativeJavaConnection;
+import nl.vu.datalayer.hbase.id.BaseId;
 import nl.vu.datalayer.hbase.id.DataPair;
 import nl.vu.datalayer.hbase.id.HBaseValue;
 import nl.vu.datalayer.hbase.id.TypedId;
@@ -23,6 +24,7 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.mapreduce.HFileOutputFormat;
 import org.apache.hadoop.hbase.mapreduce.LoadIncrementalHFiles;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapreduce.CounterGroup;
 import org.apache.hadoop.mapreduce.Counters;
@@ -33,6 +35,7 @@ import org.apache.hadoop.mapreduce.lib.output.SequenceFileOutputFormat;
 
 public abstract class AbstractPrefixMatchBulkLoad {
 	
+	private static final long DEFAULT_BLOCK_SIZE = 134217728;
 	private  HTableInterface string2Id = null;
 	private  HTableInterface id2String = null;
 	/**
@@ -43,7 +46,7 @@ public abstract class AbstractPrefixMatchBulkLoad {
 	/**
 	 * Estimate of a quad size  
 	 */
-	public  int QUAD_AVERAGE_SIZE = 230;
+	
 	public  int ELEMENTS_PER_QUAD = 4;
 	/**
 	 * Estimate of imbalance of data  distributed across reducers
@@ -63,6 +66,7 @@ public abstract class AbstractPrefixMatchBulkLoad {
 	protected  NativeJavaConnection con;
 	protected  LoadIncrementalHFiles bulkLoad;
 	protected FileSystem fs;
+	protected long inputSplitSize;
 
 	public AbstractPrefixMatchBulkLoad(Path input, int inputEstimateSize, String outputPath, String schemaSuffix, boolean onlyTriples) {
 		this.schemaSuffix = schemaSuffix;
@@ -82,16 +86,17 @@ public abstract class AbstractPrefixMatchBulkLoad {
 		
 		Path resourceIds = new Path(outputPath+"/"+TripleToResource.RESOURCE_IDS_DIR);
 		fs = FileSystem.get(con.getConfiguration());
+		inputSplitSize = con.getConfiguration().getLong("dfs.block.size", DEFAULT_BLOCK_SIZE);
 		
 		runTripleToResourceJob(idStringAssocInput, resourceIds, prefMatchSchema);
 		
 		//SECOND PASS-----------------------------------------------	
-		//TODO runResourceToTripleJob(resourceIds, convertedTripletsPath);
+		runResourceToTripleJob(resourceIds, convertedTripletsPath);
 		
 		bulkLoad = new LoadIncrementalHFiles(con.getConfiguration());
 		
 		bulkLoadIdStringMappingTables(idStringAssocInput);		
-		//TODO bulkLoadQuadTables(convertedTripletsPath);
+		bulkLoadQuadTables(convertedTripletsPath);
 		
 		con.close();
 	}
@@ -121,7 +126,7 @@ public abstract class AbstractPrefixMatchBulkLoad {
 	protected void createSchemaFromCounters(HBPrefixMatchSchema prefMatchSchema) throws IOException {
 		long startPartition = HBPrefixMatchSchema.updateLastCounter(tripleToResourceReduceTasks, con.getConfiguration(), schemaSuffix)+1;
 		//long startPartition = HBPrefixMatchSchema.getLastCounter(con.getConfiguration())+1;
-		System.out.println(totalStringCount+" : "+numericalCount);
+		//System.out.println(totalStringCount+" : "+numericalCount);
 		
 		prefMatchSchema.setTableSplitInfo(totalStringCount, numericalCount, 
 				tripleToResourceReduceTasks, startPartition, onlyTriples);
@@ -172,28 +177,27 @@ public abstract class AbstractPrefixMatchBulkLoad {
 
 	public  Job createTripleToResourceJob(Path input, Path output, int inputSizeEstimate) throws IOException {
 		Configuration conf = new Configuration();
-		conf.setInt("mapred.job.reuse.jvm.num.tasks", -1);
 		
-		//the intermediate keys are larger than intermediate values
-		conf.setFloat("io.sort.record.percent", 0.6f);
+		ShuffleStageOptimizer shuffleOptimizer = new ShuffleStageOptimizer(inputSplitSize, 
+													TripleToResource.QUAD_MEDIAN_SIZE, 
+													TripleToResource.getMapOutputRecordSizeEstimate(), 1.4, 4);
+		configureShuffle(conf, shuffleOptimizer);	
 		
-		//for large data we will spill anyway, so might as well start it as soon as possible, 
-		//so that the mapper doesn't block
-		conf.setFloat("io.sort.spill.percent", 0.6f);
 		conf.set("schemaSuffix", schemaSuffix);
 		
 		Job j = new Job(conf);
 		
 		j.setJobName("TripleToResource");
 		
-		long numInputBytes = (long)(inputSizeEstimate*Math.pow(10.0, 6.0));
-		long numQuads = numInputBytes/QUAD_AVERAGE_SIZE;
-		long totalNumberOfElements = numQuads*ELEMENTS_PER_QUAD;
-		double maximumNumElementsperPartition = (double)totalNumberOfElements/Math.pow(2.0, 24.0);
-		int taskEstimate = (int)(Math.ceil(maximumNumElementsperPartition)* LOAD_BALANCER_FACTOR) ;
+		long numInputBytes = (long)(inputSizeEstimate*Math.pow(1024.0, 2.0));
+		long numQuads = numInputBytes/TripleToResource.QUAD_AVERAGE_SIZE;
+		long totalNumberOfUniqueElements = numQuads*ELEMENTS_PER_QUAD;
+		double maximumElementPerPartition = Math.pow(2.0, 24.0);
+		double numPartitions = (double)totalNumberOfUniqueElements/maximumElementPerPartition;
+		int taskEstimate = (int)(Math.ceil(numPartitions)* LOAD_BALANCER_FACTOR) ;
 		tripleToResourceReduceTasks = CLUSTER_SIZE > taskEstimate ?
 										CLUSTER_SIZE : taskEstimate;
-		//tripleToResourceReduceTasks = 14;
+		
 		System.out.println("Number of reduce tasks: "+tripleToResourceReduceTasks);
 		
 		j.setJarByClass(BulkLoad.class);
@@ -217,11 +221,13 @@ public abstract class AbstractPrefixMatchBulkLoad {
 	}
 
 	public  Job createString2IdJob(HBaseConnection con, Path input, Path output) throws Exception {
-	
-		JobConf conf = new JobConf();
-		conf.setInt("mapred.job.reuse.jvm.num.tasks", -1);
-		conf.setFloat("io.sort.record.percent", 0.6f);//intermediate keys are usually bigger than intermediate values 
-		conf.setFloat("io.sort.spill.percent", 0.6f);
+		JobConf conf = new JobConf(); 
+		
+		ShuffleStageOptimizer shuffleOptimizer = new ShuffleStageOptimizer(inputSplitSize, 
+				TripleToResource.QUAD_MEDIAN_SIZE/4+BaseId.SIZE+Bytes.SIZEOF_INT+Bytes.SIZEOF_LONG, 
+				StringIdAssoc.String2IdMapper.getMapOutputRecordSizeEstimate(), 1.4);
+		configureShuffle(conf, shuffleOptimizer);
+		
 		Job j = new Job(conf);
 	
 		j.setJobName(HBPrefixMatchSchema.STRING2ID+schemaSuffix);
@@ -243,8 +249,14 @@ public abstract class AbstractPrefixMatchBulkLoad {
 	}
 
 	public  Job createId2StringJob(HBaseConnection con, Path input, Path output) throws Exception {
-	
-		Job j = new Job();
+		JobConf conf = new JobConf(); 
+		
+		ShuffleStageOptimizer shuffleOptimizer = new ShuffleStageOptimizer(inputSplitSize, 
+				TripleToResource.QUAD_MEDIAN_SIZE/4+BaseId.SIZE+Bytes.SIZEOF_INT+Bytes.SIZEOF_LONG, 
+				StringIdAssoc.Id2StringMapper.getMapOutputRecordSizeEstimate(), 1.4);
+		configureShuffle(conf, shuffleOptimizer);
+		
+		Job j = new Job(conf);
 	
 		j.setJobName(HBPrefixMatchSchema.ID2STRING+schemaSuffix);
 		j.setJarByClass(BulkLoad.class);
@@ -323,11 +335,8 @@ public abstract class AbstractPrefixMatchBulkLoad {
 		System.out.println(totalCounter);*/
 	}
 
-	public  void moveIdStringAssocDirectory(Path resourceIds, Path id2StringInput) throws IOException {
-		Configuration conf = new Configuration();
-		
+	public  void moveIdStringAssocDirectory(Path resourceIds, Path id2StringInput) throws IOException {	
 		Path source = new Path(resourceIds, TripleToResource.ID2STRING_DIR);
-		
 		fs.rename(source, id2StringInput);
 	}
 
@@ -337,8 +346,18 @@ public abstract class AbstractPrefixMatchBulkLoad {
 		long bulkTime = System.currentTimeMillis() - start;
 		System.out.println("[Time] "+table.getTableDescriptor().getNameAsString() + " bulkLoad time: " + bulkTime + " ms");
 	}
-
 	
+	final protected void configureShuffle(Configuration conf, ShuffleStageOptimizer shuffleOptimizer) {
+		conf.setInt("io.sort.mb", shuffleOptimizer.getIoSortMB());
+		conf.setFloat("io.sort.spill.percent", shuffleOptimizer.getIoSortSpillThreshold());
+		conf.setFloat("io.sort.record.percent", shuffleOptimizer.getIoSortRecordPercent());
+		conf.setInt("io.sort.factor", shuffleOptimizer.getIoSortFactor());
+	}
+
+	/*public static long getIntermediateBufferSize(long inputSplitSizeBytes, int inputRecordSize, long mapOutRecordSize){		 		
+		long inputRecordsPerSplit = inputSplitSizeBytes/inputRecordSize+1;
+		return (inputRecordsPerSplit*mapOutRecordSize);
+	}*/
 
 	protected abstract HBPrefixMatchSchema createPrefixMatchSchema();
 	

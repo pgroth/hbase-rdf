@@ -6,6 +6,7 @@ import java.util.List;
 import nl.vu.datalayer.hbase.bulkload.AbstractPrefixMatchBulkLoad;
 import nl.vu.datalayer.hbase.bulkload.BulkLoad;
 import nl.vu.datalayer.hbase.bulkload.ResourceToTriple;
+import nl.vu.datalayer.hbase.bulkload.ShuffleStageOptimizer;
 import nl.vu.datalayer.hbase.id.BaseId;
 import nl.vu.datalayer.hbase.id.DataPair;
 import nl.vu.datalayer.hbase.schema.HBPrefixMatchSchema;
@@ -45,9 +46,12 @@ public class CoprocessorBulkLoad extends AbstractPrefixMatchBulkLoad {
 
 	private Job createResourceToTripleJob(Path input, Path output) throws IOException {
 		Configuration conf = new Configuration();
-		conf.setInt("mapred.job.reuse.jvm.num.tasks", -1);
-		conf.setFloat("io.sort.record.percent", 0.2f);
-		conf.setFloat("io.sort.spill.percent", 0.7f);
+		
+		ShuffleStageOptimizer shuffleOptimizer = new ShuffleStageOptimizer(inputSplitSize,
+				ResourceToTriple.getMapOutputRecordSizeEstimate(),
+				ResourceToTriple.getMapOutputRecordSizeEstimate());
+		configureShuffle(conf, shuffleOptimizer);
+		
 		conf.set("SUFFIX", schemaSuffix);
 		conf.setBoolean("mapred.map.tasks.speculative.execution", false);
 		conf.setBoolean("mapred.reduce.tasks.speculative.execution", false);
@@ -80,7 +84,7 @@ public class CoprocessorBulkLoad extends AbstractPrefixMatchBulkLoad {
 			Job j2 = createResourceToTripleJob(resourceIds, convertedTripletsPath);
 			j2.waitForCompletion(true);
 			long j2Time = System.currentTimeMillis() - start;
-			System.out.println("Second pass finished: " + j2Time + " ms ; " + ((double) j2Time / 60.0) + " min");
+			System.out.println("[Time] Second pass finished: " + j2Time + " ms ; " + ((double) j2Time / 60.0) + " min");
 		}
 		runCoprocessors();
 		//flushCoprocessorBuffers((HBPrefixMatchSchema.TABLE_NAMES[HBPrefixMatchSchema.SPOC]+schemaSuffix).getBytes());
@@ -101,7 +105,7 @@ public class CoprocessorBulkLoad extends AbstractPrefixMatchBulkLoad {
 			e.printStackTrace();
 		}
 		long coprocLoadingTime = System.currentTimeMillis()-start;
-		System.out.println("Coprocessor loading finished in: "+coprocLoadingTime+" ms");
+		System.out.println("[Time] Coprocessor loading finished in: "+coprocLoadingTime+" ms");
 	}
 
 	public static void main(String[] args) {

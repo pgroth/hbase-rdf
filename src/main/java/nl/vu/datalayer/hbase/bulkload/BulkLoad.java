@@ -16,6 +16,7 @@ import org.apache.hadoop.hbase.client.HTableInterface;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.mapreduce.HFileOutputFormat;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.Mapper;
@@ -110,7 +111,11 @@ public class BulkLoad extends AbstractPrefixMatchBulkLoad{
 
 	public  Job createPrefixMatchJob(HBaseConnection con, Path input, Path output, Class<? extends Mapper> cls, String tableName) throws Exception {		
 		Configuration conf = new Configuration();
-		conf.setFloat("io.sort.record.percent", 0.3f);
+		
+		ShuffleStageOptimizer shuffleOptimizer = new ShuffleStageOptimizer(inputSplitSize,
+														HBPrefixMatchSchema.KEY_LENGTH+Bytes.SIZEOF_INT+Bytes.SIZEOF_LONG,
+														PrefixMatch.getMapOutputRecordSizeEstimate());		
+		configureShuffle(conf, shuffleOptimizer);
 		Job j = new Job(conf);
 
 		j.setJobName(tableName+schemaSuffix);
@@ -138,9 +143,12 @@ public class BulkLoad extends AbstractPrefixMatchBulkLoad{
 	private Job createResourceToTripleJob(Path input, Path output) throws IOException {
 	
 		Configuration conf = new Configuration();
+		
+		ShuffleStageOptimizer shuffleOptimizer = new ShuffleStageOptimizer(inputSplitSize,
+													ResourceToTriple.getMapOutputRecordSizeEstimate(),
+													ResourceToTriple.getMapOutputRecordSizeEstimate());
+		configureShuffle(conf, shuffleOptimizer);
 		conf.setInt("mapred.job.reuse.jvm.num.tasks", -1);
-		conf.setFloat("io.sort.record.percent", 0.2f);
-		conf.setFloat("io.sort.spill.percent", 0.7f);
 		
 		Job j = new Job(conf);
 		j.setJobName("ResourceToTriple");
@@ -183,7 +191,7 @@ public class BulkLoad extends AbstractPrefixMatchBulkLoad{
 				System.out.println("Usage: bulkLoad <inputPath> <inputSizeEstimate in MB> <outputPath> <schemaSuffix> <onlyTriples(true/false)>");
 				return;
 			}		
-			BulkLoad bulkLoad = new BulkLoad(new Path(args[0]),
+			AbstractPrefixMatchBulkLoad bulkLoad = new BulkLoad(new Path(args[0]),
 									Integer.parseInt(args[1]),
 									args[2],
 									args[3],
