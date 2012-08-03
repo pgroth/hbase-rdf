@@ -3,19 +3,16 @@ package nl.vu.datalayer.hbase.bulkload;
 import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
-import java.io.UnsupportedEncodingException;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 
+import nl.vu.datalayer.hbase.id.BaseId;
 import nl.vu.datalayer.hbase.id.HBaseValue;
 import nl.vu.datalayer.hbase.schema.HBPrefixMatchSchema;
 
-import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.io.Text;
-import org.apache.hadoop.mapreduce.Mapper.Context;
 
 public class StringIdAssoc {
 	
@@ -25,54 +22,44 @@ public class StringIdAssoc {
 	public static class Id2StringMapper extends 
 			org.apache.hadoop.mapreduce.Mapper<ImmutableBytesWritable, HBaseValue, ImmutableBytesWritable, Put>
 	{
+		private ByteArrayOutputStream out = new ByteArrayOutputStream();
+		private DataOutputStream dataOut = new DataOutputStream(out);
+		private byte [] keyBytes = new byte [BaseId.SIZE];//
+		
+		public static long getMapOutputRecordSizeEstimate() {
+			long immutableByesKey = BaseId.SIZE+Bytes.SIZEOF_INT+Bytes.SIZEOF_LONG;
+			long putSize = 155;//empirically determined
+			return (immutableByesKey+putSize);
+		}
+		
 		@Override
 		protected void map(ImmutableBytesWritable key, HBaseValue value, Context context) throws IOException, InterruptedException {
-			
-			byte []keyBytes = new byte [key.getLength()];
-			System.arraycopy(key.get(), key.getOffset(), keyBytes, 0, key.getLength());
-			
+			System.arraycopy(key.get(), key.getOffset(), keyBytes, 0, key.getLength());	
 			Put outVal = new Put(keyBytes);
-			
-			ByteArrayOutputStream out = new ByteArrayOutputStream();
-			value.write(new DataOutputStream(out));
-			//byte []valueBytes = new byte [value.getLength()];
-			//System.arraycopy(value.getBytes(), 0, valueBytes, 0, value.getLength());
+	
+			out.reset();
+			value.write(dataOut);
 			
 			outVal.add(HBPrefixMatchSchema.COLUMN_FAMILY, HBPrefixMatchSchema.COLUMN_NAME, out.toByteArray());
-			
 			context.write(key, outVal);
 		}
 	}
 	
-	/**
-	 * Hash function to convert any string to an 8-byte integer
-	 * @param key
-	 * @return
-	 */
-	private static long hashFunction(String key){
-		long hash = 0;
-		
-		for (int i = 0; i < key.length(); i++) {
-			hash = (int)key.charAt(i) + (hash << 6) + (hash << 16) - hash;
-		}
-		
-		return hash;
-	}
 	
-	public static byte []reverseBytes(byte []sourceBytes){
-		int lastIndex = sourceBytes.length-1;
-		
-		byte []outValueBytes = new byte[lastIndex+1];
-		for (int i = 0; i < outValueBytes.length; i++) {
-			outValueBytes[i] = sourceBytes[lastIndex - i];
-		}
-		return outValueBytes;
-	}
 	
 	public static class String2IdMapper extends 
 			org.apache.hadoop.mapreduce.Mapper<ImmutableBytesWritable, HBaseValue, ImmutableBytesWritable, Put> 
 	{
+		private static final int HASH_SIZE = 16;
 		private MessageDigest mDigest;
+		private byte [] inKeyBytes = new byte [BaseId.SIZE];
+		private ImmutableBytesWritable outKey = new ImmutableBytesWritable();
+		
+		public static long getMapOutputRecordSizeEstimate() {
+			long immutableByesKey = HASH_SIZE+Bytes.SIZEOF_INT+Bytes.SIZEOF_LONG;
+			long putSize = 111;//empirically determined
+			return (immutableByesKey+putSize);
+		}
 		
 		@Override
 		protected void setup(Context context) throws IOException, InterruptedException {
@@ -88,10 +75,10 @@ public class StringIdAssoc {
 										throws IOException, InterruptedException {
 			
 			byte []md5HashBytes = mDigest.digest(inValue.toString().getBytes("UTF-8"));
-			ImmutableBytesWritable outKey = new ImmutableBytesWritable(md5HashBytes);				
+			outKey.set(md5HashBytes);				
 
 			Put outVal = new Put(md5HashBytes);
-			byte []inKeyBytes = new byte [inKey.getLength()];
+			
 			System.arraycopy(inKey.get(), inKey.getOffset(), inKeyBytes, 0, inKey.getLength());
 			outVal.add(HBPrefixMatchSchema.COLUMN_FAMILY, HBPrefixMatchSchema.COLUMN_NAME, inKeyBytes);
 
