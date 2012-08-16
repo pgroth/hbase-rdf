@@ -6,12 +6,13 @@ import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 
+@Deprecated
 public class TripleToResourceLocal extends Configured implements Tool {
 
 	@Override
 	public int run(String[] arg0) throws Exception {
 
-		Path resourceIds = new Path("./" + TripleToResource.RESOURCE_IDS_DIR);
+		/*Path resourceIds = new Path("./" + TripleToResource.RESOURCE_IDS_DIR);
 		Job j1 = BulkLoad.createTripleToResourceJob(new Path("input"), resourceIds, 100);
 		j1.getConfiguration().set("outputPath", "./");
 		j1.waitForCompletion(true);
@@ -20,7 +21,7 @@ public class TripleToResourceLocal extends Configured implements Tool {
 		 * JobConf j1 = BulkLoad.createTripleToResourceJob(new Path("input"),
 		 * resourceIds, 2); j1.set("outputPath", "./"); RunningJob runningJ1 =
 		 * JobClient.runJob(j1);
-		 */
+		 
 		BulkLoad.retrieveTripleToResourceCounters(j1);
 
 		Path convertedTripletsPath = new Path("./" + ResourceToTriple.TEMP_TRIPLETS_DIR);
