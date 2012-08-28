@@ -84,9 +84,13 @@ public class CoprocessorBulkLoad extends AbstractPrefixMatchBulkLoad {
 			Job j2 = createResourceToTripleJob(resourceIds, convertedTripletsPath);
 			j2.waitForCompletion(true);
 			long j2Time = System.currentTimeMillis() - start;
-			System.out.println("[Time] Second pass finished: " + j2Time + " ms ; " + ((double) j2Time / 60.0) + " min");
+			System.out.println("[Time] Second pass finished: " + j2Time + " ms");
 		}
+		
 		runCoprocessors();
+		long start = System.currentTimeMillis();
+		prefMatchSchema.flushSecondaryIndexTables();
+		System.out.println("[Time] Flushing secondary index tables took: "+(System.currentTimeMillis()-start)+" ms");
 		//flushCoprocessorBuffers((HBPrefixMatchSchema.TABLE_NAMES[HBPrefixMatchSchema.SPOC]+schemaSuffix).getBytes());
 	}
 

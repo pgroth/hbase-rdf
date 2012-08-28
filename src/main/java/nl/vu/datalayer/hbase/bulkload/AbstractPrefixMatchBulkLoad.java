@@ -41,7 +41,7 @@ public abstract class AbstractPrefixMatchBulkLoad {
 	/**
 	 * Cluster parameters used to estimate number of reducers 
 	 */
-	public  int CLUSTER_SIZE = 14;
+	public  int CLUSTER_SIZE = 13;
 	public  int TASK_PER_NODE = 2;
 	/**
 	 * Estimate of a quad size  
@@ -67,6 +67,7 @@ public abstract class AbstractPrefixMatchBulkLoad {
 	protected  LoadIncrementalHFiles bulkLoad;
 	protected FileSystem fs;
 	protected long inputSplitSize;
+	protected HBPrefixMatchSchema prefMatchSchema;
 
 	public AbstractPrefixMatchBulkLoad(Path input, int inputEstimateSize, String outputPath, String schemaSuffix, boolean onlyTriples) {
 		this.schemaSuffix = schemaSuffix;
@@ -77,14 +78,15 @@ public abstract class AbstractPrefixMatchBulkLoad {
 	}
 
 	protected void run() throws IOException, Exception, InterruptedException, ClassNotFoundException {
+		long globalStartTime = System.currentTimeMillis();
 		Path convertedTripletsPath = new Path(outputPath+ResourceToTriple.TEMP_TRIPLETS_DIR);
-		Path idStringAssocInput = new Path(outputPath+"/"+TripleToResource.ID2STRING_DIR);
+		Path idStringAssocInput = new Path(outputPath+"/"+QuadBreakDown.ID2STRING_DIR);
 		
 		con = (NativeJavaConnection)HBaseConnection.create(HBaseConnection.NATIVE_JAVA);
-		HBPrefixMatchSchema prefMatchSchema = createPrefixMatchSchema();
+		prefMatchSchema = createPrefixMatchSchema();
 		prefMatchSchema.createCounterTable(con.getAdmin());
 		
-		Path resourceIds = new Path(outputPath+"/"+TripleToResource.RESOURCE_IDS_DIR);
+		Path resourceIds = new Path(outputPath+"/"+QuadBreakDown.RESOURCE_IDS_DIR);
 		fs = FileSystem.get(con.getConfiguration());
 		inputSplitSize = con.getConfiguration().getLong("dfs.block.size", DEFAULT_BLOCK_SIZE);
 		
@@ -99,6 +101,10 @@ public abstract class AbstractPrefixMatchBulkLoad {
 		bulkLoadQuadTables(convertedTripletsPath);
 		
 		con.close();
+		long globalEndTime = System.currentTimeMillis();
+		System.out.println("[Time] Total time: "+(globalEndTime-globalStartTime)+" ms");
+		
+		//TODO prefMatchSchema.warmUpBlockCache();
 	}
 
 	protected abstract void runResourceToTripleJob(Path resourceIds, Path convertedTripletsPath) throws IOException, InterruptedException, ClassNotFoundException;
@@ -170,27 +176,31 @@ public abstract class AbstractPrefixMatchBulkLoad {
 
 			//id2String = con.getTable(HBPrefixMatchSchema.ID2STRING+schemaSuffix);TODO add when reading from file
 			doTableBulkLoad(id2StringOutput, id2String, con);
-		}
+		} 
 		System.out.println("Finished bulk load for Id2String table");//=====================//==================================
 	}
 
 
 	public  Job createTripleToResourceJob(Path input, Path output, int inputSizeEstimate) throws IOException {
 		Configuration conf = new Configuration();
+		conf.setBoolean("mapred.map.tasks.speculative.execution", false);
+		conf.setBoolean("mapred.reduce.tasks.speculative.execution", false);
 		
 		ShuffleStageOptimizer shuffleOptimizer = new ShuffleStageOptimizer(inputSplitSize, 
-													TripleToResource.QUAD_MEDIAN_SIZE, 
-													TripleToResource.getMapOutputRecordSizeEstimate(), 1.4, 4);
+													QuadBreakDown.QUAD_MEDIAN_SIZE, 
+													QuadBreakDown.getMapOutputRecordSizeEstimate(), 1.4, 4);
 		configureShuffle(conf, shuffleOptimizer);	
 		
 		conf.set("schemaSuffix", schemaSuffix);
+		conf.setBoolean("mapred.map.tasks.speculative.execution", false);
+		conf.setBoolean("mapred.reduce.tasks.speculative.execution", false);
 		
 		Job j = new Job(conf);
 		
 		j.setJobName("TripleToResource");
 		
 		long numInputBytes = (long)(inputSizeEstimate*Math.pow(1024.0, 2.0));
-		long numQuads = numInputBytes/TripleToResource.QUAD_AVERAGE_SIZE;
+		long numQuads = numInputBytes/QuadBreakDown.QUAD_AVERAGE_SIZE;
 		long totalNumberOfUniqueElements = numQuads*ELEMENTS_PER_QUAD;
 		double maximumElementPerPartition = Math.pow(2.0, 24.0);
 		double numPartitions = (double)totalNumberOfUniqueElements/maximumElementPerPartition;
@@ -201,8 +211,8 @@ public abstract class AbstractPrefixMatchBulkLoad {
 		System.out.println("Number of reduce tasks: "+tripleToResourceReduceTasks);
 		
 		j.setJarByClass(BulkLoad.class);
-		j.setMapperClass(TripleToResource.TripleToResourceMapper.class);
-		j.setReducerClass(TripleToResource.TripleToResourceReducer.class);
+		j.setMapperClass(QuadBreakDown.TripleToResourceMapper.class);
+		j.setReducerClass(QuadBreakDown.TripleToResourceReducer.class);
 		
 		j.setOutputKeyClass(TypedId.class);
 		j.setOutputValueClass(DataPair.class);
@@ -222,12 +232,14 @@ public abstract class AbstractPrefixMatchBulkLoad {
 
 	public  Job createString2IdJob(HBaseConnection con, Path input, Path output) throws Exception {
 		JobConf conf = new JobConf(); 
+		conf.setBoolean("mapred.map.tasks.speculative.execution", false);
+		conf.setBoolean("mapred.reduce.tasks.speculative.execution", false);
 		
 		ShuffleStageOptimizer shuffleOptimizer = new ShuffleStageOptimizer(inputSplitSize, 
-				TripleToResource.QUAD_MEDIAN_SIZE/4+BaseId.SIZE+Bytes.SIZEOF_INT+Bytes.SIZEOF_LONG, 
+				QuadBreakDown.QUAD_MEDIAN_SIZE/4+BaseId.SIZE+Bytes.SIZEOF_INT+Bytes.SIZEOF_LONG, 
 				StringIdAssoc.String2IdMapper.getMapOutputRecordSizeEstimate(), 1.4);
 		configureShuffle(conf, shuffleOptimizer);
-		
+		conf.setInt("hbase.mapreduce.hfileoutputformat.blocksize", 8*1024);
 		Job j = new Job(conf);
 	
 		j.setJobName(HBPrefixMatchSchema.STRING2ID+schemaSuffix);
@@ -250,12 +262,14 @@ public abstract class AbstractPrefixMatchBulkLoad {
 
 	public  Job createId2StringJob(HBaseConnection con, Path input, Path output) throws Exception {
 		JobConf conf = new JobConf(); 
+		conf.setBoolean("mapred.map.tasks.speculative.execution", false);
+		conf.setBoolean("mapred.reduce.tasks.speculative.execution", false);
 		
 		ShuffleStageOptimizer shuffleOptimizer = new ShuffleStageOptimizer(inputSplitSize, 
-				TripleToResource.QUAD_MEDIAN_SIZE/4+BaseId.SIZE+Bytes.SIZEOF_INT+Bytes.SIZEOF_LONG, 
+				QuadBreakDown.QUAD_MEDIAN_SIZE/4+BaseId.SIZE+Bytes.SIZEOF_INT+Bytes.SIZEOF_LONG, 
 				StringIdAssoc.Id2StringMapper.getMapOutputRecordSizeEstimate(), 1.4);
 		configureShuffle(conf, shuffleOptimizer);
-		
+		conf.setInt("hbase.mapreduce.hfileoutputformat.blocksize", 8*1024);
 		Job j = new Job(conf);
 	
 		j.setJobName(HBPrefixMatchSchema.ID2STRING+schemaSuffix);
@@ -281,11 +295,11 @@ public abstract class AbstractPrefixMatchBulkLoad {
 		//sufixCounters = new TreeMap<Short, Long>();
 		
 		Counters counters = j1.getCounters();
-		CounterGroup numGroup = counters.getGroup(TripleToResource.TripleToResourceReducer.NUMERICAL_GROUP);
+		CounterGroup numGroup = counters.getGroup(QuadBreakDown.TripleToResourceReducer.NUMERICAL_GROUP);
 		totalStringCount = numGroup.findCounter("NonNumericals").getValue();
 		numericalCount = numGroup.findCounter("Numericals").getValue();
 		
-		CounterGroup elemsGroup = counters.getGroup(TripleToResource.TripleToResourceReducer.ELEMENT_TYPE_GROUP);
+		CounterGroup elemsGroup = counters.getGroup(QuadBreakDown.TripleToResourceReducer.ELEMENT_TYPE_GROUP);
 		literalCount = elemsGroup.findCounter("Literals").getValue();
 		bNodeCount = elemsGroup.findCounter("Blanks").getValue();
 		
@@ -336,7 +350,7 @@ public abstract class AbstractPrefixMatchBulkLoad {
 	}
 
 	public  void moveIdStringAssocDirectory(Path resourceIds, Path id2StringInput) throws IOException {	
-		Path source = new Path(resourceIds, TripleToResource.ID2STRING_DIR);
+		Path source = new Path(resourceIds, QuadBreakDown.ID2STRING_DIR);
 		fs.rename(source, id2StringInput);
 	}
 
