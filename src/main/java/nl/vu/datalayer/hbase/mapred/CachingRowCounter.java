@@ -90,7 +90,7 @@ public class CachingRowCounter {
 	        }
 	      }
 	    }
-	    scan.setCaching(100);
+	    scan.setCaching(1000);
 	    
 	    // Second argument is the table name.
 	    job.setOutputFormatClass(NullOutputFormat.class);
