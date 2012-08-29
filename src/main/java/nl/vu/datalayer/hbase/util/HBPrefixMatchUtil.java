@@ -186,11 +186,11 @@ public class HBPrefixMatchUtil implements IHBaseUtil {
 			
 			ArrayList<ArrayList<Value>> ret = buildSPOCOrderResults();
 			
-			long totalTime = System.currentTimeMillis() - start;
+			/*long totalTime = System.currentTimeMillis() - start;
 			System.out.println("Id2String number of results: "+id2StringResults.length);
 			System.out.println("TotalTime: "+totalTime+"; RangeScanOverhead: "+searchTime+"; Id2StringOverhead: "+id2StringOverhead+"; String2IdOverhead: "
 									+string2IdOverhead+"; KeyBuildOverhead: "+keyBuildOverhead);
-			
+			*/
 			return ret;
 		
 		} catch (NumericalRangeException e) {
@@ -403,7 +403,7 @@ public class HBPrefixMatchUtil implements IHBaseUtil {
 		
 		//Query the String2Id table
 		byte []key = new byte[keySize];
-		if (numericalElement != null && keySize==TypedId.SIZE){//we only have a numerical in our key
+		if (numericalElement != null && keySize==TypedId.SIZE){//we have only a numerical in our key
 			Bytes.putBytes(key, HBPrefixMatchSchema.OFFSETS[currentTableIndex][2], numericalElement, 0, numericalElement.length);
 		}
 		else{
@@ -421,7 +421,6 @@ public class HBPrefixMatchUtil implements IHBaseUtil {
 		string2IdOverhead += System.currentTimeMillis()-start;
 		
 		for (Result result : results) {
-
 			byte[] value = result.getValue(HBPrefixMatchSchema.COLUMN_FAMILY, HBPrefixMatchSchema.COLUMN_NAME);
 			if (value == null) {
 				throw new ElementNotFoundException("Quad element could not found: " + new String(result.toString()) + "\n" 
@@ -438,7 +437,7 @@ public class HBPrefixMatchUtil implements IHBaseUtil {
 		}	
 		
 		if (numericalElement != null){
-			Bytes.putBytes(key, HBPrefixMatchSchema.OFFSETS[currentTableIndex][2], numericalElement, 0, numericalElement.length);
+			Bytes.putBytes(key, HBPrefixMatchSchema.OFFSETS[currentTableIndex][OBJECT_POSITION], numericalElement, 0, numericalElement.length);
 		}
 		return key;
 	}
@@ -455,7 +454,7 @@ public class HBPrefixMatchUtil implements IHBaseUtil {
 				boundElements.add(quad[i]);
 				
 				byte []sBytes;
-				if (i != 2){//not Object
+				if (i != OBJECT_POSITION){//not Object
 					keySize += BaseId.SIZE;		
 					sBytes = quad[i].toString().getBytes("UTF-8");
 				}
