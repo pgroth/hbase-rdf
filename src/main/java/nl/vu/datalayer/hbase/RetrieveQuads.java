@@ -72,14 +72,14 @@ public class RetrieveQuads {
 			//the schemaSuffix is retrieved from config.properties
 			HBaseClientSolution sol = HBaseFactory.getHBaseSolution(HBPrefixMatchSchema.SCHEMA_NAME, con, null);
 			
-			//FileInputStream ifstream = new FileInputStream(args[0]);
-			//DataInputStream in = new DataInputStream(ifstream);
-			BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
+			FileInputStream ifstream = new FileInputStream(args[0]);
+			DataInputStream dataIn = new DataInputStream(ifstream);
+			BufferedReader br = new BufferedReader(new InputStreamReader(dataIn));
 
 			String strLine;
 			ValueFactory valFactory = new ValueFactoryImpl();
 			
-			System.out.print(">");
+			//System.out.print(">");
 			while ((strLine = br.readLine()) != null) {
 				System.out.println("Query: "+strLine);
 				
