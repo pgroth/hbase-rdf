@@ -1,5 +1,10 @@
 package nl.vu.datalayer.hbase.test;
 
+import java.io.BufferedReader;
+import java.io.DataInputStream;
+import java.io.FileInputStream;
+import java.io.InputStreamReader;
+
 import nl.vu.datalayer.hbase.sail.HBaseRepositoryConnection;
 import nl.vu.datalayer.hbase.sail.HBaseSail;
 import nl.vu.datalayer.hbase.sail.HBaseSailRepository;
@@ -22,35 +27,48 @@ public class HBaseSailTest {
 	 * @throws RepositoryException
 	 */
 	public static void main(String[] args) throws SailException, RepositoryException {
-		// TODO Auto-generated method stub
 		HBaseSail mySail = new HBaseSail();
 		mySail.initialize();
 		HBaseSailRepository myRepo = new HBaseSailRepository(mySail);
 		HBaseRepositoryConnection conn = myRepo.getConnection();
-		// conn
-
-		String queryString = "SELECT ?g FROM NAMED <http://en.wikipedia.org/wiki/Alabama#>  WHERE { GRAPH ?g { <http://dbpedia.org/resource/Alabama> <http://dbpedia.org/ontology/abstract> ?o . } }";
-		System.out.println(queryString);
-
+		
+		String[] vars = {"g", "s", "p", "o"};
+		
 		try {
-			TupleQuery tupleQuery = conn.prepareTupleQuery(QueryLanguage.SPARQL, queryString);
-			TupleQueryResult result = tupleQuery.evaluate();
-			while (result.hasNext()) {
-				BindingSet bindingSet = result.next();
+			FileInputStream fstream = new FileInputStream("sparql_queries.txt");
+			DataInputStream in = new DataInputStream(fstream);
+			BufferedReader br = new BufferedReader(new InputStreamReader(in));
+			
+			String queryString;
+			while ((queryString = br.readLine()) != null) {
+				System.out.println (queryString);
+				
+				try {
+					TupleQuery tupleQuery = conn.prepareTupleQuery(QueryLanguage.SPARQL, queryString);
+					TupleQueryResult result = tupleQuery.evaluate();
+					while (result.hasNext()) {
+						BindingSet bindingSet = result.next();
+						
+						for (int i = 0; i < vars.length; i++) {
+							Value value = bindingSet.getValue(vars[i]);
+							if (value != null) {
+								System.out.println(vars[i] + " = " + value.stringValue() + "\n");
+							}
+						}
+					}
 
-				// Value valueOfP = bindingSet.getValue("p");
-				// System.out.println("?p = " + valueOfP.stringValue());
-
-				Value valueOfO = bindingSet.getValue("g");
-				System.out.println("?g = " + valueOfO.stringValue() + "\n");
+				} catch (MalformedQueryException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				} catch (QueryEvaluationException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
 			}
-
-		} catch (MalformedQueryException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		} catch (QueryEvaluationException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+			in.close();
+		}
+		catch (Exception e) {
+			System.err.println("Error: " + e.getMessage());
 		}
 
 		conn.close();
