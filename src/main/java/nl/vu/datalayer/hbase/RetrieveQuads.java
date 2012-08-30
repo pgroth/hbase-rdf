@@ -23,9 +23,8 @@ public class RetrieveQuads {
 		long start = System.currentTimeMillis();
 		ArrayList<ArrayList<Value>> results = util.getResults(valQuad);
 		long end = System.currentTimeMillis();
-		System.out.println("Inner query: "+results.size()+" quads retrieved in: "+(end-start)+" ms");
 		
-		ArrayList<Value> objects = new ArrayList<Value>();
+		/*ArrayList<Value> objects = new ArrayList<Value>();
 		for (ArrayList<Value> arrayList : results ) {
 			int i=0;
 			for (Value val : arrayList) {
@@ -36,7 +35,8 @@ public class RetrieveQuads {
 				i++;
 			}
 			System.out.println();
-		}
+		}*/
+		System.out.println("Inner query: "+results.size()+" quads retrieved in: "+(end-start)+" ms");
 		System.out.println("----------------");
 		
 		/*for (Value value : objects) {
@@ -72,28 +72,36 @@ public class RetrieveQuads {
 			//the schemaSuffix is retrieved from config.properties
 			HBaseClientSolution sol = HBaseFactory.getHBaseSolution(HBPrefixMatchSchema.SCHEMA_NAME, con, null);
 			
-			FileInputStream ifstream = new FileInputStream(args[0]);
-			DataInputStream in = new DataInputStream(ifstream);
-			BufferedReader br = new BufferedReader(new InputStreamReader(in));
+			//FileInputStream ifstream = new FileInputStream(args[0]);
+			//DataInputStream in = new DataInputStream(ifstream);
+			BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
 
 			String strLine;
 			ValueFactory valFactory = new ValueFactoryImpl();
+			
+			System.out.print(">");
 			while ((strLine = br.readLine()) != null) {
 				System.out.println("Query: "+strLine);
 				
-				long start = System.currentTimeMillis();
-				String []quad = parseLine(strLine);
+				//long start = System.currentTimeMillis();
+				String []quad = strLine.split(" ");
 				Value []valQuad = {null, null, null, null};
 				for (int i = 0; i < valQuad.length; i++) {
 					if (!quad[i].equals("?"))
 						valQuad[i] = NTriplesUtil.parseValue(quad[i], valFactory);
 				}
-				recursiveResolveQuads(valQuad, sol.util);
+				try{
+					recursiveResolveQuads(valQuad, sol.util);
+				}
+				catch (IOException e) {
+					e.printStackTrace();
+				}
 				
-				long end = System.currentTimeMillis();
-				System.out.println("Outer loop: Quads retrieved in: "+(end-start)+" ms");
+				//long end = System.currentTimeMillis();
+				//System.out.println("Outer loop: Quads retrieved in: "+(end-start)+" ms");
 				
 				System.out.println();
+				System.out.print(">");
 			}
 			
 			

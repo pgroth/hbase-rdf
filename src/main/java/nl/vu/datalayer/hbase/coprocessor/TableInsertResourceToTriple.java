@@ -26,7 +26,8 @@ public class TableInsertResourceToTriple extends ResourceToTriple.ResourceToTrip
 		String suffix = context.getConfiguration().get("SUFFIX");
 		spocTable = new HTable(HBaseConfiguration.create(), HBPrefixMatchSchema.TABLE_NAMES[HBPrefixMatchSchema.SPOC]+suffix);
 		spocTable.setAutoFlush(false);
-		spocTable.setWriteBufferSize(12*1024*1024);
+		spocTable.setWriteBufferSize(40*1024*1024);
+		spocTable.prewarmRegionCache(spocTable.getRegionsInfo());
 	}
 
 	@Override
@@ -38,9 +39,14 @@ public class TableInsertResourceToTriple extends ResourceToTriple.ResourceToTrip
 			return;
 		}
 		
-		Put put = new Put(outValues);
-		put.add(HBPrefixMatchSchema.COLUMN_FAMILY, HBPrefixMatchSchema.COLUMN_NAME, null);
+		try{
+			Put put = new Put(outValues);
+			put.add(HBPrefixMatchSchema.COLUMN_FAMILY, HBPrefixMatchSchema.COLUMN_NAME, null);
 		
-		spocTable.put(put);
+			spocTable.put(put);
+		}
+		catch (IOException e){
+			System.err.println("Problems with put operation: "+e.getMessage());
+		}
 	}	
 }

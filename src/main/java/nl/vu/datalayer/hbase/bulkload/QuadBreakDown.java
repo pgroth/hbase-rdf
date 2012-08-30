@@ -36,7 +36,7 @@ import org.openrdf.rio.RDFParseException;
 import org.openrdf.rio.RDFParser;
 import org.openrdf.rio.helpers.StatementCollector;
 
-public class TripleToResource {
+public class QuadBreakDown {
 	
 	public static final String RESOURCE_IDS_DIR = "resourceIds";
 	public static final String ID2STRING_DIR = "idStringAssoc";

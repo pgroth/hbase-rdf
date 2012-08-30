@@ -42,13 +42,6 @@ public class BulkLoad extends AbstractPrefixMatchBulkLoad{
 	protected void bulkLoadQuadTables(Path convertedTripletsPath) throws Exception {
 		//SPOC--------------------
 		twoStepTableBulkLoad(convertedTripletsPath, HBPrefixMatchSchema.SPOC, PrefixMatch.PrefixMatchSPOCMapper.class);
-		/*long start = System.currentTimeMillis();
-		Job j5 = createPrefixMatchJob(con, convertedTripletsPath, spocPath, HBPrefixMatchSchema.SPOC, PrefixMatch.PrefixMatchSPOCMapper.class, HBPrefixMatchSchema.TABLE_NAMES[tableIndex]); 
-		j5.waitForCompletion(true);
-		System.out.println("[Time] SPOC finished in: "+(System.currentTimeMillis()-start));
-		
-//		currentTable = con.getTable(HBPrefixMatchSchema.TABLE_NAMES[HBPrefixMatchSchema.SPOC]+schemaSuffix);//TODO remove
-		doTableBulkLoad(spocPath, currentTable, con);*/
 
 		if (onlyTriples == false){
 			bulkLoadQuadOnlyTables(convertedTripletsPath);
@@ -56,23 +49,9 @@ public class BulkLoad extends AbstractPrefixMatchBulkLoad{
 		
 		//OSPC---------------------------
 		twoStepTableBulkLoad(convertedTripletsPath, HBPrefixMatchSchema.OSPC, PrefixMatch.PrefixMatchOSPCMapper.class);
-		/*start = System.currentTimeMillis();
-		Job j10 = createPrefixMatchJob(con, convertedTripletsPath, ospcPath, HBPrefixMatchSchema.OSPC, PrefixMatch.PrefixMatchOSPCMapper.class, HBPrefixMatchSchema.TABLE_NAMES[tableIndex]);
-		j10.waitForCompletion(true);
-		System.out.println("[Time] OSPC finished in: "+(System.currentTimeMillis()-start));
-		
-//		currentTable = con.getTable(HBPrefixMatchSchema.TABLE_NAMES[HBPrefixMatchSchema.OSPC]+schemaSuffix);TODO remove
-		doTableBulkLoad(ospcPath, currentTable, con);*/
 		
 		//POCS---------------------
 		twoStepTableBulkLoad(convertedTripletsPath, HBPrefixMatchSchema.POCS, PrefixMatch.PrefixMatchPOCSMapper.class);
-		/*start = System.currentTimeMillis();
-		Job j6 = createPrefixMatchJob(con, convertedTripletsPath, pocsPath, HBPrefixMatchSchema.POCS, PrefixMatch.PrefixMatchPOCSMapper.class, HBPrefixMatchSchema.TABLE_NAMES[tableIndex]);
-		j6.waitForCompletion(true);
-		System.out.println("[Time] POCS finished in: "+(System.currentTimeMillis()-start));
-		
-//		currentTable = con.getTable(HBPrefixMatchSchema.TABLE_NAMES[HBPrefixMatchSchema.POCS]+schemaSuffix);TODO remove
-		doTableBulkLoad(pocsPath, currentTable, con);*/
 	}
 
 	private  void bulkLoadQuadOnlyTables(Path convertedTripletsPath) throws Exception, IOException, InterruptedException, ClassNotFoundException {
@@ -95,7 +74,7 @@ public class BulkLoad extends AbstractPrefixMatchBulkLoad{
 			Job j9 = createPrefixMatchJob(con, convertedTripletsPath, tablePath, tableMapperClass, tableName);
 			j9.waitForCompletion(true);
 			long time = System.currentTimeMillis() - start;
-			System.out.println("[Time] " + tableName + " finished in: " + time + " = " + ((double) time / 60.0) + " min");
+			System.out.println("[Time] " + tableName + " finished in: " + time + " ms");
 
 			doTableBulkLoad(tablePath, currentTable, con);
 		}
@@ -111,6 +90,8 @@ public class BulkLoad extends AbstractPrefixMatchBulkLoad{
 
 	public  Job createPrefixMatchJob(HBaseConnection con, Path input, Path output, Class<? extends Mapper> cls, String tableName) throws Exception {		
 		Configuration conf = new Configuration();
+		conf.setBoolean("mapred.map.tasks.speculative.execution", false);
+		conf.setBoolean("mapred.reduce.tasks.speculative.execution", false);
 		
 		ShuffleStageOptimizer shuffleOptimizer = new ShuffleStageOptimizer(inputSplitSize,
 														HBPrefixMatchSchema.KEY_LENGTH+Bytes.SIZEOF_INT+Bytes.SIZEOF_LONG,
@@ -143,12 +124,13 @@ public class BulkLoad extends AbstractPrefixMatchBulkLoad{
 	private Job createResourceToTripleJob(Path input, Path output) throws IOException {
 	
 		Configuration conf = new Configuration();
+		conf.setBoolean("mapred.map.tasks.speculative.execution", false);
+		conf.setBoolean("mapred.reduce.tasks.speculative.execution", false);
 		
 		ShuffleStageOptimizer shuffleOptimizer = new ShuffleStageOptimizer(inputSplitSize,
 													ResourceToTriple.getMapOutputRecordSizeEstimate(),
 													ResourceToTriple.getMapOutputRecordSizeEstimate());
 		configureShuffle(conf, shuffleOptimizer);
-		conf.setInt("mapred.job.reuse.jvm.num.tasks", -1);
 		
 		Job j = new Job(conf);
 		j.setJobName("ResourceToTriple");

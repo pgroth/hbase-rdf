@@ -29,14 +29,15 @@ public class NativeJavaConnection extends HBaseConnection {
 	
 	public void initTables(String []tableNames) throws IOException{
 		int iterations = MAX_POOL_SIZE/tableNames.length;
-		HTableInterface [][]tables = new HTable[iterations][];
+		HTable [][]tables = new HTable[iterations][];
 		
 		//open tables
 		for (int i = 0; i < iterations; i++) {
 			tables[i] = new HTable[tableNames.length];
 			for (int j = 0; j < tableNames.length; j++) {
 				if (hbase.tableExists(tableNames[j])){
-					tables[i][j] = tablePool.getTable(tableNames[j]);
+					tables[i][j] = (HTable)tablePool.getTable(tableNames[j]);
+					tables[i][j].prewarmRegionCache(tables[i][j].getRegionsInfo());
 				}
 				else{ 
 					tables[i][j] = null;

@@ -6,6 +6,7 @@ import java.util.Arrays;
 
 import nl.vu.datalayer.hbase.connection.HBaseConnection;
 import nl.vu.datalayer.hbase.connection.NativeJavaConnection;
+import nl.vu.datalayer.hbase.mapred.CachingRowCounter;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
@@ -21,6 +22,7 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.io.hfile.Compression.Algorithm;
 import org.apache.hadoop.hbase.regionserver.StoreFile;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.mapreduce.Job;
 
 public class HBPrefixMatchSchema implements IHBaseSchema {
 	
@@ -67,8 +69,19 @@ public class HBPrefixMatchSchema implements IHBaseSchema {
 	public static final byte WITH_COPROCESSORS = 1;
 	private String coprocessorPath = null;
 	
+	public static final byte RANDOM_ACCESS_PATTERN = 0;
+	public static final byte SEQUENTIAL_ACCESS_PATTERN = 1;
+	
+	//these flags are used only to suggest the caching behavior for a certain table
+	private static final byte ON_DISK = 0;
+	private static final byte IN_MEMORY = 1;
+	
+	public static final byte NO_COMPRESSION = 0;
+	public static final byte COMPRESSED = 1;
+	
 	//default number of initial regions
-	public static final int NUM_REGIONS = 28;//TODO should be retrieved from the cluster
+	public static final int NUM_REGIONS = 26;//TODO should be retrieved from the cluster
+	public static final int COPROC_NUM_REGIONS = 13;//TODO should be retrieved from the cluster
 	
 	private int numInputPartitions;
 	private long startPartition;
@@ -95,10 +108,13 @@ public class HBPrefixMatchSchema implements IHBaseSchema {
 	
 	private byte coprocessorFlag = WITHOUT_COPROCESSORS;
 	
+	private int numberOfRegions;
+	
 	public HBPrefixMatchSchema(HBaseConnection con, String schemaSuffix) {
 		super();
 		this.con = con;
 		this.schemaSuffix = schemaSuffix;
+		numberOfRegions = NUM_REGIONS;
 	}
 
 	public HBPrefixMatchSchema(HBaseConnection con, String schemaSuffix, String coprocessorPath) {
@@ -106,6 +122,7 @@ public class HBPrefixMatchSchema implements IHBaseSchema {
 		this.con = con;
 		this.schemaSuffix = schemaSuffix;
 		this.coprocessorFlag = WITH_COPROCESSORS;
+		numberOfRegions = COPROC_NUM_REGIONS;
 		this.coprocessorPath = coprocessorPath;
 	}
 	
@@ -126,6 +143,38 @@ public class HBPrefixMatchSchema implements IHBaseSchema {
 		//prefixCounters = prefixCounter;
 		numericalCount = numericalParam;
 		onlyTriples = onlyTriplesParam; 
+	}
+	
+	public void warmUpBlockCache(){
+		if (con instanceof NativeJavaConnection){
+			long start = System.currentTimeMillis();
+			
+			Configuration conf = ((NativeJavaConnection)con).getConfiguration();
+		    conf.setBoolean("mapred.reduce.tasks.speculative.execution", false);
+		    String []jobParams = {ID2STRING+schemaSuffix};
+		    try{
+		    	Job job = CachingRowCounter.createSubmittableJob(conf, jobParams);
+		    	job.waitForCompletion(true);
+		    }
+		    catch (Exception e) {
+		    	System.err.println("Problems warming up Id2String block cache: "+e.getMessage());
+			}
+		    long end = System.currentTimeMillis();
+		    System.out.println("[Time] Block cache warm up in: "+(end-start)+" ms");
+		}
+		else{
+			System.err.println("Block cache can be warmed up only with a NativeJavaConnection");
+		}
+	}
+	
+	public void flushSecondaryIndexTables() throws IOException, InterruptedException{
+		if (con instanceof NativeJavaConnection){
+			HBaseAdmin admin = ((NativeJavaConnection)con).getAdmin();
+			for (int i = 1; i < TABLE_NAMES.length; i++) {
+				admin.flush(TABLE_NAMES[i]+schemaSuffix);
+			}
+			
+		}
 	}
 	
 	public void createCounterTable(HBaseAdmin admin) throws IOException{
@@ -229,33 +278,33 @@ public class HBPrefixMatchSchema implements IHBaseSchema {
 		//distribute the regions over the entire ID space for String2ID
 		byte[][] splits = getString2IdSplits();
 		
-		createSimpleTable(admin, STRING2ID+schemaSuffix, splits, false);
+		createSimpleTable(admin, STRING2ID+schemaSuffix, splits, NO_COMPRESSION, RANDOM_ACCESS_PATTERN, ON_DISK);
 		
-		splits = getNonNumericalSplits(NUM_REGIONS, 0);
+		splits = getNonNumericalSplits(numberOfRegions, 0);
 		
 		//System.out.println("Id2String splits: ");
 		//printSplits(splits);
 		
-		createSimpleTable(admin, ID2STRING+schemaSuffix, splits, true);
+		createSimpleTable(admin, ID2STRING+schemaSuffix, splits, COMPRESSED, RANDOM_ACCESS_PATTERN, IN_MEMORY);
 		
-		createSimpleTable(admin, TABLE_NAMES[POCS]+schemaSuffix, splits, false);
+		createSimpleTable(admin, TABLE_NAMES[POCS]+schemaSuffix, splits, NO_COMPRESSION, SEQUENTIAL_ACCESS_PATTERN, ON_DISK);
 		
-		byte [][] objectSplits = getObjectPrefixSplits(NUM_REGIONS);
+		byte [][] objectSplits = getObjectPrefixSplits(numberOfRegions);
 		//printSplits(objectSplits);
-		createSimpleTable(admin, TABLE_NAMES[OSPC]+schemaSuffix, objectSplits, false);
+		createSimpleTable(admin, TABLE_NAMES[OSPC]+schemaSuffix, objectSplits, NO_COMPRESSION, SEQUENTIAL_ACCESS_PATTERN, ON_DISK);
 		
 		if (onlyTriples == false){
-			createSimpleTable(admin, TABLE_NAMES[CSPO]+schemaSuffix, splits, false);
-			createSimpleTable(admin, TABLE_NAMES[CPSO]+schemaSuffix, splits, false);	
+			createSimpleTable(admin, TABLE_NAMES[CSPO]+schemaSuffix, splits, NO_COMPRESSION, SEQUENTIAL_ACCESS_PATTERN, ON_DISK);
+			createSimpleTable(admin, TABLE_NAMES[CPSO]+schemaSuffix, splits, NO_COMPRESSION, SEQUENTIAL_ACCESS_PATTERN, ON_DISK);	
 			
-			createSimpleTable(admin, TABLE_NAMES[OCSP]+schemaSuffix, objectSplits, false);
+			createSimpleTable(admin, TABLE_NAMES[OCSP]+schemaSuffix, objectSplits, NO_COMPRESSION, SEQUENTIAL_ACCESS_PATTERN, ON_DISK);
 		}
 		
 		if (coprocessorFlag == WITH_COPROCESSORS){
 			createTableWithCoprocessor(admin, TABLE_NAMES[SPOC]+schemaSuffix, splits, coprocessorPath);
 		}
 		else{
-			createSimpleTable(admin, TABLE_NAMES[SPOC]+schemaSuffix, splits, false);
+			createSimpleTable(admin, TABLE_NAMES[SPOC]+schemaSuffix, splits, NO_COMPRESSION, SEQUENTIAL_ACCESS_PATTERN, ON_DISK);
 		}
 	}
 	
@@ -289,9 +338,9 @@ public class HBPrefixMatchSchema implements IHBaseSchema {
 	 * @throws IOException
 	 */
 	public static void createSimpleTable(HBaseAdmin admin, String tableName, byte [][]splits, 
-									boolean enableCompression) throws IOException{
+									byte compression, byte accessPattern, byte inMemory) throws IOException{
 		if (!admin.tableExists(tableName)){
-			HTableDescriptor desc = createTableDescriptor(tableName, enableCompression);
+			HTableDescriptor desc = createTableDescriptor(tableName, compression, accessPattern, inMemory);
 
 			System.out.println("Creating table: " + tableName);
 			admin.createTable(desc, splits);
@@ -301,8 +350,9 @@ public class HBPrefixMatchSchema implements IHBaseSchema {
 	public static void createTableWithCoprocessor(HBaseAdmin admin, String tableName, 
 							byte [][]splits, String coprocessorPath) throws IOException{
 		if (!admin.tableExists(tableName)){
-			HTableDescriptor desc = createTableDescriptor(tableName, false);
+			HTableDescriptor desc = createTableDescriptor(tableName, NO_COMPRESSION, SEQUENTIAL_ACCESS_PATTERN, ON_DISK);//assumption that only SPOC uses a coprocessor
 			desc.setValue("SPLIT_POLICY", "org.apache.hadoop.hbase.regionserver.ConstantSizeRegionSplitPolicy");
+			//desc.setValue("SPLIT_POLICY", "org.apache.hadoop.hbase.regionserver.IncreasingToUpperBoundRegionSplitPolicy");
 			desc.addCoprocessor(COPROCESSOR_CLASS_NAME, 
 					new Path(coprocessorPath),
 					Coprocessor.PRIORITY_USER, null);
@@ -312,16 +362,33 @@ public class HBPrefixMatchSchema implements IHBaseSchema {
 		}
 	}
 
-	final private static HTableDescriptor createTableDescriptor(String tableName, boolean enableCompression) {
+	final private static HTableDescriptor createTableDescriptor(String tableName, 
+														byte compressionStatus,
+														byte accessPatternType,
+														byte inMemory) {
 		HTableDescriptor desc = new HTableDescriptor(tableName);
 		
+		//desc.setValue("SPLIT_POLICY", "org.apache.hadoop.hbase.regionserver.IncreasingToUpperBoundRegionSplitPolicy");
 		HColumnDescriptor famDesc = new HColumnDescriptor(COLUMN_FAMILY);
 		
 		famDesc.setBloomFilterType(StoreFile.BloomType.ROW);
 		famDesc.setMaxVersions(1);
-		if (enableCompression){//by default it is disabled
+		if (compressionStatus == COMPRESSED){//by default it is disabled
 			famDesc.setCompactionCompressionType(Algorithm.LZO);
 			famDesc.setCompressionType(Algorithm.LZO);
+		}
+		if (accessPatternType == RANDOM_ACCESS_PATTERN){
+			famDesc.setBlocksize(8*1024);
+		}
+		else{//SEQUENTIAL ACCESS PATTERN
+			//use the default 64K
+		}
+		
+		if (inMemory == IN_MEMORY){
+			famDesc.setInMemory(true);
+		}
+		else{
+			famDesc.setBlockCacheEnabled(false);
 		}
 		desc.addFamily(famDesc);
 		
@@ -438,7 +505,7 @@ public class HBPrefixMatchSchema implements IHBaseSchema {
 		byte []startKey = new byte[KEY_LENGTH];
 		byte []endKey = new byte[KEY_LENGTH];
 		Arrays.fill(endKey, 0, KEY_LENGTH, (byte)0xff);
-		byte [][]splits = getSplits(startKey, endKey, NUM_REGIONS);
+		byte [][]splits = getSplits(startKey, endKey, numberOfRegions);
 		//System.out.println(" String2Id splits: ");
 		//printSplits(splits);
 		return splits;
