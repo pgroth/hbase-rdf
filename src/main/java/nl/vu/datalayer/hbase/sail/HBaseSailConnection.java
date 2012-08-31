@@ -167,10 +167,15 @@ public class HBaseSailConnection extends NotifyingSailConnectionBase {
 
 			ArrayList<Statement> myList = new ArrayList();
 			for (Value graph : g) {
-				System.out.println("HBase Query: " + arg0 + " - " + arg1 + " - " + arg2.stringValue() + " - " + graph);
+				System.out.println("HBase Query: " + arg0 + " - " + arg1 + " - " + arg2 + " - " + graph);
 
 				Value[] query = { arg0, arg1, arg2, graph };
-				ArrayList<ArrayList<Value>> result = hbase.util.getResults(query);
+				ArrayList<ArrayList<Value>> result = null;
+				try {
+					result = hbase.util.getResults(query);
+				}
+				catch (Exception e) {
+				}
 
 				myList.addAll(reconstructTriples(result, query));
 			}
@@ -478,6 +483,10 @@ public class HBaseSailConnection extends NotifyingSailConnectionBase {
 						}
 					}
 					index += 1;
+				}
+				
+				if (obj != null) {
+					System.out.println("OBJECT:" + obj.stringValue());
 				}
 
 				CloseableIteration ci = getStatementsInternal(subj, pred, obj, false, contexts);
