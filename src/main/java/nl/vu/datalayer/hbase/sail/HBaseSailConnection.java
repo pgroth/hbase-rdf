@@ -483,7 +483,7 @@ public class HBaseSailConnection extends NotifyingSailConnectionBase {
 
 					} else {
 						if (var.hasValue()) {
-							obj = getObject(var.getValue().stringValue());
+							obj = getObject(var.getValue().toString());
 							System.out.println("OBJECT: " + var.getValue().toString());
 						} else if (var.isAnonymous()) {
 							obj = getObject(var.getName());
