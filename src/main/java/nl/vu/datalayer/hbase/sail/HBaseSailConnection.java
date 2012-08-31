@@ -117,7 +117,7 @@ public class HBaseSailConnection extends NotifyingSailConnectionBase {
 
 	@Override
 	protected void closeInternal() throws SailException {
-		memStoreCon.close();
+//		memStoreCon.close();
 	}
 
 	@Override
