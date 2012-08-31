@@ -588,8 +588,6 @@ public class HBaseSailConnection extends NotifyingSailConnectionBase {
 		} catch (SailException e) {
 			e.printStackTrace();
 			throw e;
-		} catch (QueryEvaluationException e) {
-			throw new SailException(e);
 		}
 	}
 
