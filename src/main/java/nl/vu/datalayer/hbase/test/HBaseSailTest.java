@@ -41,7 +41,7 @@ public class HBaseSailTest {
 			
 			String queryString;
 			while ((queryString = br.readLine()) != null) {
-				System.out.println (queryString);
+				System.out.println(queryString);
 				
 				try {
 					TupleQuery tupleQuery = conn.prepareTupleQuery(QueryLanguage.SPARQL, queryString);

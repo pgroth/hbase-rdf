@@ -7,10 +7,12 @@ import java.io.File;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 
 import nl.vu.datalayer.hbase.RetrieveURI;
 
+import org.openrdf.model.Graph;
 import org.openrdf.model.Namespace;
 import org.openrdf.model.Resource;
 import org.openrdf.model.Statement;
@@ -21,6 +23,7 @@ import org.openrdf.query.BindingSet;
 import org.openrdf.query.BooleanQuery;
 import org.openrdf.query.Dataset;
 import org.openrdf.query.GraphQuery;
+import org.openrdf.query.GraphQueryResult;
 import org.openrdf.query.MalformedQueryException;
 import org.openrdf.query.Query;
 import org.openrdf.query.QueryEvaluationException;
@@ -29,7 +32,9 @@ import org.openrdf.query.TupleQuery;
 import org.openrdf.query.TupleQueryResult;
 import org.openrdf.query.TupleQueryResultHandler;
 import org.openrdf.query.algebra.TupleExpr;
+import org.openrdf.query.impl.GraphQueryResultImpl;
 import org.openrdf.query.impl.TupleQueryResultBuilder;
+import org.openrdf.query.parser.ParsedGraphQuery;
 import org.openrdf.query.parser.ParsedTupleQuery;
 import org.openrdf.query.parser.QueryParserUtil;
 import org.openrdf.repository.RepositoryException;
@@ -90,7 +95,9 @@ public class HBaseRepositoryConnection extends SailRepositoryConnection {
 	@Override
 	public SailGraphQuery prepareGraphQuery(QueryLanguage lang, String query, String baseURI)
 			throws MalformedQueryException {
-		return null;// new HBaseSailGraphQuery(parsedQuery, this);
+		ParsedGraphQuery parsedQuery = QueryParserUtil.parseGraphQuery(lang, query, baseURI);
+		
+		return null; // new HBaseSailGraphQuery(parsedQuery, this);
 	}
 
 	@Override
@@ -347,7 +354,6 @@ public class HBaseRepositoryConnection extends SailRepositoryConnection {
 		@Override
 		public void evaluate(TupleQueryResultHandler handler) throws QueryEvaluationException {
 			try {
-				// Set<String> bindingSet = getBindings().getBindingNames();
 				List<String> bindingList = new ArrayList<String>();
 
 				HBaseSailConnection connection = ((HBaseRepositoryConnection) this.getConnection())
@@ -355,25 +361,7 @@ public class HBaseRepositoryConnection extends SailRepositoryConnection {
 				TupleExpr te = getParsedQuery().getTupleExpr();
 				Dataset dataset = getDataset();
 
-				// System.out.println("ORIGINAL TUPLE EXPRESSION: " +
-				// te.toString());
-				// System.out.println("CONTEXT: " + context.toString());
-
 				TupleQueryResult result = connection.query(te, context, getBindings(), getIncludeInferred());
-
-				// System.out.println("TupleQueryResult bindings: " +
-				// result.getBindingNames().size());
-
-				// Get all triples from HBase, without evaluating them against
-				// the
-				// memory triple store.
-				//
-				// TupleQueryResult result = new
-				// TupleQueryResultImpl(bindingList,
-				// ((HBaseRepositoryConnection)this.getConnection()).getHBaseSailConnection().evaluateInternal(getParsedQuery().getTupleExpr(),
-				// getDataset(), getBindings(), getIncludeInferred()));
-
-				System.out.println("WE MADE IT");
 
 				int ressize = 0;
 				handler.startQueryResult(result.getBindingNames());
@@ -391,5 +379,47 @@ public class HBaseRepositoryConnection extends SailRepositoryConnection {
 			}
 		}
 	}
+
+//	private static class HBaseSailGraphQuery extends SailGraphQuery {
+//		protected HBaseSailGraphQuery(ParsedGraphQuery tupleQuery,
+//				SailRepositoryConnection con) {
+//			super(tupleQuery, con);
+//			
+//		}
+//		
+//		@Override
+//		public GraphQueryResult evaluate() throws QueryEvaluationException {
+//			try {
+//				GraphBuildingRDFHandler aHandler = new GraphBuildingRDFHandler();
+//
+//				evaluate(aHandler);
+//
+//				return new GraphQueryResultImpl(new HashMap<String, String>(), aHandler.getGraph());
+//			}
+//			catch (RDFHandlerException e) {
+//				throw new QueryEvaluationException(e);
+//			}
+//		}
+//
+//		/**
+//		 * @inheritDoc
+//		 */
+//		@Override
+//		public void evaluate(RDFHandler theHandler) throws QueryEvaluationException, RDFHandlerException {
+//			try {
+//				Graph aGraph = ((HBaseRepositoryConnection) this.getConnection())
+//						.getHBaseSailConnection().graphQuery(new SPARQLQueryRenderer().render(getParsedQuery()));
+//
+//				theHandler.startRDF();
+//				for (Statement aStmt : aGraph) {
+//					theHandler.handleStatement(aStmt);
+//				}
+//				theHandler.endRDF();
+//			}
+//			catch (Exception e) {
+//				throw new QueryEvaluationException(e);
+//			}
+//		}
+//	}
 
 }

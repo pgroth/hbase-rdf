@@ -85,6 +85,13 @@ import org.openrdf.query.algebra.ValueConstant;
 import org.openrdf.query.algebra.Var;
 import org.openrdf.query.algebra.ZeroLengthPath;
 
+/**
+ * A SPARQL query visitor, it is used to parse SPARQL queries and return
+ * statement patterns.
+ * 
+ * @author Anca Dumitrache
+ * @see <a href="https://github.com/openphacts/OpsPlatform/blob/master/ops-platform/larkc-plugins/plugin.imsSqarqlExpand/src/main/java/eu/ops/plugin/imssparqlexpand/querywriter/QueryWriterModelVisitor.java">QueryWriterModelVisitor in OPS</a>
+ */
 public class HBaseQueryVisitor implements QueryModelVisitor<QueryExpansionException> {
 
 	// Builder to write the query to bit by bit
@@ -596,10 +603,32 @@ public class HBaseQueryVisitor implements QueryModelVisitor<QueryExpansionExcept
 		return queryString.toString();
 	}
 
+	/**
+	 * Returns a list of statement patterns from the processed SPARQL query.
+	 * <p>
+	 * The patterns are expressed as a list of Value objects, where a query
+	 * variable is expressed as a null value.
+	 * <p>
+	 * Works if and only if the model was visited exactly once.
+	 * 
+	 * @return list of statement patterns
+	 */
 	private ArrayList<ArrayList<Var>> getStatements() {
 		return statements;
 	}
 
+	/**
+	 * Converts a SPARQL query in TupleExpr format to a list of statement patterns.
+	 * <p>
+	 * For now, only the TupleExpr parameter is relevant, all the information concerning
+	 * the query can be extracted from there.
+	 * 
+	 * @param tupleExpr
+	 * @param dataSet
+	 * @param requiredAttributes
+	 * @return
+	 * @throws QueryExpansionException
+	 */
 	public static ArrayList<ArrayList<Var>> convertToStatements(TupleExpr tupleExpr, Dataset dataSet,
 			List<String> requiredAttributes) throws QueryExpansionException {
 		// System.out.println("Evaluating TupleExpr:" + tupleExpr.toString());

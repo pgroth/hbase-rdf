@@ -34,6 +34,20 @@ import org.openrdf.sail.helpers.NotifyingSailConnectionBase;
 import org.openrdf.sail.helpers.SailBase;
 import org.openrdf.sail.memory.MemoryStore;
 
+/**
+ * A connection to an HBase Sail object. This class implements methods to break down SPARQL
+ * queries into statement patterns that can be used for querying HBase, to set up an in-memory
+ * store for loading the quads retrieved from HBase, and finally, to run the intial SPARQL query
+ * over the in-memory store and return the results.  
+ * <p>
+ * This class implements
+ * An HBaseSailConnection is active from the moment it is created until it is closed. Care
+ * should be taken to properly close HBaseSailConnections as they might block concurrent queries
+ * and/or updates on the Sail while active, depending on the Sail-implementation that is being
+ * used.
+ * 
+ * @author Anca Dumitrache
+ */
 public class HBaseSailConnection extends NotifyingSailConnectionBase {
 
 	MemoryStore memStore;
@@ -43,6 +57,11 @@ public class HBaseSailConnection extends NotifyingSailConnectionBase {
 	// Builder to write the query to bit by bit
 	StringBuilder queryString = new StringBuilder();
 
+	/**
+	 * Establishes the connection to the HBase Sail, and sets up the in-memory store.
+	 * 
+	 * @param sailBase
+	 */
 	public HBaseSailConnection(SailBase sailBase) {
 		super(sailBase);
 		// System.out.println("SailConnection created");
@@ -120,36 +139,24 @@ public class HBaseSailConnection extends NotifyingSailConnectionBase {
 		return null;
 	}
 
+	/**
+	 * This function sends a statement pattern to HBase for querying,
+	 * then returns the results in RDF Statement format.
+	 * 
+	 * @param arg0
+	 * @param arg1
+	 * @param arg2
+	 * @param arg3
+	 * @param contexts
+	 * @return
+	 * @throws SailException
+	 */
 	protected CloseableIteration<? extends Statement, SailException> getStatementsInternal(Resource arg0, URI arg1,
 			Value arg2, boolean arg3, Set<URI> contexts) throws SailException {
 		try {
-			// String s = null;
-			// String p = null;
-			// String o = null;
 
 			ArrayList<Value> g = new ArrayList();
 
-			// if (arg0 != null) {
-			// s = arg0.stringValue();
-			// }
-			// else {
-			// s = "?";
-			// }
-			//
-			// if (arg1 != null) {
-			// p = arg1.stringValue();
-			// }
-			// else {
-			// p = "?";
-			// }
-			//
-			// if (arg2 != null) {
-			// o = arg2.stringValue();
-			// }
-			// else {
-			// o = "?";
-			// }
-			//
 			if (contexts != null && contexts.size() != 0) {
 				for (Resource r : contexts) {
 					g.add(r);
@@ -160,25 +167,13 @@ public class HBaseSailConnection extends NotifyingSailConnectionBase {
 
 			ArrayList<Statement> myList = new ArrayList();
 			for (Value graph : g) {
-				System.out.println("HBase Query: " + arg0 + " - " + arg1 + " - " + arg2 + " - " + graph);
+				System.out.println("HBase Query: " + arg0 + " - " + arg1 + " - " + arg2.stringValue() + " - " + graph);
 
 				Value[] query = { arg0, arg1, arg2, graph };
 				ArrayList<ArrayList<Value>> result = hbase.util.getResults(query);
 
-				// for (ArrayList<String> tr : triples) {
-				// for (String st : tr) {
-				// System.out.print(st + " ");
-				// }
-				// System.out.print("\n");
-				// }
-
-				// System.out.println("Raw triples: " + triples);
-
 				myList.addAll(reconstructTriples(result, query));
 			}
-
-			// System.out.println("Triples retrieved:");
-			// System.out.println(myList.toString());
 
 			Iterator it = myList.iterator();
 			CloseableIteration<Statement, SailException> ci = new CloseableIteratorIteration<Statement, SailException>(
@@ -197,6 +192,15 @@ public class HBaseSailConnection extends NotifyingSailConnectionBase {
 		return null;
 	}
 
+	/**
+	 * This function reconstructs RDF Statements from the list of Value items
+	 * returned from HBase.
+	 * 
+	 * @param result
+	 * @param triple
+	 * @return
+	 * @throws SailException
+	 */
 	protected ArrayList<Statement> reconstructTriples(ArrayList<ArrayList<Value>> result, Value[] triple)
 			throws SailException {
 		ArrayList<Statement> list = new ArrayList();
@@ -232,21 +236,39 @@ public class HBaseSailConnection extends NotifyingSailConnectionBase {
 		return list;
 	}
 
+	/**
+	 * This functions parses a String to return the subject in a query.
+	 * 
+	 * @param s
+	 * @return
+	 */
 	Value getSubject(String s) {
-		System.out.println("SUBJECT: " + s);
+//		System.out.println("SUBJECT: " + s);
 		if (s.startsWith("_")) {
 			return new BNodeImpl(s.substring(2));
 		}
 		return new URIImpl(s);
 	}
 
+	/**
+	 * This functions parses a String to return the predicate in a query.
+	 * 
+	 * @param s
+	 * @return
+	 */
 	Value getPredicate(String s) {
-		System.out.println("PREDICATE: " + s);
+//		System.out.println("PREDICATE: " + s);
 		return new URIImpl(s);
 	}
 
+	/**
+	 * This functions parses a String to return the object in a query.
+	 * 
+	 * @param s
+	 * @return
+	 */
 	Value getObject(String s) {
-		System.out.println("OBJECT: " + s);
+//		System.out.println("OBJECT: " + s);
 		if (s.startsWith("_")) {
 			return new BNodeImpl(s.substring(2));
 		} else if (s.startsWith("\"")) {
@@ -328,8 +350,14 @@ public class HBaseSailConnection extends NotifyingSailConnectionBase {
 		return object;
 	}
 
+	/**
+	 * This functions parses a String to return the graph in a query.
+	 * 
+	 * @param s
+	 * @return
+	 */
 	Value getContext(String s) {
-		System.out.println("GRAPH: " + s);
+//		System.out.println("GRAPH: " + s);
 		return new URIImpl(s);
 	}
 
@@ -370,9 +398,10 @@ public class HBaseSailConnection extends NotifyingSailConnectionBase {
 	}
 
 	/**
-	 * This functions returns a List of all RDF statements in HBase that are
-	 * needed in the query.
-	 * 
+	 * This function retrieves all the triples from HBase that match with
+	 * StatementPatterns in the SPARQL query, without executing the SPARQL query
+	 * on them.
+	 *
 	 * @param arg0
 	 * @return
 	 * @throws SailException
@@ -465,11 +494,7 @@ public class HBaseSailConnection extends NotifyingSailConnectionBase {
 		return result;
 	}
 
-	/**
-	 * This function retrieves all the triples from HBase that match with
-	 * StatementPatterns in the SPARQL query, without executing the SPARQL query
-	 * on them.
-	 */
+	
 	@Override
 	protected CloseableIteration<? extends BindingSet, QueryEvaluationException> evaluateInternal(TupleExpr arg0,
 			Dataset arg1, BindingSet arg2, boolean arg3) throws SailException {
@@ -513,9 +538,6 @@ public class HBaseSailConnection extends NotifyingSailConnectionBase {
 			Iterator it = statements.iterator();
 			while (it.hasNext()) {
 				Statement statement = (Statement) it.next();
-				// Resource[] context = {new
-				// URIImpl("http://hbase.sail.vu.nl")};
-				// System.out.println(statement.getSubject().stringValue());
 				try {
 					memStoreCon.addStatement(statement.getSubject(), statement.getPredicate(), statement.getObject(),
 							context);
@@ -535,33 +557,17 @@ public class HBaseSailConnection extends NotifyingSailConnectionBase {
 			while (ci.hasNext()) {
 				index++;
 				BindingSet bs = ci.next();
-				// System.out.println("Binding size(" + index + "): " +
-				// bs.getBindingNames().size());
 				Set<String> localBindings = bs.getBindingNames();
 				Iterator jt = localBindings.iterator();
 				while (jt.hasNext()) {
 					String binding = (String) jt.next();
 					if (bindingList.contains(binding) == false) {
 						bindingList.add(binding);
-						// System.out.println("Added binding: " + binding);
 					}
 				}
 			}
 
-			// System.out.println("Results retrieved from memory store: " +
-			// index);
-			// System.out.println("Bindings retrieved from memory store: " +
-			// bindingList.size());
-
 			TupleQueryResult result = new TupleQueryResultImpl(bindingList, cj);
-
-			// int ressize = 0;
-			// while (result.hasNext()) {
-			// BindingSet binding = result.next();
-			// System.out.println("x = " + binding.getValue("x").stringValue());
-			// ressize += 1;
-			// }
-			// System.out.println("TupleQueryResult size: " + ressize);
 
 			return result;
 
@@ -569,7 +575,6 @@ public class HBaseSailConnection extends NotifyingSailConnectionBase {
 			e.printStackTrace();
 			throw e;
 		} catch (QueryEvaluationException e) {
-			// TODO Auto-generated catch block
 			throw new SailException(e);
 		}
 	}
