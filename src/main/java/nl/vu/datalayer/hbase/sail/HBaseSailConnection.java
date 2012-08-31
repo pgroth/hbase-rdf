@@ -484,7 +484,7 @@ public class HBaseSailConnection extends NotifyingSailConnectionBase {
 					} else {
 						if (var.hasValue()) {
 							obj = getObject(var.getValue().stringValue());
-							System.out.println("OBJECT: " + var.getValue().stringValue());
+							System.out.println("OBJECT: " + var.getValue().toString());
 						} else if (var.isAnonymous()) {
 							obj = getObject(var.getName());
 						}
@@ -493,7 +493,7 @@ public class HBaseSailConnection extends NotifyingSailConnectionBase {
 				}
 				
 				if (obj != null) {
-					System.out.println("OBJECT:" + obj.stringValue()) ;
+//					System.out.println("OBJECT:" + obj.stringValue()) ;
 				}
 
 				CloseableIteration ci = getStatementsInternal(subj, pred, obj, false, contexts);
