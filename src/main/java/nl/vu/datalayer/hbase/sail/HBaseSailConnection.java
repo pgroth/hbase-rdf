@@ -27,6 +27,7 @@ import org.openrdf.query.QueryEvaluationException;
 import org.openrdf.query.TupleQueryResult;
 import org.openrdf.query.algebra.TupleExpr;
 import org.openrdf.query.algebra.Var;
+import org.openrdf.query.impl.DatasetImpl;
 import org.openrdf.query.impl.TupleQueryResultImpl;
 import org.openrdf.sail.NotifyingSailConnection;
 import org.openrdf.sail.SailException;
@@ -538,6 +539,21 @@ public class HBaseSailConnection extends NotifyingSailConnectionBase {
 	 */
 	public TupleQueryResult query(TupleExpr tupleExpr, Dataset dataset, BindingSet bindings, boolean includeInferred)
 			throws SailException {
+		
+		DatasetImpl backup = null;
+		try {
+			// dataset gets emptied by the evaluateInternal method, it needs to be preserved
+			Set<URI> contexts = new HashSet(dataset.getNamedGraphs());
+			backup = new DatasetImpl();
+			for (URI uri : contexts) {
+				backup.addNamedGraph(uri);
+			}
+			System.out.println("DATASET: " + backup.toString());
+		}
+		catch (Exception e) {
+			// no context info given
+		}
+		
 		try {
 			ArrayList<Statement> statements = evaluateInternal(tupleExpr, dataset);
 			// System.out.println("Statements retrieved: " + statements.size());
@@ -555,31 +571,11 @@ public class HBaseSailConnection extends NotifyingSailConnectionBase {
 							new URIImpl("http://hbase.sail.vu.nl"));
 				}
 			}
-
-//			CloseableIteration<? extends BindingSet, QueryEvaluationException> ci = memStoreCon.evaluate(tupleExpr,
-//					dataset, bindings, includeInferred);
-//			CloseableIteration<? extends BindingSet, QueryEvaluationException> cj = memStoreCon.evaluate(tupleExpr,
-//					dataset, bindings, includeInferred);
-//
-//			List<String> bindingList = new ArrayList<String>();
-//			int index = 0;
-//			while (ci.hasNext()) {
-//				index++;
-//				BindingSet bs = ci.next();
-//				Set<String> localBindings = bs.getBindingNames();
-//				Iterator jt = localBindings.iterator();
-//				while (jt.hasNext()) {
-//					String binding = (String) jt.next();
-//					if (bindingList.contains(binding) == false) {
-//						bindingList.add(binding);
-//					}
-//				}
-//			}
 			
 			System.out.println("Evaluating query");
 			System.out.println("EVALUATE:" + tupleExpr.toString());
 
-			CloseableIteration<? extends BindingSet, QueryEvaluationException> ci = memStoreCon.evaluate(tupleExpr, dataset, bindings, includeInferred);
+			CloseableIteration<? extends BindingSet, QueryEvaluationException> ci = memStoreCon.evaluate(tupleExpr, backup, bindings, includeInferred);
 
 			TupleQueryResult result = new TupleQueryResultImpl(bindingNames, ci);
 
