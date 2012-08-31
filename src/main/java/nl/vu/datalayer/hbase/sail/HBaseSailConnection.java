@@ -71,7 +71,7 @@ public class HBaseSailConnection extends NotifyingSailConnectionBase {
 		memStore = new MemoryStore();
 		try {
 			memStore.initialize();
-			memStoreCon = memStore.getConnection();
+			memStoreCon = (MemoryStoreConnection) memStore.getConnection();
 		} catch (SailException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
