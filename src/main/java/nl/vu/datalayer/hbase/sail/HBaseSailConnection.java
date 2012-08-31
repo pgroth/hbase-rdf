@@ -540,19 +540,19 @@ public class HBaseSailConnection extends NotifyingSailConnectionBase {
 	public TupleQueryResult query(TupleExpr tupleExpr, Dataset dataset, BindingSet bindings, boolean includeInferred)
 			throws SailException {
 		
-		DatasetImpl backup = null;
-		try {
-			// dataset gets emptied by the evaluateInternal method, it needs to be preserved
-			Set<URI> contexts = new HashSet(dataset.getNamedGraphs());
-			backup = new DatasetImpl();
-			for (URI uri : contexts) {
-				backup.addNamedGraph(uri);
-			}
-			System.out.println("DATASET: " + backup.toString());
-		}
-		catch (Exception e) {
-			// no context info given
-		}
+//		DatasetImpl backup = null;
+//		try {
+//			// dataset gets emptied by the evaluateInternal method, it needs to be preserved
+//			Set<URI> contexts = new HashSet(dataset.getNamedGraphs());
+//			backup = new DatasetImpl();
+//			for (URI uri : contexts) {
+//				backup.addNamedGraph(uri);
+//			}
+////			System.out.println("DATASET: " + backup.toString());
+//		}
+//		catch (Exception e) {
+//			// no context info given
+//		}
 		
 		try {
 			ArrayList<Statement> statements = evaluateInternal(tupleExpr, dataset);
@@ -572,12 +572,15 @@ public class HBaseSailConnection extends NotifyingSailConnectionBase {
 				}
 			}
 			
-			System.out.println("Evaluating query");
-			System.out.println("EVALUATE:" + tupleExpr.toString());
+//			System.out.println("Evaluating query");
+//			System.out.println("EVALUATE:" + tupleExpr.toString());
 
-			CloseableIteration<? extends BindingSet, QueryEvaluationException> ci = memStoreCon.evaluate(tupleExpr, backup, bindings, includeInferred);
+			CloseableIteration<? extends BindingSet, QueryEvaluationException> ci = memStoreCon.evaluate(tupleExpr, dataset, bindings, includeInferred);
 
 			TupleQueryResult result = new TupleQueryResultImpl(bindingNames, ci);
+			
+			// clear up the in-memory store
+			memStoreCon.clear();
 
 			return result;
 
