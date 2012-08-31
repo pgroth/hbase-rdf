@@ -545,6 +545,7 @@ public class HBaseSailConnection extends NotifyingSailConnectionBase {
 				for (URI cont : contexts) {
 					context[index] = cont;
 					index++;
+					System.out.println("CONTEXT FOR MEMORY STORE: " + cont.stringValue());
 				}
 			} catch (Exception e) {
 				context = new Resource[1];
