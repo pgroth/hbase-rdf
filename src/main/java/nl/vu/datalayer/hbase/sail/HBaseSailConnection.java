@@ -534,41 +534,20 @@ public class HBaseSailConnection extends NotifyingSailConnectionBase {
 		// System.out.println("EVALUATE:" + tupleExpr.toString());
 
 		try {
-			Set<URI> contexts = new HashSet(dataset.getNamedGraphs());
 			ArrayList<Statement> statements = evaluateInternal(tupleExpr, dataset);
 			// System.out.println("Statements retrieved: " + statements.size());
-
-			Resource[] context = null;
-			try {
-				context = new Resource[contexts.size()];
-				int index = 0;
-				for (URI cont : contexts) {
-					context[index] = cont;
-					index++;
-					
-				}
-			} catch (Exception e) {
-				context = new Resource[1];
-				context[0] = new URIImpl("http://hbase.sail.vu.nl");
-			}
 
 			Iterator it = statements.iterator();
 			while (it.hasNext()) {
 				Statement statement = (Statement) it.next();
 				System.out.println("WE GOT THIS SENTENCE: " + statement.toString());
 				try {
-					if (statement.getContext() != null) {
 					memStoreCon.addStatement(statement.getSubject(), statement.getPredicate(), statement.getObject(),
-							statement.getContext());
+								statement.getContext());
 					System.out.println("CONTEXT FOR MEMORY STORE: " + statement.getContext().stringValue());
-					}
-					else {
-						memStoreCon.addStatement(statement.getSubject(), statement.getPredicate(), statement.getObject(),
-								new URIImpl("http://hbase.sail.vu.nl"));
-					}
 				} catch (Exception e) {
-					System.out.println("THE FOLLOWING STATEMENT COULD NOT BE ADDED TO THE MEMORY STORE: "
-							+ statement.toString());
+					memStoreCon.addStatement(statement.getSubject(), statement.getPredicate(), statement.getObject(),
+							new URIImpl("http://hbase.sail.vu.nl"));
 				}
 			}
 
