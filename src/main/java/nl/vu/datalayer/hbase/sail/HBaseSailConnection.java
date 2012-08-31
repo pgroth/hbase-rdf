@@ -33,7 +33,6 @@ import org.openrdf.sail.SailException;
 import org.openrdf.sail.helpers.NotifyingSailConnectionBase;
 import org.openrdf.sail.helpers.SailBase;
 import org.openrdf.sail.memory.MemoryStore;
-import org.openrdf.sail.memory.MemoryStoreConnection;
 
 /**
  * A connection to an HBase Sail object. This class implements methods to break down SPARQL
@@ -52,7 +51,7 @@ import org.openrdf.sail.memory.MemoryStoreConnection;
 public class HBaseSailConnection extends NotifyingSailConnectionBase {
 
 	MemoryStore memStore;
-	MemoryStoreConnection memStoreCon;
+	NotifyingSailConnection memStoreCon;
 	HBaseClientSolution hbase;
 
 	// Builder to write the query to bit by bit
@@ -71,7 +70,7 @@ public class HBaseSailConnection extends NotifyingSailConnectionBase {
 		memStore = new MemoryStore();
 		try {
 			memStore.initialize();
-			memStoreCon = (MemoryStoreConnection) memStore.getConnection();
+			memStoreCon = memStore.getConnection();
 		} catch (SailException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
