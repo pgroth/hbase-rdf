@@ -534,12 +534,12 @@ public class HBaseSailConnection extends NotifyingSailConnectionBase {
 		// System.out.println("EVALUATE:" + tupleExpr.toString());
 
 		try {
+			Set<URI> contexts = new HashSet(dataset.getNamedGraphs());
 			ArrayList<Statement> statements = evaluateInternal(tupleExpr, dataset);
 			// System.out.println("Statements retrieved: " + statements.size());
 
 			Resource[] context = null;
 			try {
-				Set<URI> contexts = dataset.getNamedGraphs();
 				context = new Resource[contexts.size()];
 				int index = 0;
 				for (URI cont : contexts) {
