@@ -173,17 +173,23 @@ public class HBaseSailConnection extends NotifyingSailConnectionBase {
 				ArrayList<ArrayList<Value>> result = null;
 				try {
 					result = hbase.util.getResults(query);
+					myList.addAll(reconstructTriples(result, query));
 				}
 				catch (Exception e) {
+					// empty list retrieved from HBase
 				}
-
-				myList.addAll(reconstructTriples(result, query));
 			}
 
-			Iterator it = myList.iterator();
-			CloseableIteration<Statement, SailException> ci = new CloseableIteratorIteration<Statement, SailException>(
-					it);
-			return ci;
+			try {
+				Iterator it = myList.iterator();
+				CloseableIteration<Statement, SailException> ci = new CloseableIteratorIteration<Statement, SailException>(
+						it);
+				return ci;
+			}
+			catch (Exception e) {
+				// if there are no results to retrieve
+				return null;
+			}
 
 		} catch (Exception e) {
 			Exception ex = new SailException("HBase connection error: " + e.getMessage());
@@ -478,6 +484,7 @@ public class HBaseSailConnection extends NotifyingSailConnectionBase {
 					} else {
 						if (var.hasValue()) {
 							obj = getObject(var.getValue().stringValue());
+							System.out.println("OBJECT: " + var.getValue().stringValue());
 						} else if (var.isAnonymous()) {
 							obj = getObject(var.getName());
 						}
@@ -486,7 +493,7 @@ public class HBaseSailConnection extends NotifyingSailConnectionBase {
 				}
 				
 				if (obj != null) {
-					System.out.println("OBJECT:" + obj.stringValue());
+					System.out.println("OBJECT:" + obj.stringValue()) ;
 				}
 
 				CloseableIteration ci = getStatementsInternal(subj, pred, obj, false, contexts);
