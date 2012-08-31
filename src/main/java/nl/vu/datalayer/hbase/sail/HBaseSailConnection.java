@@ -56,6 +56,8 @@ public class HBaseSailConnection extends NotifyingSailConnectionBase {
 
 	// Builder to write the query to bit by bit
 	StringBuilder queryString = new StringBuilder();
+	
+	List<String> bindingNames;
 
 	/**
 	 * Establishes the connection to the HBase Sail, and sets up the in-memory store.
@@ -75,6 +77,8 @@ public class HBaseSailConnection extends NotifyingSailConnectionBase {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
+		
+		bindingNames = new ArrayList();
 	}
 
 	@Override
@@ -421,7 +425,11 @@ public class HBaseSailConnection extends NotifyingSailConnectionBase {
 		ArrayList<Statement> result = new ArrayList();
 
 		try {
-			ArrayList<ArrayList<Var>> statements = HBaseQueryVisitor.convertToStatements(arg0, null, null);
+			HBaseQueryVisitor queryParser = new HBaseQueryVisitor(null, null, null);
+
+			ArrayList<ArrayList<Var>> statements = queryParser.convertToStatements(arg0, null, null);
+			bindingNames = queryParser.getBindingNames();
+			
 			// System.out.println("StatementPatterns: " + statements.size());
 
 			// ArrayList<Var> contexts = HBaseQueryVisitor.getContexts(arg0);
@@ -551,27 +559,29 @@ public class HBaseSailConnection extends NotifyingSailConnectionBase {
 				}
 			}
 
-			CloseableIteration<? extends BindingSet, QueryEvaluationException> ci = memStoreCon.evaluate(tupleExpr,
-					dataset, bindings, includeInferred);
-			CloseableIteration<? extends BindingSet, QueryEvaluationException> cj = memStoreCon.evaluate(tupleExpr,
-					dataset, bindings, includeInferred);
+//			CloseableIteration<? extends BindingSet, QueryEvaluationException> ci = memStoreCon.evaluate(tupleExpr,
+//					dataset, bindings, includeInferred);
+//			CloseableIteration<? extends BindingSet, QueryEvaluationException> cj = memStoreCon.evaluate(tupleExpr,
+//					dataset, bindings, includeInferred);
+//
+//			List<String> bindingList = new ArrayList<String>();
+//			int index = 0;
+//			while (ci.hasNext()) {
+//				index++;
+//				BindingSet bs = ci.next();
+//				Set<String> localBindings = bs.getBindingNames();
+//				Iterator jt = localBindings.iterator();
+//				while (jt.hasNext()) {
+//					String binding = (String) jt.next();
+//					if (bindingList.contains(binding) == false) {
+//						bindingList.add(binding);
+//					}
+//				}
+//			}
+			
+			CloseableIteration<? extends BindingSet, QueryEvaluationException> ci = memStoreCon.evaluate(tupleExpr, dataset, bindings, includeInferred);
 
-			List<String> bindingList = new ArrayList<String>();
-			int index = 0;
-			while (ci.hasNext()) {
-				index++;
-				BindingSet bs = ci.next();
-				Set<String> localBindings = bs.getBindingNames();
-				Iterator jt = localBindings.iterator();
-				while (jt.hasNext()) {
-					String binding = (String) jt.next();
-					if (bindingList.contains(binding) == false) {
-						bindingList.add(binding);
-					}
-				}
-			}
-
-			TupleQueryResult result = new TupleQueryResultImpl(bindingList, cj);
+			TupleQueryResult result = new TupleQueryResultImpl(bindingNames, ci);
 
 			return result;
 

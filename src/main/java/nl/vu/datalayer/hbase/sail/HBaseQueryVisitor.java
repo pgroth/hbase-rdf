@@ -125,6 +125,8 @@ public class HBaseQueryVisitor implements QueryModelVisitor<QueryExpansionExcept
 
 	// List of the number of options clauses pushed under the graph clause.
 	int optionInGraph = 0;
+	
+	private List<String> bindingNames;
 
 	/**
 	 * Sets up the visitor for writing the query.
@@ -147,6 +149,7 @@ public class HBaseQueryVisitor implements QueryModelVisitor<QueryExpansionExcept
 		this.contexts = contexts;
 
 		statements = new ArrayList();
+		bindingNames = new ArrayList();
 	}
 
 	public static ArrayList<Var> getContexts(TupleExpr tupleExpr) throws QueryExpansionException {
@@ -504,6 +507,7 @@ public class HBaseQueryVisitor implements QueryModelVisitor<QueryExpansionExcept
 	public void meet(ProjectionElem arg0) throws QueryExpansionException {
 		// TODO Auto-generated method stub
 		// System.out.println("FOUND ProjectionElem");
+		bindingNames.add(arg0.getSourceName());
 	}
 
 	@Override
@@ -616,6 +620,10 @@ public class HBaseQueryVisitor implements QueryModelVisitor<QueryExpansionExcept
 	private ArrayList<ArrayList<Var>> getStatements() {
 		return statements;
 	}
+	
+	public List<String> getBindingNames() {
+    	return bindingNames;
+    }
 
 	/**
 	 * Converts a SPARQL query in TupleExpr format to a list of statement patterns.
@@ -629,7 +637,7 @@ public class HBaseQueryVisitor implements QueryModelVisitor<QueryExpansionExcept
 	 * @return
 	 * @throws QueryExpansionException
 	 */
-	public static ArrayList<ArrayList<Var>> convertToStatements(TupleExpr tupleExpr, Dataset dataSet,
+	public ArrayList<ArrayList<Var>> convertToStatements(TupleExpr tupleExpr, Dataset dataSet,
 			List<String> requiredAttributes) throws QueryExpansionException {
 		// System.out.println("Evaluating TupleExpr:" + tupleExpr.toString());
 
