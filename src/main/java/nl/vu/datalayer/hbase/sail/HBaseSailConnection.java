@@ -545,7 +545,7 @@ public class HBaseSailConnection extends NotifyingSailConnectionBase {
 				for (URI cont : contexts) {
 					context[index] = cont;
 					index++;
-					System.out.println("CONTEXT FOR MEMORY STORE: " + cont.stringValue());
+					
 				}
 			} catch (Exception e) {
 				context = new Resource[1];
@@ -560,6 +560,7 @@ public class HBaseSailConnection extends NotifyingSailConnectionBase {
 					if (statement.getContext() != null) {
 					memStoreCon.addStatement(statement.getSubject(), statement.getPredicate(), statement.getObject(),
 							statement.getContext());
+					System.out.println("CONTEXT FOR MEMORY STORE: " + statement.getContext().stringValue());
 					}
 					else {
 						memStoreCon.addStatement(statement.getSubject(), statement.getPredicate(), statement.getObject(),
