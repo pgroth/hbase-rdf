@@ -557,7 +557,7 @@ public class HBaseSailConnection extends NotifyingSailConnectionBase {
 				Statement statement = (Statement) it.next();
 				try {
 					memStoreCon.addStatement(statement.getSubject(), statement.getPredicate(), statement.getObject(),
-							context);
+							statement.getContext());
 				} catch (Exception e) {
 					System.out.println("THE FOLLOWING STATEMENT COULD NOT BE ADDED TO THE MEMORY STORE: "
 							+ statement.toString());
