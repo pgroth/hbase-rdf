@@ -466,8 +466,8 @@ public class HBaseSailConnection extends NotifyingSailConnectionBase {
 
 				int index = 0;
 
+				Set<URI> statementContexts = new HashSet<URI>(contexts);
 				while (jt.hasNext()) {
-					Set<URI> statementContexts = new HashSet<URI>(contexts);
 					
 					Var var = (Var) jt.next();
 
@@ -535,8 +535,8 @@ public class HBaseSailConnection extends NotifyingSailConnectionBase {
 	 */
 	public TupleQueryResult query(TupleExpr tupleExpr, Dataset dataset, BindingSet bindings, boolean includeInferred)
 			throws SailException {
-		// System.out.println("Evaluating query");
-		// System.out.println("EVALUATE:" + tupleExpr.toString());
+		System.out.println("Evaluating query");
+		System.out.println("EVALUATE:" + tupleExpr.toString());
 
 		try {
 			ArrayList<Statement> statements = evaluateInternal(tupleExpr, dataset);
