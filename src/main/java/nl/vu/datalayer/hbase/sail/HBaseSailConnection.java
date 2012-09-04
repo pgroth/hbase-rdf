@@ -27,6 +27,7 @@ import org.openrdf.query.QueryEvaluationException;
 import org.openrdf.query.TupleQueryResult;
 import org.openrdf.query.algebra.TupleExpr;
 import org.openrdf.query.algebra.Var;
+import org.openrdf.query.impl.DatasetImpl;
 import org.openrdf.query.impl.TupleQueryResultImpl;
 import org.openrdf.sail.NotifyingSailConnection;
 import org.openrdf.sail.SailException;
@@ -56,6 +57,8 @@ public class HBaseSailConnection extends NotifyingSailConnectionBase {
 
 	// Builder to write the query to bit by bit
 	StringBuilder queryString = new StringBuilder();
+	
+	List<String> bindingNames;
 
 	/**
 	 * Establishes the connection to the HBase Sail, and sets up the in-memory store.
@@ -75,6 +78,8 @@ public class HBaseSailConnection extends NotifyingSailConnectionBase {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
+		
+		bindingNames = new ArrayList();
 	}
 
 	@Override
@@ -112,7 +117,7 @@ public class HBaseSailConnection extends NotifyingSailConnectionBase {
 
 	@Override
 	protected void closeInternal() throws SailException {
-		memStoreCon.close();
+//		memStoreCon.close();
 	}
 
 	@Override
@@ -421,7 +426,11 @@ public class HBaseSailConnection extends NotifyingSailConnectionBase {
 		ArrayList<Statement> result = new ArrayList();
 
 		try {
-			ArrayList<ArrayList<Var>> statements = HBaseQueryVisitor.convertToStatements(arg0, null, null);
+			HBaseQueryVisitor queryParser = new HBaseQueryVisitor(null, null, null);
+
+			ArrayList<ArrayList<Var>> statements = queryParser.convertToStatements(arg0, null, null);
+			bindingNames = queryParser.getBindingNames();
+			
 			// System.out.println("StatementPatterns: " + statements.size());
 
 			// ArrayList<Var> contexts = HBaseQueryVisitor.getContexts(arg0);
@@ -532,9 +541,21 @@ public class HBaseSailConnection extends NotifyingSailConnectionBase {
 	 */
 	public TupleQueryResult query(TupleExpr tupleExpr, Dataset dataset, BindingSet bindings, boolean includeInferred)
 			throws SailException {
-		// System.out.println("Evaluating query");
-		// System.out.println("EVALUATE:" + tupleExpr.toString());
-
+		
+//		DatasetImpl backup = null;
+//		try {
+//			// dataset gets emptied by the evaluateInternal method, it needs to be preserved
+//			Set<URI> contexts = new HashSet(dataset.getNamedGraphs());
+//			backup = new DatasetImpl();
+//			for (URI uri : contexts) {
+//				backup.addNamedGraph(uri);
+//			}
+////			System.out.println("DATASET: " + backup.toString());
+//		}
+//		catch (Exception e) {
+//			// no context info given
+//		}
+		
 		try {
 			ArrayList<Statement> statements = evaluateInternal(tupleExpr, dataset);
 			// System.out.println("Statements retrieved: " + statements.size());
@@ -542,46 +563,32 @@ public class HBaseSailConnection extends NotifyingSailConnectionBase {
 			Iterator it = statements.iterator();
 			while (it.hasNext()) {
 				Statement statement = (Statement) it.next();
-//				System.out.println("WE GOT THIS SENTENCE: " + statement.toString());
+				System.out.println("WE GOT THIS SENTENCE: " + statement.toString());
 				try {
 					memStoreCon.addStatement(statement.getSubject(), statement.getPredicate(), statement.getObject(),
 								statement.getContext());
-//					System.out.println("CONTEXT FOR MEMORY STORE: " + statement.getContext().stringValue());
+					System.out.println("CONTEXT FOR MEMORY STORE: " + statement.getContext().stringValue());
 				} catch (Exception e) {
 					memStoreCon.addStatement(statement.getSubject(), statement.getPredicate(), statement.getObject(),
 							new URIImpl("http://hbase.sail.vu.nl"));
 				}
 			}
+			
+//			System.out.println("Evaluating query");
+//			System.out.println("EVALUATE:" + tupleExpr.toString());
 
-			CloseableIteration<? extends BindingSet, QueryEvaluationException> ci = memStoreCon.evaluate(tupleExpr,
-					dataset, bindings, includeInferred);
-			CloseableIteration<? extends BindingSet, QueryEvaluationException> cj = memStoreCon.evaluate(tupleExpr,
-					dataset, bindings, includeInferred);
+			CloseableIteration<? extends BindingSet, QueryEvaluationException> ci = memStoreCon.evaluate(tupleExpr, dataset, bindings, includeInferred);
 
-			List<String> bindingList = new ArrayList<String>();
-			int index = 0;
-			while (ci.hasNext()) {
-				index++;
-				BindingSet bs = ci.next();
-				Set<String> localBindings = bs.getBindingNames();
-				Iterator jt = localBindings.iterator();
-				while (jt.hasNext()) {
-					String binding = (String) jt.next();
-					if (bindingList.contains(binding) == false) {
-						bindingList.add(binding);
-					}
-				}
-			}
-
-			TupleQueryResult result = new TupleQueryResultImpl(bindingList, cj);
+			TupleQueryResult result = new TupleQueryResultImpl(bindingNames, ci);
+			
+			// clear up the in-memory store
+			memStoreCon.clear();
 
 			return result;
 
 		} catch (SailException e) {
 			e.printStackTrace();
 			throw e;
-		} catch (QueryEvaluationException e) {
-			throw new SailException(e);
 		}
 	}
 
