@@ -466,7 +466,10 @@ public class HBaseSailConnection extends NotifyingSailConnectionBase {
 
 				int index = 0;
 
-				Set<URI> statementContexts = new HashSet<URI>(contexts);
+				Set<URI> statementContexts = new HashSet<URI>();
+				if (contexts != null && contexts.size() != 0) {
+					statementContexts.addAll(contexts);
+				}
 				while (jt.hasNext()) {
 					
 					Var var = (Var) jt.next();
