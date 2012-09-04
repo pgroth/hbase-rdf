@@ -491,7 +491,7 @@ public class HBaseSailConnection extends NotifyingSailConnectionBase {
 						}
 					} else {
 						if (var.hasValue()) {
-							statementContexts.add((URI)getContext(var.getName()));
+							statementContexts.add((URI)getContext(var.getValue().toString()));
 						}
 					}
 					index += 1;
