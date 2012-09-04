@@ -481,13 +481,15 @@ public class HBaseSailConnection extends NotifyingSailConnectionBase {
 							pred = (URI) getPredicate(var.getValue().stringValue());
 						}
 
-					} else {
+					} else if (index == 2) {
 						if (var.hasValue()) {
 							obj = getObject(var.getValue().toString());
 							System.out.println("OBJECT: " + var.getValue().toString());
 						} else if (var.isAnonymous()) {
 							obj = getObject(var.getName());
 						}
+					} else {
+						contexts.add((URI)getContext(var.getName()));
 					}
 					index += 1;
 				}

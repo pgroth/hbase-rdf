@@ -551,6 +551,7 @@ public class HBaseQueryVisitor implements QueryModelVisitor<QueryExpansionExcept
 		statement.add(sp.getSubjectVar());
 		statement.add(sp.getPredicateVar());
 		statement.add(sp.getObjectVar());
+		statement.add(sp.getContextVar());
 
 		statements.add(statement);
 	}
