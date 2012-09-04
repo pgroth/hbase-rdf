@@ -27,6 +27,7 @@ import org.openrdf.query.QueryEvaluationException;
 import org.openrdf.query.TupleQueryResult;
 import org.openrdf.query.algebra.TupleExpr;
 import org.openrdf.query.algebra.Var;
+import org.openrdf.query.impl.DatasetImpl;
 import org.openrdf.query.impl.TupleQueryResultImpl;
 import org.openrdf.sail.NotifyingSailConnection;
 import org.openrdf.sail.SailException;
@@ -422,42 +423,38 @@ public class HBaseSailConnection extends NotifyingSailConnectionBase {
 
 		try {
 			ArrayList<ArrayList<Var>> statements = HBaseQueryVisitor.convertToStatements(arg0, null, null);
-			// System.out.println("StatementPatterns: " + statements.size());
 
-			// ArrayList<Var> contexts = HBaseQueryVisitor.getContexts(arg0);
-			// ArrayList<Resource> cons = new ArrayList();
-			// Iterator qt = contexts.iterator();
-			// while (qt.hasNext()) {
-			// Var context = (Var)qt.next();
-			// if (context != null) {
-			// System.out.println(context.toString());
-			// }
-			// }
+			System.out.println("DATASET: " + context.toString());
 
-			Set<URI> contexts;
-			try {
-				contexts = context.getNamedGraphs();
-			} catch (Exception e) {
-				contexts = new HashSet();
+			Set<URI> contexts = new HashSet();
+			try {			
+				Set<URI> defGraphs = context.getDefaultGraphs();
+				if (defGraphs != null && defGraphs.size() != 0) {
+					for (URI gr : defGraphs) {
+						contexts.add(gr);
+					}
+				}
+
+				Set<URI> namedGraphs = context.getNamedGraphs();
+				if (namedGraphs != null && namedGraphs.size() != 0) {
+					for (URI gr : namedGraphs) {
+						contexts.add(gr);
+					}
+				}
+			}
+			catch (Exception e) {
+				// no contexts found
 			}
 
-			if (contexts != null && contexts.size() != 0) {
+			/* if (contexts != null && contexts.size() != 0) {
 				for (URI gr : contexts) {
 					System.out.println("CONTEXT FOUND: " + gr.stringValue());
 				}
-			}
+			} */
 
 			Iterator it = statements.iterator();
 			while (it.hasNext()) {
 				ArrayList<Var> sp = (ArrayList<Var>) it.next();
-
-				// System.out.println("CONTEXTS:");
-				// if (contexts != null) {
-				// for (Var con : contexts) {
-				// System.out.println("CONTEXT: " + con.toString());
-				// // cons.add((Resource)new URIImpl(con.));
-				// }
-				// }
 
 				Resource subj = null;
 				URI pred = null;
@@ -493,7 +490,7 @@ public class HBaseSailConnection extends NotifyingSailConnectionBase {
 							obj = getObject(var.getName());
 						}
 					} else {
-						if (var.hasValue()) {
+						if (var != null && var.hasValue()) {
 							statementContexts.add((URI)getContext(var.getValue().toString()));
 						}
 					}
@@ -538,8 +535,8 @@ public class HBaseSailConnection extends NotifyingSailConnectionBase {
 	 */
 	public TupleQueryResult query(TupleExpr tupleExpr, Dataset dataset, BindingSet bindings, boolean includeInferred)
 			throws SailException {
-		System.out.println("Evaluating query");
-		System.out.println("EVALUATE:" + tupleExpr.toString());
+		// System.out.println("Evaluating query");
+		// System.out.println("EVALUATE:" + tupleExpr.toString());
 
 		try {
 			ArrayList<Statement> statements = evaluateInternal(tupleExpr, dataset);
@@ -558,6 +555,7 @@ public class HBaseSailConnection extends NotifyingSailConnectionBase {
 							new URIImpl("http://hbase.sail.vu.nl"));
 				}
 			}
+			memStoreCon.commit();
 
 			CloseableIteration<? extends BindingSet, QueryEvaluationException> ci = memStoreCon.evaluate(tupleExpr,
 					dataset, bindings, includeInferred);
