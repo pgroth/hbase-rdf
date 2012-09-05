@@ -71,7 +71,7 @@ public class HBaseSailTest {
 			System.err.println("Error: " + e.getMessage());
 		}
 
-		conn.close();
+//		conn.close();
 	}
 
 }

@@ -424,10 +424,9 @@ public class HBaseSailConnection extends NotifyingSailConnectionBase {
 		try {
 			ArrayList<ArrayList<Var>> statements = HBaseQueryVisitor.convertToStatements(arg0, null, null);
 
-			System.out.println("DATASET: " + context.toString());
-
 			Set<URI> contexts = new HashSet();
 			try {			
+				// System.out.println("DATASET: " + context.toString());
 				Set<URI> defGraphs = context.getDefaultGraphs();
 				if (defGraphs != null && defGraphs.size() != 0) {
 					for (URI gr : defGraphs) {
@@ -444,6 +443,7 @@ public class HBaseSailConnection extends NotifyingSailConnectionBase {
 			}
 			catch (Exception e) {
 				// no contexts found
+				// System.out.println("NO DEFAULT/NAMED CONTEXTS FOUND");
 			}
 
 			/* if (contexts != null && contexts.size() != 0) {
@@ -492,13 +492,10 @@ public class HBaseSailConnection extends NotifyingSailConnectionBase {
 					} else {
 						if (var != null && var.hasValue()) {
 							statementContexts.add((URI)getContext(var.getValue().toString()));
+							// System.out.println("GRAPH: " + var.getValue().toString());
 						}
 					}
 					index += 1;
-				}
-				
-				if (obj != null) {
-//					System.out.println("OBJECT:" + obj.stringValue()) ;
 				}
 
 				CloseableIteration ci = getStatementsInternal(subj, pred, obj, false, statementContexts);
