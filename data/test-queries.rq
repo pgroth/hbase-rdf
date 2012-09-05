@@ -1,0 +1,14 @@
+SELECT ?g ?p ?o WHERE { GRAPH ?g { <http://dbpedia.org/resource/Alabama> ?p ?o } }
+SELECT ?g ?o WHERE { GRAPH ?g { <http://dbpedia.org/resource/Alabama> <http://dbpedia.org/ontology/PopulatedPlace/areaTotal> ?o } }
+SELECT ?g ?s WHERE { GRAPH ?g { ?s <http://dbpedia.org/ontology/PopulatedPlace/areaTotal> "135765.0"^^<http://dbpedia.org/datatype/squareKilometre> } }
+SELECT ?s FROM <http://en.wikipedia.org/wiki/Alabama?oldid=495507959#absolute-line=33> WHERE { ?s <http://dbpedia.org/ontology/PopulatedPlace/areaTotal> "135765.0"^^<http://dbpedia.org/datatype/squareKilometre> }
+SELECT ?g ?s ?p WHERE { GRAPH ?g { ?s ?p "135765.0"^^<http://dbpedia.org/datatype/squareKilometre> } }
+SELECT ?s ?p FROM <http://en.wikipedia.org/wiki/Alabama?oldid=495507959#absolute-line=33> WHERE { ?s ?p "135765.0"^^<http://dbpedia.org/datatype/squareKilometre> }
+SELECT ?p FROM <http://en.wikipedia.org/wiki/Alabama?oldid=495507959#absolute-line=33> WHERE { <http://dbpedia.org/resource/Alabama> ?p "135765.0"^^<http://dbpedia.org/datatype/squareKilometre> }
+SELECT ?g ?p WHERE { GRAPH ?g { <http://dbpedia.org/resource/Alabama> ?p "135765.0"^^<http://dbpedia.org/datatype/squareKilometre> } }
+SELECT ?s ?p ?o FROM <http://en.wikipedia.org/wiki/Alabama?oldid=495507959#absolute-line=33> WHERE { ?s ?p ?o }
+SELECT ?p ?o FROM <http://en.wikipedia.org/wiki/Alabama?oldid=495507959#absolute-line=33> WHERE { <http://dbpedia.org/resource/Alabama> ?p ?o }
+SELECT ?o FROM <http://en.wikipedia.org/wiki/Alabama?oldid=495507959#absolute-line=33> WHERE { <http://dbpedia.org/resource/Alabama> <http://dbpedia.org/ontology/PopulatedPlace/areaTotal> ?o }
+SELECT ?o WHERE { GRAPH <http://en.wikipedia.org/wiki/Alabama?oldid=495507959#absolute-line=33> { <http://dbpedia.org/resource/Alabama> <http://dbpedia.org/ontology/PopulatedPlace/areaTotal> ?o } }
+SELECT ?o WHERE { GRAPH <http://en.wikipedia.org/wiki/Alabama?oldid=495507959#absolute-line=3ss3> { <http://dbpedia.org/resource/Alabama> <http://dbpedia.org/ontology/PopulatedPlace/areaTotal> ?o } }
+
