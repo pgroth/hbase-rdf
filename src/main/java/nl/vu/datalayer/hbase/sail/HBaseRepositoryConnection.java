@@ -51,6 +51,18 @@ import org.openrdf.rio.RDFParseException;
 import org.openrdf.sail.SailConnection;
 import org.openrdf.sail.SailException;
 
+/**
+ * A connection to a HBase repository that wraps around {@link HBaseSailConnection}. It can be
+ * used to execute SPARQL queries on the HBase store, like in the following example:
+ * <pre>
+ * {@code
+ * TupleQuery tupleQuery = HBaseRepositoryConnection.prepareTupleQuery(QueryLanguage.SPARQL, queryString);
+ * TupleQueryResult result = tupleQuery.evaluate();
+ * }
+ * </pre>
+ * 
+ * @author Anca Dumitrache, Antonis Loizou
+ */
 public class HBaseRepositoryConnection extends SailRepositoryConnection {
 
 	HBaseSailConnection conn;
@@ -379,47 +391,5 @@ public class HBaseRepositoryConnection extends SailRepositoryConnection {
 			}
 		}
 	}
-
-//	private static class HBaseSailGraphQuery extends SailGraphQuery {
-//		protected HBaseSailGraphQuery(ParsedGraphQuery tupleQuery,
-//				SailRepositoryConnection con) {
-//			super(tupleQuery, con);
-//			
-//		}
-//		
-//		@Override
-//		public GraphQueryResult evaluate() throws QueryEvaluationException {
-//			try {
-//				GraphBuildingRDFHandler aHandler = new GraphBuildingRDFHandler();
-//
-//				evaluate(aHandler);
-//
-//				return new GraphQueryResultImpl(new HashMap<String, String>(), aHandler.getGraph());
-//			}
-//			catch (RDFHandlerException e) {
-//				throw new QueryEvaluationException(e);
-//			}
-//		}
-//
-//		/**
-//		 * @inheritDoc
-//		 */
-//		@Override
-//		public void evaluate(RDFHandler theHandler) throws QueryEvaluationException, RDFHandlerException {
-//			try {
-//				Graph aGraph = ((HBaseRepositoryConnection) this.getConnection())
-//						.getHBaseSailConnection().graphQuery(new SPARQLQueryRenderer().render(getParsedQuery()));
-//
-//				theHandler.startRDF();
-//				for (Statement aStmt : aGraph) {
-//					theHandler.handleStatement(aStmt);
-//				}
-//				theHandler.endRDF();
-//			}
-//			catch (Exception e) {
-//				throw new QueryEvaluationException(e);
-//			}
-//		}
-//	}
 
 }

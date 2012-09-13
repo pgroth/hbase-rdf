@@ -13,6 +13,11 @@ import org.openrdf.sail.NotifyingSailConnection;
 import org.openrdf.sail.SailException;
 import org.openrdf.sail.helpers.NotifyingSailBase;
 
+/**
+ * An implementation of a Sail interface, that retrieves data from an HBase store. 
+ * 
+ * @author Anca Dumitrache, Antonis Loizou
+ */
 public class HBaseSail extends NotifyingSailBase {
 
 	private HBaseClientSolution hbase;
@@ -20,6 +25,10 @@ public class HBaseSail extends NotifyingSailBase {
 	
 	private ValueFactory valueFactory = new ValueFactoryImpl();
 	
+	/**
+	 * Establishes a connection to the HBase store, via the {@link HBaseConnection} and
+	 * {@link HBaseFactory} classes.
+	 */
 	public HBaseSail() {
 		try {
 			HBaseConnection con = HBaseConnection.create(HBaseConnection.NATIVE_JAVA);
@@ -39,6 +48,10 @@ public class HBaseSail extends NotifyingSailBase {
 		return hbase;
 	}
 
+	/**
+	 * Returns a store-specific {@link HBaseConnection} object.
+	 * @return A connection to the store.
+	 */
 	HBaseConnection getHBaseConnection() {
 		return con;
 	}

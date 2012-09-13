@@ -36,7 +36,7 @@ import org.openrdf.sail.helpers.SailBase;
 import org.openrdf.sail.memory.MemoryStore;
 
 /**
- * A connection to an HBase Sail object. This class implements methods to break down SPARQL
+ * A connection to an {@link HBaseSail} object. This class implements methods to break down SPARQL
  * queries into statement patterns that can be used for querying HBase, to set up an in-memory
  * store for loading the quads retrieved from HBase, and finally, to run the intial SPARQL query
  * over the in-memory store and return the results.  
@@ -80,23 +80,7 @@ public class HBaseSailConnection extends NotifyingSailConnectionBase {
 
 	@Override
 	protected void addStatementInternal(Resource arg0, URI arg1, Value arg2, Resource... arg3) throws SailException {
-		ArrayList<Statement> myList = new ArrayList();
-		Statement s = new StatementImpl(arg0, arg1, arg2);
-		myList.add(s);
-
-		// TODO: update method for adding quads
-
-		// try {
-		// HBaseClientSolution sol =
-		// HBaseFactory.getHBaseSolution(HBHexastoreSchema.SCHEMA_NAME, con,
-		// myList);
-		// sol.schema.create();
-		// sol.util.populateTables(myList);
-		// }
-		// catch (Exception e) {
-		// e.printStackTrace();
-		// // TODO error handling
-		// }
+		// TODO Auto-generated method stub
 	}
 
 	@Override
@@ -156,8 +140,8 @@ public class HBaseSailConnection extends NotifyingSailConnectionBase {
 			Value arg2, boolean arg3, Set<URI> contexts) throws SailException {
 		try {
 
+			// construct the list of contexts for this statement pattern
 			ArrayList<Value> g = new ArrayList();
-
 			if (contexts != null && contexts.size() != 0) {
 				for (Resource r : contexts) {
 					g.add(r);
@@ -168,16 +152,18 @@ public class HBaseSailConnection extends NotifyingSailConnectionBase {
 
 			ArrayList<Statement> myList = new ArrayList();
 			for (Value graph : g) {
+				// send the query to HBase
 				System.out.println("HBase Query: " + arg0 + " - " + arg1 + " - " + arg2 + " - " + graph);
-
 				Value[] query = { arg0, arg1, arg2, graph };
+				
 				ArrayList<ArrayList<Value>> result = null;
 				try {
+					// reconstruct Statement objects
 					result = hbase.util.getResults(query);
 					myList.addAll(reconstructTriples(result, query));
 				}
 				catch (Exception e) {
-					// empty list retrieved from HBase
+					// no result retrieved from HBase
 				}
 			}
 
@@ -422,8 +408,10 @@ public class HBaseSailConnection extends NotifyingSailConnectionBase {
 		ArrayList<Statement> result = new ArrayList();
 
 		try {
+			// get statement patterns from query
 			ArrayList<ArrayList<Var>> statements = HBaseQueryVisitor.convertToStatements(arg0, null, null);
 
+			// retrieve default/named context list
 			Set<URI> contexts = new HashSet();
 			try {			
 				// System.out.println("DATASET: " + context.toString());
@@ -454,6 +442,7 @@ public class HBaseSailConnection extends NotifyingSailConnectionBase {
 
 			Iterator it = statements.iterator();
 			while (it.hasNext()) {
+				
 				ArrayList<Var> sp = (ArrayList<Var>) it.next();
 
 				Resource subj = null;
@@ -463,6 +452,7 @@ public class HBaseSailConnection extends NotifyingSailConnectionBase {
 
 				int index = 0;
 
+				// convert Var objects to Sesame Value objects
 				Set<URI> statementContexts = new HashSet<URI>();
 				if (contexts != null && contexts.size() != 0) {
 					statementContexts.addAll(contexts);
@@ -498,6 +488,7 @@ public class HBaseSailConnection extends NotifyingSailConnectionBase {
 					index += 1;
 				}
 
+				// get the quads from HBase
 				CloseableIteration ci = getStatementsInternal(subj, pred, obj, false, statementContexts);
 
 				while (ci.hasNext()) {

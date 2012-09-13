@@ -314,8 +314,9 @@ public class HBaseQueryVisitor implements QueryModelVisitor<QueryExpansionExcept
 
 	@Override
 	public void meet(Join arg0) throws QueryExpansionException {
-		// TODO Auto-generated method stub
-
+		// System.out.println("Found Join");
+		arg0.getLeftArg().visit(this);
+		arg0.getRightArg().visit(this);
 	}
 
 	@Override
@@ -396,6 +397,7 @@ public class HBaseQueryVisitor implements QueryModelVisitor<QueryExpansionExcept
 		// The leftArg is the stuff outside of the optional.
 		// May be a SingletonSet in which case nothing is written
 		lj.getLeftArg().visit(this);
+		lj.getRightArg().visit(this);
 	}
 
 	/**
@@ -545,7 +547,7 @@ public class HBaseQueryVisitor implements QueryModelVisitor<QueryExpansionExcept
 	// @Override
 	@Override
 	public void meet(StatementPattern sp) throws QueryExpansionException {
-		// System.out.println("Found StatementPattern");
+//		System.out.println("Found StatementPattern");
 		ArrayList<Var> statement = new ArrayList();
 
 		statement.add(sp.getSubjectVar());
@@ -632,7 +634,7 @@ public class HBaseQueryVisitor implements QueryModelVisitor<QueryExpansionExcept
 	 */
 	public static ArrayList<ArrayList<Var>> convertToStatements(TupleExpr tupleExpr, Dataset dataSet,
 			List<String> requiredAttributes) throws QueryExpansionException {
-		// System.out.println("Evaluating TupleExpr:" + tupleExpr.toString());
+//		System.out.println("Evaluating TupleExpr:" + tupleExpr.toString());
 
 		ArrayList<Var> contexts = ContextListerVisitor.getContexts(tupleExpr);
 
