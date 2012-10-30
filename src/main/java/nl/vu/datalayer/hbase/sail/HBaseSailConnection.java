@@ -153,7 +153,7 @@ public class HBaseSailConnection extends NotifyingSailConnectionBase {
 			ArrayList<Statement> myList = new ArrayList();
 			for (Value graph : g) {
 				// send the query to HBase
-				System.out.println("HBase Query: " + arg0 + " - " + arg1 + " - " + arg2 + " - " + graph);
+				//System.out.println("HBase Query: " + arg0 + " - " + arg1 + " - " + arg2 + " - " + graph);
 				Value[] query = { arg0, arg1, arg2, graph };
 				
 				ArrayList<ArrayList<Value>> result = null;

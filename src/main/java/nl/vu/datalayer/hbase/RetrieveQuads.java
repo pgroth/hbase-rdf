@@ -24,7 +24,7 @@ public class RetrieveQuads {
 		ArrayList<ArrayList<Value>> results = util.getResults(valQuad);
 		long end = System.currentTimeMillis();
 		
-		/*ArrayList<Value> objects = new ArrayList<Value>();
+		ArrayList<Value> objects = new ArrayList<Value>();
 		for (ArrayList<Value> arrayList : results ) {
 			int i=0;
 			for (Value val : arrayList) {
@@ -35,7 +35,7 @@ public class RetrieveQuads {
 				i++;
 			}
 			System.out.println();
-		}*/
+		}
 		System.out.println("Inner query: "+results.size()+" quads retrieved in: "+(end-start)+" ms");
 		System.out.println("----------------");
 		
@@ -99,9 +99,6 @@ public class RetrieveQuads {
 				
 				//long end = System.currentTimeMillis();
 				//System.out.println("Outer loop: Quads retrieved in: "+(end-start)+" ms");
-				
-				System.out.println();
-				System.out.print(">");
 			}
 			
 			

@@ -62,7 +62,7 @@ public abstract class AbstractPrefixMatchBulkLoad {
 	protected  Path input;
 	protected  int inputEstimateSize;
 	protected  String outputPath;
-	protected  boolean onlyTriples;
+	protected  byte rdfUnitType;
 	protected  NativeJavaConnection con;
 	protected  LoadIncrementalHFiles bulkLoad;
 	protected FileSystem fs;
@@ -74,7 +74,10 @@ public abstract class AbstractPrefixMatchBulkLoad {
 		this.input = input;
 		this.inputEstimateSize = inputEstimateSize;
 		this.outputPath = outputPath;
-		this.onlyTriples = onlyTriples;
+		if (onlyTriples)
+			rdfUnitType = RDFUnit.TRIPLE;
+		else
+			rdfUnitType = RDFUnit.QUAD;
 	}
 
 	protected void run() throws IOException, Exception, InterruptedException, ClassNotFoundException {
@@ -135,7 +138,7 @@ public abstract class AbstractPrefixMatchBulkLoad {
 		//System.out.println(totalStringCount+" : "+numericalCount);
 		
 		prefMatchSchema.setTableSplitInfo(totalStringCount, numericalCount, 
-				tripleToResourceReduceTasks, startPartition, onlyTriples);
+				tripleToResourceReduceTasks, startPartition, rdfUnitType==RDFUnit.TRIPLE);
 		prefMatchSchema.create();
 	}
 	
@@ -145,7 +148,7 @@ public abstract class AbstractPrefixMatchBulkLoad {
 		buildCountersFromFile();
 		
 		prefMatchSchema.setTableSplitInfo(totalStringCount, numericalCount, 
-				tripleToResourceReduceTasks, startPartition, onlyTriples);
+				tripleToResourceReduceTasks, startPartition, rdfUnitType==RDFUnit.TRIPLE);
 		prefMatchSchema.create();
 	}
 	
@@ -200,8 +203,8 @@ public abstract class AbstractPrefixMatchBulkLoad {
 		j.setJobName("TripleToResource");
 		
 		long numInputBytes = (long)(inputSizeEstimate*Math.pow(1024.0, 2.0));
-		long numQuads = numInputBytes/QuadBreakDown.QUAD_AVERAGE_SIZE;
-		long totalNumberOfUniqueElements = numQuads*ELEMENTS_PER_QUAD;
+		long numQuads = numInputBytes/RDFUnit.getAverageUnitSize(rdfUnitType);
+		long totalNumberOfUniqueElements = numQuads*RDFUnit.getNumberOfAtoms(rdfUnitType);
 		double maximumElementPerPartition = Math.pow(2.0, 24.0);
 		double numPartitions = (double)totalNumberOfUniqueElements/maximumElementPerPartition;
 		int taskEstimate = (int)(Math.ceil(numPartitions)* LOAD_BALANCER_FACTOR) ;

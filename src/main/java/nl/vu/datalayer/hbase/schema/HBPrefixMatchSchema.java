@@ -80,8 +80,8 @@ public class HBPrefixMatchSchema implements IHBaseSchema {
 	public static final byte COMPRESSED = 1;
 	
 	//default number of initial regions
-	public static final int NUM_REGIONS = 26;//TODO should be retrieved from the cluster
-	public static final int COPROC_NUM_REGIONS = 13;//TODO should be retrieved from the cluster
+	public static final int NUM_REGIONS = 64;//TODO should be retrieved from the cluster
+	public static final int COPROC_NUM_REGIONS = 32;//TODO should be retrieved from the cluster
 	
 	private int numInputPartitions;
 	private long startPartition;
@@ -394,8 +394,6 @@ public class HBPrefixMatchSchema implements IHBaseSchema {
 		
 		return desc;
 	}
-	
-	
 	
 	/**
 	 * Divide the space between startKey and endKey into an equal amount of regions

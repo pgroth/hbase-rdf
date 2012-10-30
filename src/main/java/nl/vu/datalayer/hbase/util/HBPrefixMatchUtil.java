@@ -197,7 +197,7 @@ public class HBPrefixMatchUtil implements IHBaseUtil {
 			throw new IOException("Bound numerical variable not in expected range: "+e.getMessage());
 		} catch (ElementNotFoundException e) {
 			throw new IOException(e.getMessage());
-		}
+		} 
 	}
 
 	final private ArrayList<ArrayList<Value>> buildSPOCOrderResults() {
@@ -423,7 +423,7 @@ public class HBPrefixMatchUtil implements IHBaseUtil {
 		for (Result result : results) {
 			byte[] value = result.getValue(HBPrefixMatchSchema.COLUMN_FAMILY, HBPrefixMatchSchema.COLUMN_NAME);
 			if (value == null) {
-				throw new ElementNotFoundException("Quad element could not found: " + new String(result.toString()) + "\n" 
+				throw new ElementNotFoundException("Quad element not found: " + new String(result.toString()) + "\n" 
 												+ (result.getRow() == null ? null : hexaString(result.getRow())));
 			}
 

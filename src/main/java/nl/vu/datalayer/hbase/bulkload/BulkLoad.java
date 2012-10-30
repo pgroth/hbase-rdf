@@ -43,7 +43,7 @@ public class BulkLoad extends AbstractPrefixMatchBulkLoad{
 		//SPOC--------------------
 		twoStepTableBulkLoad(convertedTripletsPath, HBPrefixMatchSchema.SPOC, PrefixMatch.PrefixMatchSPOCMapper.class);
 
-		if (onlyTriples == false){
+		if (rdfUnitType == RDFUnit.QUAD){
 			bulkLoadQuadOnlyTables(convertedTripletsPath);
 		}
 		
@@ -78,14 +78,6 @@ public class BulkLoad extends AbstractPrefixMatchBulkLoad{
 
 			doTableBulkLoad(tablePath, currentTable, con);
 		}
-	}
-
-	private  void initializeLocalVariables(String[] args) {
-		input = new Path(args[0]);
-		inputEstimateSize = Integer.parseInt(args[1]);
-		outputPath = args[2];
-		schemaSuffix = args[3];
-		onlyTriples = Boolean.parseBoolean(args[4]);
 	}
 
 	public  Job createPrefixMatchJob(HBaseConnection con, Path input, Path output, Class<? extends Mapper> cls, String tableName) throws Exception {		

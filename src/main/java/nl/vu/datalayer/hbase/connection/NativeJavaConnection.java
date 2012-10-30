@@ -47,7 +47,7 @@ public class NativeJavaConnection extends HBaseConnection {
 		
 		//close tables
 		for (int i = 0; i < tables.length; i++) {
-			for (int j = 0; j < tables.length; j++) {
+			for (int j = 0; j < tableNames.length; j++) {
 				if (tables[i][j]!=null){
 					tables[i][j].close();
 				}
