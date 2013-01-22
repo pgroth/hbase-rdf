@@ -1,0 +1,6 @@
+<file:///home/tolgam/2002/01/tr-automation/tr.rdf> <http://purl.org/dc/elements/1.1/title> "W3C Standards and Technical Reports" .
+<file:///home/tolgam/Documents/Divers/tbl-card.rdf> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://xmlns.com/foaf/0.1/PersonalProfileDocument> .
+<file:///home/tolgam/Documents/Divers/tbl-card.rdf> <http://creativecommons.org/ns#license> <http://creativecommons.org/licenses/by-nc/3.0/> .
+<file:///home/tolgam/Documents/Divers/tbl-card.rdf> <http://purl.org/dc/elements/1.1/title> "Tim Berners-Lee's FOAF file" .
+<file:///home/tolgam/Documents/Divers/tbl-card.rdf> <http://xmlns.com/foaf/0.1/maker> <http://www.w3.org/People/Berners-Lee/card#i> .
+<file:///home/tolgam/Documents/Divers/tbl-card.rdf> <http://xmlns.com/foaf/0.1/primaryTopic> <http://www.w3.org/People/Berners-Lee/card#i> .
