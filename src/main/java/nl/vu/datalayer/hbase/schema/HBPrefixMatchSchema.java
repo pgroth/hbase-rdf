@@ -116,6 +116,16 @@ public class HBPrefixMatchSchema implements IHBaseSchema {
 		this.schemaSuffix = schemaSuffix;
 		numberOfRegions = NUM_REGIONS;
 	}
+	
+	public HBPrefixMatchSchema(HBaseConnection con, String schemaSuffix, boolean onlyTriples, int numberOfRegions) {
+		super();
+		this.con = con;
+		this.schemaSuffix = schemaSuffix;
+		this.onlyTriples = onlyTriples;
+		this.numberOfRegions = numberOfRegions;
+	}
+	
+	
 
 	public HBPrefixMatchSchema(HBaseConnection con, String schemaSuffix, String coprocessorPath) {
 		super();
@@ -125,6 +135,8 @@ public class HBPrefixMatchSchema implements IHBaseSchema {
 		numberOfRegions = COPROC_NUM_REGIONS;
 		this.coprocessorPath = coprocessorPath;
 	}
+	
+	
 	
 	/**
 	 * Sets all the information required to do proper pre-splits when creating the tables making up this schema
@@ -285,7 +297,12 @@ public class HBPrefixMatchSchema implements IHBaseSchema {
 		//System.out.println("Id2String splits: ");
 		//printSplits(splits);
 		
-		createSimpleTable(admin, ID2STRING+schemaSuffix, splits, COMPRESSED, RANDOM_ACCESS_PATTERN, IN_MEMORY);
+		if (numberOfRegions > 0){
+			createSimpleTable(admin, ID2STRING+schemaSuffix, splits, COMPRESSED, RANDOM_ACCESS_PATTERN, IN_MEMORY);
+		}
+		else{
+			createSimpleTable(admin, ID2STRING+schemaSuffix, splits, NO_COMPRESSION, RANDOM_ACCESS_PATTERN, IN_MEMORY);
+		}
 		
 		createSimpleTable(admin, TABLE_NAMES[POCS]+schemaSuffix, splits, NO_COMPRESSION, SEQUENTIAL_ACCESS_PATTERN, ON_DISK);
 		
@@ -469,6 +486,10 @@ public class HBPrefixMatchSchema implements IHBaseSchema {
 	 * @return
 	 */
 	final private byte [][]getObjectPrefixSplits(int numRegions){
+		if (numRegions <= 0){
+			return new byte[0][];
+		}
+		
 		int numericalRegions = (int)Math.round((double)numRegions*((double)numericalCount/(double)(totalStringCount+numericalCount)));
 		
 		byte [][]nonNumSplits = getNonNumericalSplits(numRegions-numericalRegions, 1);

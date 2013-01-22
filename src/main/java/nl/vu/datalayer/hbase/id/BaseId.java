@@ -26,6 +26,10 @@ public class BaseId extends Id{
 		super(id);
 	}
 	
+	public BaseId(long idValue){
+		id = Bytes.toBytes(idValue);
+	}
+	
 	public BaseId(){
 		id = new byte[SIZE];
 	}

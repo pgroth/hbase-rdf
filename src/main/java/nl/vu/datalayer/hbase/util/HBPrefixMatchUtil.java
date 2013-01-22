@@ -20,6 +20,7 @@ import nl.vu.datalayer.hbase.exceptions.NumericalRangeException;
 import nl.vu.datalayer.hbase.id.BaseId;
 import nl.vu.datalayer.hbase.id.HBaseValue;
 import nl.vu.datalayer.hbase.id.TypedId;
+import nl.vu.datalayer.hbase.loader.HBaseLoader;
 import nl.vu.datalayer.hbase.schema.HBPrefixMatchSchema;
 
 import org.apache.hadoop.hbase.client.Get;
@@ -499,7 +500,7 @@ public class HBPrefixMatchUtil implements IHBaseUtil {
 	@Override
 	public void populateTables(ArrayList<Statement> statements)
 			throws Exception {
-
+		HBaseLoader.load(con, schemaSuffix, statements);
 	}
 
 	@Override
