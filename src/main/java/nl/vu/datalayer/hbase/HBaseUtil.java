@@ -19,6 +19,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 
 //import com.sun.appserv.util.cache.Constants;
 
+@Deprecated
 public class HBaseUtil {
 
 	public static HBaseAdmin hbase = null;

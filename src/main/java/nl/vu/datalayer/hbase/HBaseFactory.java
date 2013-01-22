@@ -25,7 +25,7 @@ public class HBaseFactory {
 			return new HBaseClientSolution(schema,
 										new HBasePredicateCFUtil(con, schema));
 		}
-		else if (schemaName.equals(HBPrefixMatchSchema.SCHEMA_NAME)){
+		else if (schemaName.endsWith(HBPrefixMatchSchema.SCHEMA_NAME)){
 			Properties prop = new Properties();
 			try{
 				prop.load(new FileInputStream("config.properties"));
@@ -35,7 +35,14 @@ public class HBaseFactory {
 			}
 			String schemaSuffix = prop.getProperty(HBPrefixMatchSchema.SUFFIX_PROPERTY, "");
 			
-			HBPrefixMatchSchema schema = new HBPrefixMatchSchema(con, schemaSuffix);
+			HBPrefixMatchSchema schema;
+			if (schemaName.startsWith("local")){
+				schema = new HBPrefixMatchSchema(con, schemaSuffix, true, 0);//triples and 0 regions
+			}
+			else{
+				schema = new HBPrefixMatchSchema(con, schemaSuffix);
+			}
+			
 			return new HBaseClientSolution(schema,
 					new HBPrefixMatchUtil(con));
 		}

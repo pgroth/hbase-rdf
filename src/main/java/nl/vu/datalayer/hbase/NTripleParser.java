@@ -65,7 +65,7 @@ public class NTripleParser {
 			//parse("tbl-card.nt", null);
 			if (args.length != 2){
 				System.out.println("Usage: NTripleParser <inputFile> <schemaName>");
-				System.out.println("Schema names: predicate-cf, hexastore");
+				System.out.println("Schema names: predicate-cf, hexastore, prefix-match");
 				return;
 			}
 			parse(args[0], args[1]);
