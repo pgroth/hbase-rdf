@@ -1,5 +1,7 @@
 package nl.vu.datalayer.hbase.loader;
 
+import java.io.ByteArrayOutputStream;
+import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.security.MessageDigest;
@@ -14,6 +16,7 @@ import nl.vu.datalayer.hbase.connection.NativeJavaConnection;
 import nl.vu.datalayer.hbase.exceptions.NonNumericalException;
 import nl.vu.datalayer.hbase.exceptions.NumericalRangeException;
 import nl.vu.datalayer.hbase.id.BaseId;
+import nl.vu.datalayer.hbase.id.HBaseValue;
 import nl.vu.datalayer.hbase.id.Id;
 import nl.vu.datalayer.hbase.id.TypedId;
 import nl.vu.datalayer.hbase.schema.HBPrefixMatchSchema;
@@ -56,8 +59,10 @@ public class HBaseLoader {
 		HTableInterface pocsTable = con.getTable(HBPrefixMatchSchema.TABLE_NAMES[HBPrefixMatchSchema.POCS]+schemaSuffix);
 		HTableInterface ospcTable = con.getTable(HBPrefixMatchSchema.TABLE_NAMES[HBPrefixMatchSchema.OSPC]+schemaSuffix);
 		
+		
 		spocTable.put(spocTableData);
 		for (Put put : spocTableData) {
+			
 			Put pocsPut = build(25, 0, 8, 17, put.getRow());
 			pocsTable.put(pocsPut);
 			
@@ -70,6 +75,11 @@ public class HBaseLoader {
 			String schemaSuffix) throws NoSuchAlgorithmException, IOException,
 			UnsupportedEncodingException {
 		MessageDigest mDigest = MessageDigest.getInstance("MD5");
+		HBaseValue hbaseValue = new HBaseValue();
+		//we create the byte stream in advance to avoid reallocation for each result
+		ByteArrayOutputStream byteStream = new ByteArrayOutputStream(100);
+		DataOutputStream dataOutputStream = new DataOutputStream(byteStream);
+		
 		
 		HTableInterface string2IdTable = con.getTable(HBPrefixMatchSchema.STRING2ID+schemaSuffix);
 		HTableInterface id2StringTable = con.getTable(HBPrefixMatchSchema.ID2STRING+schemaSuffix);
@@ -80,11 +90,16 @@ public class HBaseLoader {
 			byte []md5Hash = mDigest.digest(valBytes);
 			
 			Put string2IdPut = new Put(md5Hash);
-			string2IdPut.add(HBPrefixMatchSchema.COLUMN_FAMILY, HBPrefixMatchSchema.COLUMN_NAME, valueIdPair.id.getBytes());
+			string2IdPut.add(HBPrefixMatchSchema.COLUMN_FAMILY, HBPrefixMatchSchema.COLUMN_NAME, valueIdPair.id.getContent());
 			string2IdTable.put(string2IdPut);
 			
-			Put id2StringPut = new Put(valueIdPair.id.getBytes());
-			id2StringPut.add(HBPrefixMatchSchema.COLUMN_FAMILY, HBPrefixMatchSchema.COLUMN_NAME, valBytes);
+			byteStream.reset();
+			hbaseValue.setValue(val);
+			hbaseValue.write(dataOutputStream);
+			byte []serializedValue = byteStream.toByteArray();
+			
+			Put id2StringPut = new Put(valueIdPair.id.getContent());
+			id2StringPut.add(HBPrefixMatchSchema.COLUMN_FAMILY, HBPrefixMatchSchema.COLUMN_NAME, serializedValue);
 			id2StringTable.put(id2StringPut);
 		}
 	}
@@ -93,40 +108,57 @@ public class HBaseLoader {
 			throws NumericalRangeException {
 		for (Statement statement : statements) {
 			Value subject = statement.getSubject();
-			Id subjectId = generateId(idCounter, subject);
+			Id subjectId = generateId(idCounter, subject, Id.BASE_ID);
 			Value predicate = statement.getPredicate();
-			Id predicateId  = generateId(idCounter, predicate);
+			Id predicateId  = generateId(idCounter, predicate, Id.BASE_ID);
 			
 			Value object = statement.getObject();
 			Id objectId;
 			if (object instanceof Literal){
 				Literal l = (Literal)object;
 				if (l.getDatatype() == null){//the Literals with no datatype are considered Strings
-					objectId = generateId(idCounter, object);
+					objectId = generateId(idCounter, object, Id.TYPED_ID);
 				}
 				else{//we have a datatype
 					try {
 						objectId = TypedId.createNumerical(l);
 					} catch (NonNumericalException e) {
-						objectId  = generateId(idCounter, object);
+						objectId  = generateId(idCounter, object, Id.TYPED_ID);
 					}
 				}
 			}
 			else{
-				objectId = generateId(idCounter, object);
+				objectId = generateId(idCounter, object, Id.TYPED_ID);
 			}
 			
 			Value context = statement.getContext();
 			if (context == null){
 				context = new URIImpl(DEFAULT_CONTEXT);
 			}
-			Id contextId = generateId(idCounter, context);
+			Id contextId = generateId(idCounter, context, Id.BASE_ID);
 			
-			byte []spoc = Bytes.add(Bytes.add(subjectId.getBytes(), predicateId.getBytes(), objectId.getBytes()), contextId.getBytes());
+			byte [] spoc = Bytes.add(Bytes.add(subjectId.getBytes(), predicateId.getBytes(), objectId.getBytes()), contextId.getBytes());
+			spoc = buildSPOCKey(subjectId, predicateId, objectId, contextId);
+			
 			Put spocPut = new Put(spoc);
 			spocPut.add(HBPrefixMatchSchema.COLUMN_FAMILY, HBPrefixMatchSchema.COLUMN_NAME, null);
 			spocTableData.add(spocPut);
 		}
+	}
+
+	private static byte[] buildSPOCKey(Id subjectId, Id predicateId,
+											Id objectId, Id contextId) {
+		byte []spoc = new byte[HBPrefixMatchSchema.KEY_LENGTH];
+		System.arraycopy(subjectId.getBytes(), subjectId.getContentOffset(), spoc, 0, BaseId.SIZE);
+		System.arraycopy(predicateId.getBytes(), predicateId.getContentOffset(), spoc, 8, BaseId.SIZE);
+		if (objectId instanceof TypedId){
+			System.arraycopy(objectId.getBytes(), 0, spoc, 16, TypedId.SIZE);
+		}
+		else{
+			System.arraycopy(objectId.getBytes(), 0, spoc, 17, BaseId.SIZE);
+		}
+		System.arraycopy(contextId.getBytes(), contextId.getContentOffset(), spoc, 25, BaseId.SIZE);
+		return spoc;
 	}
 	
 	public static Put build(int sOffset, int pOffset, int oOffset, int cOffset, byte []source) throws IOException
@@ -144,14 +176,21 @@ public class HBaseLoader {
 		return put;
 	}
 	
-	public static Id generateId(long oldCounter, Value value){
-		Id newId = new BaseId(oldCounter);
-		ValueIdPair valueIdPair = new ValueIdPair(value, newId);
+	public static Id generateId(long oldCounter, Value value, byte idType){
+		ValueIdPair existingPair;
+		Id retId;
+		if ((existingPair = dictionary.get(value)) == null) {
+			retId = Id.build(oldCounter, idType);
+			ValueIdPair valueIdPair = new ValueIdPair(value, retId);
+
+			dictionary.put(value, valueIdPair);
+			idCounter = oldCounter + 1;
+		}
+		else{
+			retId = existingPair.id;
+		}
 		
-		dictionary.put(value, valueIdPair);
-		
-		idCounter = oldCounter+1;
-		return newId;
+		return retId;
 	}
 	
 	

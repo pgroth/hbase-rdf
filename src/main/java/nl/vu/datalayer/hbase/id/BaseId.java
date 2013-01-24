@@ -9,7 +9,7 @@ import org.apache.hadoop.hbase.util.Bytes;
  */
 public class BaseId extends Id{
 	
-	public static int SIZE = 8;
+	public static final int SIZE = 8;
 	
 	/**
 	 * @param partitionId
@@ -47,4 +47,16 @@ public class BaseId extends Id{
 		}
 		return ret;
 	}
+
+	@Override
+	public byte[] getContent() {
+		return id;
+	}
+
+	@Override
+	public int getContentOffset() {
+		return 0;
+	}
+	
+	
 }

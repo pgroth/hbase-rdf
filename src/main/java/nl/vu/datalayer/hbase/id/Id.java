@@ -9,6 +9,9 @@ import org.apache.hadoop.io.WritableComparable;
 
 public abstract class Id implements WritableComparable<Id> {
 	
+	public static final byte BASE_ID = 0;
+	public static final byte TYPED_ID = 1;
+	
 	protected byte []id;
 	
 	public Id() {
@@ -29,11 +32,26 @@ public abstract class Id implements WritableComparable<Id> {
 				throw new RuntimeException("Unexpected id length");
 		}
 	}
+	
+	public static Id build(long content, byte type){
+		switch (type){
+			case BASE_ID:
+				return new BaseId(content); 
+			case TYPED_ID:
+				return new TypedId(content);
+			default:
+				throw new RuntimeException("Unexpected id length");
+		}
+	}
 
 	public byte[] getBytes()
 	{
 		return id;
 	}
+	
+	public abstract byte[] getContent();
+	
+	public abstract int getContentOffset();
 
 	public void set(byte[] content) {
 		this.id = content;

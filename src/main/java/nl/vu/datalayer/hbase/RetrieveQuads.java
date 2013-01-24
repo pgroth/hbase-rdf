@@ -86,9 +86,10 @@ public class RetrieveQuads {
 				//long start = System.currentTimeMillis();
 				String []quad = strLine.split(" ");
 				Value []valQuad = {null, null, null, null};
-				for (int i = 0; i < valQuad.length; i++) {
-					if (!quad[i].equals("?"))
+				for (int i = 0; i < quad.length; i++) {
+					if (!quad[i].equals("?")){
 						valQuad[i] = NTriplesUtil.parseValue(quad[i], valFactory);
+					}
 				}
 				try{
 					recursiveResolveQuads(valQuad, sol.util);

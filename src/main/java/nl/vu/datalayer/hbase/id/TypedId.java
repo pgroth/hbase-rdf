@@ -58,6 +58,20 @@ public class TypedId extends Id{
 		id = new byte[SIZE];
 	}
 	
+	public TypedId(byte[] id) {
+		super(id);
+	}
+
+	/**
+	 * Creates a non-numerical TypedId (first byte 0)
+	 * @param content - the id in the last 8 bytes
+	 */
+	public TypedId(long content) {
+		id = new byte[SIZE];
+		id[0] = 0;
+		Bytes.putLong(id, 1, content);
+	}
+	
 	public TypedId(int numericalType, byte []content) {		
 		//first bit 1 - NUMERICAL
 		//next 4 bits - numerical type
@@ -254,9 +268,6 @@ public class TypedId extends Id{
 	}
 	
 
-	public TypedId(byte[] id) {
-		super(id);
-	}
 
 	public byte getType() {
 		return (byte)(id[0]>>7 & 1);
@@ -340,5 +351,10 @@ public class TypedId extends Id{
 	public static void main(String[] args) {
 		TypedId test = new TypedId();
 		System.out.println(test.id.length);
+	}
+
+	@Override
+	public int getContentOffset() {
+		return 1;
 	}
 }
