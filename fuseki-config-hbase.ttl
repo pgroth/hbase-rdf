@@ -17,8 +17,7 @@
    ) .
 
 # HBase
-#[] ja:loadClass "com.hp.hpl.jena.tdb.TDB" .
-#tdb:DatasetTDB  rdfs:subClassOf  ja:RDFDataset .
+[] ja:loadClass "sparqlrank.SPARQLRankLoader" .
 
 
 ## ---------------------------------------------------------------
