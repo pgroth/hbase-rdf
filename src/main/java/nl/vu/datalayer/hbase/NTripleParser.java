@@ -12,7 +12,7 @@ import org.openrdf.rio.RDFHandlerException;
 import org.openrdf.rio.RDFParseException;
 import org.openrdf.rio.RDFParser;
 import org.openrdf.rio.helpers.StatementCollector;
-import org.openrdf.rio.turtle.TurtleParser;
+import org.openrdf.rio.ntriples.NTriplesParser;;
 
 
 public class NTripleParser {
@@ -22,12 +22,13 @@ public class NTripleParser {
 		try {
 			//HBaseUtil util = new HBaseUtil(confPath);
 			FileInputStream is = new FileInputStream(file);
-			RDFParser rdfParser = new TurtleParser();
+			RDFParser rdfParser = new NTriplesParser();
 			
 			ArrayList<Statement> myList = new ArrayList<Statement>();
 			StatementCollector collector = new StatementCollector(myList);
 			rdfParser.setRDFHandler(collector);
 			
+			System.out.println("Started parsing ..");
 			try {
 			   rdfParser.parse(is, "");
 			} 
@@ -43,7 +44,8 @@ public class NTripleParser {
 			  // handle a problem encountered by the RDFHandler
 				e.printStackTrace();
 			}
-
+			System.out.println("Finished parsing");
+			
 			//connect to HBase
 			NativeJavaConnection con = (NativeJavaConnection)HBaseConnection.create(HBaseConnection.NATIVE_JAVA);
 			HBaseClientSolution sol = HBaseFactory.getHBaseSolution(schemaName, con, myList);

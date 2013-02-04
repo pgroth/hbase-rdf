@@ -21,6 +21,7 @@ import nl.vu.datalayer.hbase.id.Id;
 import nl.vu.datalayer.hbase.id.TypedId;
 import nl.vu.datalayer.hbase.schema.HBPrefixMatchSchema;
 
+import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.HTableInterface;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -58,7 +59,9 @@ public class HBaseLoader {
 		HTableInterface spocTable = con.getTable(HBPrefixMatchSchema.TABLE_NAMES[HBPrefixMatchSchema.SPOC]+schemaSuffix);
 		HTableInterface pocsTable = con.getTable(HBPrefixMatchSchema.TABLE_NAMES[HBPrefixMatchSchema.POCS]+schemaSuffix);
 		HTableInterface ospcTable = con.getTable(HBPrefixMatchSchema.TABLE_NAMES[HBPrefixMatchSchema.OSPC]+schemaSuffix);
-		
+		((HTable)spocTable).setAutoFlush(false);
+		((HTable)pocsTable).setAutoFlush(false);
+		((HTable)ospcTable).setAutoFlush(false);
 		
 		spocTable.put(spocTableData);
 		for (Put put : spocTableData) {
@@ -82,7 +85,9 @@ public class HBaseLoader {
 		
 		
 		HTableInterface string2IdTable = con.getTable(HBPrefixMatchSchema.STRING2ID+schemaSuffix);
+		((HTable)string2IdTable).setAutoFlush(false);
 		HTableInterface id2StringTable = con.getTable(HBPrefixMatchSchema.ID2STRING+schemaSuffix);
+		((HTable)id2StringTable).setAutoFlush(false);
 		for (Map.Entry<Value, ValueIdPair> entry : dictionary.entrySet()) {
 			ValueIdPair valueIdPair = entry.getValue();
 			Value val = valueIdPair.value;
