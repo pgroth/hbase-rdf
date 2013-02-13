@@ -7,8 +7,10 @@ import nl.vu.datalayer.hbase.HBaseFactory;
 import nl.vu.datalayer.hbase.connection.HBaseConnection;
 import nl.vu.datalayer.hbase.schema.HBPrefixMatchSchema;
 import nl.vu.jena.graph.HBaseGraph;
+import nl.vu.jena.sparql.engine.main.HBaseStageGenerator;
 
 import com.hp.hpl.jena.graph.Graph;
+import com.hp.hpl.jena.query.ARQ;
 import com.hp.hpl.jena.query.Query;
 import com.hp.hpl.jena.query.QueryExecution;
 import com.hp.hpl.jena.query.QueryExecutionFactory;
@@ -21,6 +23,7 @@ import com.hp.hpl.jena.rdf.model.RDFNode;
 import com.hp.hpl.jena.rdf.model.Resource;
 import com.hp.hpl.jena.rdf.model.Statement;
 import com.hp.hpl.jena.rdf.model.StmtIterator;
+import com.hp.hpl.jena.sparql.engine.main.StageBuilder;
 
 public class RunJenaHBase {
 
@@ -53,13 +56,31 @@ public class RunJenaHBase {
 	}
 
 	public static void runSPARQLQuery(Model model) {
-		String queryString = "PREFIX foaf: <http://xmlns.com/foaf/0.1/> "
+		String queryString = "PREFIX bsbm-inst: <http://www4.wiwiss.fu-berlin.de/bizer/bsbm/v01/instances/> "
+			+"PREFIX bsbm: <http://www4.wiwiss.fu-berlin.de/bizer/bsbm/v01/vocabulary/> "
+				+"PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#> "
+				+"PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> "
+
+				+"SELECT DISTINCT ?product ?label "
+				+"WHERE { "
+				 +"?product rdfs:label ?label ."
+				 +"?product a \"type1\" ."
+				 +"?product bsbm:productFeature \"feature1\" ." 
+				 +"?product bsbm:productFeature \"feature2\" ." 
+				+"?product bsbm:productPropertyNumeric1 ?value1 ." 
+					+"FILTER (?value1 > 20)} " 
+				+"ORDER BY ?label "
+				+"LIMIT 10";
+/*"PREFIX foaf: <http://xmlns.com/foaf/0.1/> "
 				+ " SELECT * "
 				+ " WHERE { "
 				+ "    ?s ?p \"Tim Berners-Lee's FOAF file\" "
-				+ "}";
+				+ "}";*/
 		System.out.println("Query: \""+queryString+" \"");
 		//Query query = QueryFactory.create(queryString);
+		HBaseStageGenerator hbaseStageGenerator = new HBaseStageGenerator();
+		StageBuilder.setGenerator(ARQ.getContext(), hbaseStageGenerator) ;
+		
 		QueryExecution qexec = QueryExecutionFactory.create(queryString, model);
 		
 		ResultSet results;
