@@ -1,5 +1,7 @@
 package nl.vu.jena.sparql.engine.main;
 
+import nl.vu.jena.sparql.engine.optimizer.ReorderHeuristics;
+
 import org.openjena.atlas.logging.Log;
 
 import com.hp.hpl.jena.graph.Graph;
@@ -8,7 +10,6 @@ import com.hp.hpl.jena.sparql.engine.ExecutionContext;
 import com.hp.hpl.jena.sparql.engine.QueryIterator;
 import com.hp.hpl.jena.sparql.engine.iterator.QueryIterBlockTriples;
 import com.hp.hpl.jena.sparql.engine.main.StageGenerator;
-import com.hp.hpl.jena.sparql.engine.optimizer.reorder.ReorderLib;
 import com.hp.hpl.jena.sparql.engine.optimizer.reorder.ReorderTransformation;
 import com.hp.hpl.jena.sparql.mgt.Explain;
 import com.hp.hpl.jena.sparql.util.Utils;
@@ -69,7 +70,7 @@ public class HBaseStageGenerator implements StageGenerator {
     // Uses Jena's statistics handler.
     private static ReorderTransformation reorderBasicStats(Graph graph)
     {
-        return ReorderLib.fixed();
+        return new ReorderHeuristics();
     }
 
     /** Use the inline BGP matcher */ 

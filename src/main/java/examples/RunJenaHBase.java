@@ -45,7 +45,7 @@ public class RunJenaHBase {
 		//FileManager.get().addLocatorClassLoader(RunJenaHBase.class.getClassLoader());
         //Model model = FileManager.get().loadModel("data/tbl-card2.ttl", null, "TURTLE");
         
-        printStatements(model);
+        //printStatements(model);
 		
 		/*model.setNsPrefix("<http://purl.org/dc/elements/1.1>", "dc");
 		//model.add(new ResourceImpl("<file:///home/tolgam/Documents/Divers/tbl-card.rdf>"), 
@@ -56,26 +56,8 @@ public class RunJenaHBase {
 	}
 
 	public static void runSPARQLQuery(Model model) {
-		String queryString = "PREFIX bsbm-inst: <http://www4.wiwiss.fu-berlin.de/bizer/bsbm/v01/instances/> "
-			+"PREFIX bsbm: <http://www4.wiwiss.fu-berlin.de/bizer/bsbm/v01/vocabulary/> "
-				+"PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#> "
-				+"PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> "
+		String queryString = BSBMQueries.Q2;
 
-				+"SELECT DISTINCT ?product ?label "
-				+"WHERE { "
-				 +"?product rdfs:label ?label ."
-				 +"?product a \"type1\" ."
-				 +"?product bsbm:productFeature \"feature1\" ." 
-				 +"?product bsbm:productFeature \"feature2\" ." 
-				+"?product bsbm:productPropertyNumeric1 ?value1 ." 
-					+"FILTER (?value1 > 20)} " 
-				+"ORDER BY ?label "
-				+"LIMIT 10";
-/*"PREFIX foaf: <http://xmlns.com/foaf/0.1/> "
-				+ " SELECT * "
-				+ " WHERE { "
-				+ "    ?s ?p \"Tim Berners-Lee's FOAF file\" "
-				+ "}";*/
 		System.out.println("Query: \""+queryString+" \"");
 		//Query query = QueryFactory.create(queryString);
 		HBaseStageGenerator hbaseStageGenerator = new HBaseStageGenerator();
