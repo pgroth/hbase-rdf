@@ -8,6 +8,8 @@ import nl.vu.datalayer.hbase.connection.HBaseConnection;
 import nl.vu.datalayer.hbase.schema.HBPrefixMatchSchema;
 import nl.vu.jena.graph.HBaseGraph;
 import nl.vu.jena.sparql.engine.main.HBaseStageGenerator;
+import nl.vu.jena.sparql.engine.optimizer.HBaseOptimize;
+import nl.vu.jena.sparql.engine.optimizer.TransformFilterPlacementHBase;
 
 import com.hp.hpl.jena.graph.Graph;
 import com.hp.hpl.jena.query.ARQ;
@@ -23,6 +25,7 @@ import com.hp.hpl.jena.rdf.model.RDFNode;
 import com.hp.hpl.jena.rdf.model.Resource;
 import com.hp.hpl.jena.rdf.model.Statement;
 import com.hp.hpl.jena.rdf.model.StmtIterator;
+import com.hp.hpl.jena.sparql.ARQConstants;
 import com.hp.hpl.jena.sparql.engine.main.StageBuilder;
 
 public class RunJenaHBase {
@@ -56,12 +59,15 @@ public class RunJenaHBase {
 	}
 
 	public static void runSPARQLQuery(Model model) {
-		String queryString = BSBMQueries.Q2;
+		String queryString = BSBMQueries.Q1;
 
 		System.out.println("Query: \""+queryString+" \"");
 		//Query query = QueryFactory.create(queryString);
 		HBaseStageGenerator hbaseStageGenerator = new HBaseStageGenerator();
 		StageBuilder.setGenerator(ARQ.getContext(), hbaseStageGenerator) ;
+		
+		ARQ.getContext().set(ARQConstants.sysOptimizerFactory, HBaseOptimize.hbaseOptimizationFactory);
+		ARQ.getContext().set(ARQ.optFilterPlacement, new TransformFilterPlacementHBase());
 		
 		QueryExecution qexec = QueryExecutionFactory.create(queryString, model);
 		
@@ -77,8 +83,6 @@ public class RunJenaHBase {
 		} finally {
 			qexec.close();
 		}
-		
-		
 	}
 
 	public static void printStatements(Model model) {

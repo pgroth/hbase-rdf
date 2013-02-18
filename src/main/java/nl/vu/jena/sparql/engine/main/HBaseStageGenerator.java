@@ -1,6 +1,6 @@
 package nl.vu.jena.sparql.engine.main;
 
-import nl.vu.jena.sparql.engine.optimizer.ReorderHeuristics;
+import nl.vu.jena.sparql.engine.optimizer.reorder.ReorderHeuristics;
 
 import org.openjena.atlas.logging.Log;
 
