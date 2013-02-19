@@ -91,7 +91,7 @@ public class HBaseLocalPrefixMatchTest {
 			quad[2] = "?";
 			quad[3] = "?";
 			
-			ArrayList<ArrayList<String>> results = util.getRow(quad);
+			ArrayList<ArrayList<String>> results = util.getResults(quad);
 			
 			for (ArrayList<String> arrayList : results) {
 				for (String string : arrayList) {
