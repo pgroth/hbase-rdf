@@ -21,6 +21,8 @@ import nl.vu.datalayer.hbase.id.BaseId;
 import nl.vu.datalayer.hbase.id.HBaseValue;
 import nl.vu.datalayer.hbase.id.TypedId;
 import nl.vu.datalayer.hbase.loader.HBaseLoader;
+import nl.vu.datalayer.hbase.retrieve.IHBasePrefixMatchRetrieve;
+import nl.vu.datalayer.hbase.retrieve.RowLimitPair;
 import nl.vu.datalayer.hbase.schema.HBPrefixMatchSchema;
 
 import org.apache.hadoop.hbase.client.Get;
@@ -44,7 +46,7 @@ import org.openrdf.model.impl.ValueFactoryImpl;
  * Class that exposes operations with the tables in the PrefixMatch schema
  *
  */
-public class HBPrefixMatchUtil implements IHBaseUtil {
+public class HBPrefixMatchUtil implements IHBasePrefixMatchRetrieve {
 	
 	private static final int OBJECT_POSITION = 2;
 
@@ -160,7 +162,7 @@ public class HBPrefixMatchUtil implements IHBaseUtil {
 		patternInfo.put("?|?|", new PatternInfo(HBPrefixMatchSchema.CPSO, 200));
 	}
 
-	public ArrayList<ArrayList<String>> getRow(String[] quad){
+	public ArrayList<ArrayList<String>> getResults(String[] quad){
 		return null;
 	}
 	
@@ -492,27 +494,9 @@ public class HBPrefixMatchUtil implements IHBaseUtil {
 	}
 
 	@Override
-	public String getRawCellValue(String subject, String predicate,
-			String object) throws IOException {
-		return null;
-	}
-
-	@Override
 	public void populateTables(ArrayList<Statement> statements)
 			throws Exception {
 		HBaseLoader.load(con, schemaSuffix, statements);
-	}
-
-	@Override
-	public boolean hasResults(Value[] quad) throws IOException {
-		// TODO Auto-generated method stub
-		return false;
-	}
-
-	@Override
-	public ArrayList<Value> getSingleResult(Value[] quad, Random random) throws IOException {
-		// TODO Auto-generated method stub
-		return null;
 	}
 
 	@Override
@@ -530,5 +514,11 @@ public class HBPrefixMatchUtil implements IHBaseUtil {
 			this.tableIndex = tableIndex;
 			this.scannerCachingSize = scannerCachingSize;
 		}
+	}
+
+	@Override
+	public ArrayList<ArrayList<Value>> getResults(Value[] triple, RowLimitPair limits) throws IOException {
+		// TODO Auto-generated method stub
+		return null;
 	}
 }

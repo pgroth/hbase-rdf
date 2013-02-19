@@ -3,7 +3,6 @@ package nl.vu.datalayer.hbase.util;
 import java.io.IOException;
 import java.math.BigInteger;
 import java.util.ArrayList;
-import java.util.Random;
 
 import nl.vu.datalayer.hbase.connection.HBaseConnection;
 import nl.vu.datalayer.hbase.schema.HBHexastoreSchema;
@@ -97,12 +96,12 @@ public class HBHexastoreUtil implements IHBaseUtil {
 	}
 
 	@Override
-	public String getRawCellValue(String subject, String predicate, String object) throws IOException {
+	public ArrayList<ArrayList<String>> getResults(String[] triple) throws IOException {
 
 		String[] inversedTriple = new String[3];
-		inversedTriple[0] = object.equals("?") ? null : object;
-		inversedTriple[1] = predicate.equals("?") ? null : predicate;
-		inversedTriple[2] = subject.equals("?") ? null : subject;
+		inversedTriple[0] = triple[2].equals("?") ? null : triple[2];
+		inversedTriple[1] = triple[1].equals("?") ? null : triple[1];
+		inversedTriple[2] = triple[0].equals("?") ? null : triple[0];
 
 		int index = 0;
 		for (int i = 0; i < inversedTriple.length; i++) {
@@ -118,10 +117,13 @@ public class HBHexastoreUtil implements IHBaseUtil {
 		Result r = table.get(g);
 
 		byte[] value = r.getValue(HBHexastoreSchema.COLUMN_FAMILY.getBytes(), HBHexastoreSchema.COLUMN_NAME.getBytes());
-		if (value != null)
-			return Bytes.toString(value);
-		else
-			return null;
+		ArrayList<ArrayList<String>> ret = new ArrayList<ArrayList<String>>();
+		if (value != null){
+			ArrayList<String> first = new ArrayList<String>();
+			first.add(Bytes.toString(value));
+			ret.add(first);
+		}
+		return ret;
 	}
 
 	/**
@@ -284,39 +286,7 @@ public class HBHexastoreUtil implements IHBaseUtil {
 	}
 
 	@Override
-	public ArrayList<ArrayList<String>> getRow(String[] triple) throws IOException {
-		// TODO Auto-generated method stub
-		return null;
-	}
-
-	@Override
 	public ArrayList<ArrayList<Value>> getResults(Value[] quad) throws IOException {
-		// TODO Auto-generated method stub
-		return null;
-	}
-
-	/*
-	 * (non-Javadoc)
-	 * 
-	 * @see
-	 * nl.vu.datalayer.hbase.util.IHBaseUtil#hasResults(org.openrdf.model.Value
-	 * [])
-	 */
-	@Override
-	public boolean hasResults(Value[] quad) throws IOException {
-		// TODO Auto-generated method stub
-		return false;
-	}
-
-	/*
-	 * (non-Javadoc)
-	 * 
-	 * @see
-	 * nl.vu.datalayer.hbase.util.IHBaseUtil#getSingleResult(org.openrdf.model
-	 * .Value[], java.util.Random)
-	 */
-	@Override
-	public ArrayList<Value> getSingleResult(Value[] quad, Random random) throws IOException {
 		// TODO Auto-generated method stub
 		return null;
 	}

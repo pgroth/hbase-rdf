@@ -55,8 +55,8 @@ public class HBasePredicateCFUtil implements IHBaseUtil {
 	}
 
 	@Override
-	public ArrayList<ArrayList<String>> getRow(String[] triplet) throws IOException {
-		String URI = triplet[0];
+	public ArrayList<ArrayList<String>> getResults(String[] triple) throws IOException {
+		String URI = triple[0];
 		HTableInterface table = con.getTable(HBasePredicateCFSchema.TABLE_NAME);
 
 		Get g = new Get(Bytes.toBytes(URI));
@@ -67,18 +67,18 @@ public class HBasePredicateCFUtil implements IHBaseUtil {
 
 		for (Iterator<KeyValue> it = rawList.iterator(); it.hasNext();) {
 			KeyValue k = it.next();
-			ArrayList<String> triple = new ArrayList<String>();
+			ArrayList<String> tripleAsList = new ArrayList<String>();
 
 			String pred = Bytes.toString(k.getFamily());
 			if (pred.compareTo("literal") == 0) {
 				pred = Bytes.toString(k.getQualifier());
 			}
-			triple.add(pred);
+			tripleAsList.add(pred);
 
 			String val = Bytes.toString(k.getValue());
-			triple.add(val);
+			tripleAsList.add(val);
 
-			list.add(triple);
+			list.add(tripleAsList);
 		}
 
 		return list;
@@ -118,39 +118,7 @@ public class HBasePredicateCFUtil implements IHBaseUtil {
 	}
 
 	@Override
-	public String getRawCellValue(String s, String p, String o) {
-		// TODO Auto-generated method stub
-		return null;
-	}
-
-	@Override
 	public ArrayList<ArrayList<Value>> getResults(Value[] quad) throws IOException {
-		// TODO Auto-generated method stub
-		return null;
-	}
-
-	/*
-	 * (non-Javadoc)
-	 * 
-	 * @see
-	 * nl.vu.datalayer.hbase.util.IHBaseUtil#hasResults(org.openrdf.model.Value
-	 * [])
-	 */
-	@Override
-	public boolean hasResults(Value[] quad) throws IOException {
-		// TODO Auto-generated method stub
-		return false;
-	}
-
-	/*
-	 * (non-Javadoc)
-	 * 
-	 * @see
-	 * nl.vu.datalayer.hbase.util.IHBaseUtil#getSingleResult(org.openrdf.model
-	 * .Value[], java.util.Random)
-	 */
-	@Override
-	public ArrayList<Value> getSingleResult(Value[] quad, Random random) throws IOException {
 		// TODO Auto-generated method stub
 		return null;
 	}

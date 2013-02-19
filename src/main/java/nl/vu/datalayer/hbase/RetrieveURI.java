@@ -24,7 +24,7 @@ public class RetrieveURI {
 			HBasePredicateCFUtil util = new HBasePredicateCFUtil(con, schema);
 			
 			String []triplet = {URI, null, null};
-			ArrayList<ArrayList<String>> triples = util.getRow(triplet);
+			ArrayList<ArrayList<String>> triples = util.getResults(triplet);
 			
 			for (Iterator<ArrayList<String>> it = triples.iterator(); it.hasNext();) {
 				ArrayList<String> triple = (ArrayList<String>)it.next();
@@ -63,7 +63,7 @@ public class RetrieveURI {
 			HBasePredicateCFUtil util = new HBasePredicateCFUtil(con, schema);
 			
 			String []triplet = {URI, null, null};
-			ArrayList<ArrayList<String>> triples = util.getRow(triplet);
+			ArrayList<ArrayList<String>> triples = util.getResults(triplet);
 			
 			for (Iterator<ArrayList<String>> it = triples.iterator(); it.hasNext();) {
 				ArrayList<String> triple = (ArrayList<String>)it.next();

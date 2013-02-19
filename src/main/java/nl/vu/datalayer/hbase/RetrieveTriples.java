@@ -4,6 +4,7 @@ import java.io.BufferedReader;
 import java.io.DataInputStream;
 import java.io.FileInputStream;
 import java.io.InputStreamReader;
+import java.util.ArrayList;
 
 import nl.vu.datalayer.hbase.connection.HBaseConnection;
 import nl.vu.datalayer.hbase.schema.HBHexastoreSchema;
@@ -32,10 +33,10 @@ public class RetrieveTriples {
 				System.out.println("Query: " + strLine);
 				String[] triple = parseLine(strLine);
 				long start = System.currentTimeMillis();
-				String result = sol.util.getRawCellValue(triple[0], triple[1], triple[2]);
+				ArrayList<ArrayList<String>> result = sol.util.getResults(triple);
 				long end = System.currentTimeMillis();
 				System.out.println("Result retrieved in: " + (end - start) + " ms");
-				System.out.println(result);
+				System.out.println(result.get(0).get(0));
 			}
 			br.close();
 			con.close();

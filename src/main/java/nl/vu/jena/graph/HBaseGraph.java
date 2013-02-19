@@ -4,6 +4,8 @@ import java.io.IOException;
 import java.util.ArrayList;
 
 import nl.vu.datalayer.hbase.HBaseClientSolution;
+import nl.vu.datalayer.hbase.retrieve.IHBasePrefixMatchRetrieve;
+import nl.vu.datalayer.hbase.retrieve.RowLimitPair;
 
 import org.openjena.jenasesame.impl.Convert;
 import org.openrdf.model.Value;
@@ -37,7 +39,7 @@ public class HBaseGraph extends GraphBase {
 		Node subject = m.getMatchSubject();
 		Node predicate = m.getMatchPredicate();
 		Node object =  m.getMatchObject();
-		
+	
 		Value []quad = {subject==null? null:Convert.nodeToValue(valFactory, subject), 
 				predicate==null?null:Convert.nodeToValue(valFactory, predicate), 
 				object==null?null:Convert.nodeToValue(valFactory, object), 
@@ -46,7 +48,13 @@ public class HBaseGraph extends GraphBase {
 		//retrieve results from HBase
 		ArrayList<ArrayList<Value>> results;
 		try {
-			results = hbase.util.getResults(quad);
+			if (m instanceof FilteredTriple){
+				RowLimitPair limitPair = ExprToHBaseLimitsConverter.getRowLimitPair(((FilteredTriple)m).getSimpleFilter());
+				results = ((IHBasePrefixMatchRetrieve)hbase.util).getResults(quad, limitPair);
+			}
+			else{
+				results = hbase.util.getResults(quad);
+			}
 		} catch (IOException e) {
 			return NullIterator.instance();
 		}
