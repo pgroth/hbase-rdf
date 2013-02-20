@@ -170,15 +170,26 @@ public class HBPrefixMatchUtil implements IHBasePrefixMatchRetrieve {
 	@Override
 	public ArrayList<ArrayList<Value>> getResults(Value[] quad)
 			throws IOException {//we expect the pattern in the order SPOC	
+		return getResults(quad, null);
+	}
+	
+	@Override
+	public ArrayList<ArrayList<Value>> getResults(Value[] triple, RowLimitPair limits) throws IOException {
 		try {
 			retrievalInit();
 			
 			long start = System.currentTimeMillis();
-			byte[] startKey = buildRangeScanKeyFromQuad(quad);
+			byte[] keyPrefix = buildRangeScanKeyFromQuad(triple);
 			long keyBuildOverhead = System.currentTimeMillis()-start;
 
 			long startSearch = System.currentTimeMillis();
-			ArrayList<Get> batchIdGets = doRangeScan(startKey);
+			ArrayList<Get> batchIdGets;
+			if (limits!=null){
+				batchIdGets = doRangeScan(keyPrefix, limits);
+			}
+			else{
+				batchIdGets = doRangeScan(keyPrefix);
+			}
 			long searchTime = System.currentTimeMillis() - startSearch;
 
 			long startId2String = System.currentTimeMillis();
@@ -492,6 +503,30 @@ public class HBPrefixMatchUtil implements IHBasePrefixMatchRetrieve {
 		
 		return string2IdGets;
 	}
+	
+	final private ArrayList<Get> doRangeScan(byte[] prefix, RowLimitPair limits) throws IOException {
+		byte []startKey = Bytes.add(prefix, limits.getStartLimit().getBytes());
+		byte []endKey = Bytes.incrementBytes(Bytes.add(prefix, limits.getEndLimit().getBytes()), 1);
+		
+		Filter keyOnlyFilter = new FirstKeyOnlyFilter();
+		
+		Scan scan = new Scan(startKey, endKey);
+		scan.setFilter(keyOnlyFilter);
+		
+		scan.setCaching(patternInfo.get(currentPattern).scannerCachingSize);
+		scan.setCacheBlocks(false);
+
+		String tableName = HBPrefixMatchSchema.TABLE_NAMES[currentTableIndex]+schemaSuffix;
+		
+		//System.out.println("Retrieving from table: "+tableName);
+		
+		HTableInterface table = con.getTable(tableName);
+		ResultScanner results = table.getScanner(scan);
+
+		ArrayList<Get> batchGets = parseRangeScanResults(startKey.length, results);
+		table.close();
+		return batchGets;
+	}
 
 	@Override
 	public void populateTables(ArrayList<Statement> statements)
@@ -514,11 +549,5 @@ public class HBPrefixMatchUtil implements IHBasePrefixMatchRetrieve {
 			this.tableIndex = tableIndex;
 			this.scannerCachingSize = scannerCachingSize;
 		}
-	}
-
-	@Override
-	public ArrayList<ArrayList<Value>> getResults(Value[] triple, RowLimitPair limits) throws IOException {
-		// TODO Auto-generated method stub
-		return null;
 	}
 }

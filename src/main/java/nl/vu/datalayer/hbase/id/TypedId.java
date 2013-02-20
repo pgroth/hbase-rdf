@@ -357,4 +357,8 @@ public class TypedId extends Id{
 	public int getContentOffset() {
 		return 1;
 	}
+	
+	public void adjustContent(int amount){
+		Bytes.incrementBytes(id, amount);
+	}
 }
