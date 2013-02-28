@@ -31,14 +31,19 @@ public class RowLimitPair {
 
 
 	public RowLimitPair(TypedId limit, byte whichLimit) {
+		byte []backingArray = new byte[TypedId.SIZE];
 		switch (whichLimit){
 		case START_LIMIT: {
 			this.startLimit = limit;
-			this.endLimit = new TypedId(limit.getNumericalType(), Bytes.toBytes(Long.MAX_VALUE));
+			Bytes.putLong(backingArray, 1, Long.MAX_VALUE);
+			this.endLimit = new TypedId(limit.getNumericalType(), backingArray);
+			break;
 		}
 		case END_LIMIT:{
-			this.startLimit = new TypedId(limit.getNumericalType(), Bytes.toBytes(Long.MIN_VALUE));
+			Bytes.putLong(backingArray, 1, Long.MIN_VALUE);
+			this.startLimit = new TypedId(limit.getNumericalType(), backingArray);
 			this.endLimit = limit;
+			break;
 		}
 		default: throw new RuntimeException("Unknown limit type");
 		}

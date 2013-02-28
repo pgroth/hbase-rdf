@@ -72,14 +72,14 @@ public class TypedId extends Id{
 		Bytes.putLong(id, 1, content);
 	}
 	
-	public TypedId(int numericalType, byte []content) {		
+	public TypedId(int numericalType, byte []backingArray) {		
 		//first bit 1 - NUMERICAL
 		//next 4 bits - numerical type
-		set(numericalType, content);
+		set(numericalType, backingArray);
 	}
 	
-	public void set(int numericalType, byte []content){
-		id = content;
+	public void set(int numericalType, byte []backingArray){
+		id = backingArray;
 		id[0] = (byte)((numericalType<<3) | 0x80);
 	}
 	
@@ -359,6 +359,13 @@ public class TypedId extends Id{
 	}
 	
 	public void adjustContent(int amount){
-		Bytes.incrementBytes(id, amount);
+		BigInteger temp = new BigInteger(1, id);
+		temp = temp.add(BigInteger.valueOf(amount));
+		
+		byte []b = temp.toByteArray();
+		if (b.length > TypedId.SIZE)
+			id = Bytes.tail(b, TypedId.SIZE);
+		else
+			id = Bytes.padHead(b, TypedId.SIZE-b.length);
 	}
 }

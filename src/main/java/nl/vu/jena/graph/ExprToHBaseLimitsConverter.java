@@ -67,14 +67,18 @@ public class ExprToHBaseLimitsConverter {
 	
 	private static TypedId convertToPrimaryType(NodeValue constant){
 		TypedId ret;
-		if (constant.isDouble()){
-			ret =  new TypedId(TypedId.XSD_DOUBLE, Bytes.toBytes(constant.getDouble()));
-		}
-		else if (constant.isInteger()){//TODO also check for long and BigInteger here
-			ret =  new TypedId(TypedId.XSD_INT, Bytes.toBytes(constant.getInteger().intValue()));
+		byte []backingArray = new byte[TypedId.SIZE];
+		if (constant.isInteger()){//TODO also check for long and BigInteger here
+			Bytes.putInt(backingArray, TypedId.SIZE-Integer.SIZE/8, constant.getInteger().intValue());
+			ret =  new TypedId(TypedId.XSD_INT, backingArray);
 		}
 		else if (constant.isFloat()){
-			ret =  new TypedId(TypedId.XSD_DOUBLE, Bytes.toBytes(constant.getFloat()));
+			Bytes.putFloat(backingArray, TypedId.SIZE-Float.SIZE/8, constant.getFloat());
+			ret =  new TypedId(TypedId.XSD_DOUBLE, backingArray);
+		}
+		else if (constant.isDouble()){
+			Bytes.putDouble(backingArray, TypedId.SIZE-Double.SIZE/8, constant.getDouble());
+			ret =  new TypedId(TypedId.XSD_DOUBLE, backingArray);
 		}
 		else
 			throw new RuntimeException("Unknown type in expression");

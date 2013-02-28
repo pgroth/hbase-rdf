@@ -4,6 +4,7 @@ import java.io.DataInputStream;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
+import java.math.BigInteger;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
@@ -179,7 +180,7 @@ public class HBPrefixMatchUtil implements IHBasePrefixMatchRetrieve {
 			retrievalInit();
 			
 			long start = System.currentTimeMillis();
-			byte[] keyPrefix = buildRangeScanKeyFromQuad(triple);
+			byte[] keyPrefix = buildRangeScanKeyFromQuad(triple, limits);
 			long keyBuildOverhead = System.currentTimeMillis()-start;
 
 			long startSearch = System.currentTimeMillis();
@@ -406,12 +407,13 @@ public class HBPrefixMatchUtil implements IHBasePrefixMatchRetrieve {
 		quadResults.add(currentQuad);
 	}
 	
-	final private byte []buildRangeScanKeyFromQuad(Value []quad) throws IOException, NumericalRangeException, ElementNotFoundException
+	final private byte []buildRangeScanKeyFromQuad(Value []quad, RowLimitPair limitPair) throws IOException, NumericalRangeException, ElementNotFoundException
 	{
 		currentPattern = "";
 		keySize = 0;
 		spocOffsetMap.clear();
 		
+		buildTriplePattern(quad, limitPair);
 		ArrayList<Get> string2IdGets = buildString2IdGets(quad);	
 		currentTableIndex = patternInfo.get(currentPattern).tableIndex;
 		
@@ -425,6 +427,18 @@ public class HBPrefixMatchUtil implements IHBasePrefixMatchRetrieve {
 		}
 		
 		return key;
+	}
+
+	private void buildTriplePattern(Value[] quad, RowLimitPair limitPair) {
+		for (int i = 0; i < quad.length; i++) {
+			if ((quad[i] != null) || 
+					(i==OBJECT_POSITION && limitPair!=null)) {
+				currentPattern += "|";
+			} 
+			else {
+				currentPattern += "?";
+			}
+		}
 	}
 
 	final private byte[] buildRangeScanKeyFromMappedIds(ArrayList<Get> string2IdGets, byte []key) throws ElementNotFoundException, IOException {
@@ -461,10 +475,7 @@ public class HBPrefixMatchUtil implements IHBasePrefixMatchRetrieve {
 		
 		numericalElement = null;
 		for (int i = 0; i < quad.length; i++) {
-			if (quad[i] == null)
-				currentPattern += "?";
-			else{
-				currentPattern += "|";
+			if (quad[i] != null){
 				boundElements.add(quad[i]);
 				
 				byte []sBytes;
@@ -506,7 +517,7 @@ public class HBPrefixMatchUtil implements IHBasePrefixMatchRetrieve {
 	
 	final private ArrayList<Get> doRangeScan(byte[] prefix, RowLimitPair limits) throws IOException {
 		byte []startKey = Bytes.add(prefix, limits.getStartLimit().getBytes());
-		byte []endKey = Bytes.incrementBytes(Bytes.add(prefix, limits.getEndLimit().getBytes()), 1);
+		byte []endKey = getAdjustedEndKey(Bytes.add(prefix, limits.getEndLimit().getBytes()), startKey);
 		
 		Filter keyOnlyFilter = new FirstKeyOnlyFilter();
 		
@@ -526,6 +537,21 @@ public class HBPrefixMatchUtil implements IHBasePrefixMatchRetrieve {
 		ArrayList<Get> batchGets = parseRangeScanResults(startKey.length, results);
 		table.close();
 		return batchGets;
+	}
+
+	private byte[] getAdjustedEndKey(byte []endKey, byte[] startKey) {
+		byte[] adjustedEndKey;
+		BigInteger temp = new BigInteger(1, endKey);
+		temp = temp.add(BigInteger.valueOf(1));
+		
+		byte []b = temp.toByteArray();
+		if (b.length > startKey.length){
+			adjustedEndKey = Bytes.tail(b, startKey.length);
+		}
+		else{
+			adjustedEndKey = Bytes.padHead(b, startKey.length-b.length);
+		}
+		return adjustedEndKey;
 	}
 
 	@Override
