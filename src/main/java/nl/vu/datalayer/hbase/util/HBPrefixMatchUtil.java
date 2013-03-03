@@ -179,11 +179,11 @@ public class HBPrefixMatchUtil implements IHBasePrefixMatchRetrieve {
 		try {
 			retrievalInit();
 			
-			long start = System.currentTimeMillis();
+			//long start = System.currentTimeMillis();
 			byte[] keyPrefix = buildRangeScanKeyFromQuad(triple, limits);
-			long keyBuildOverhead = System.currentTimeMillis()-start;
+			//long keyBuildOverhead = System.currentTimeMillis()-start;
 
-			long startSearch = System.currentTimeMillis();
+			//long startSearch = System.currentTimeMillis();
 			ArrayList<Get> batchIdGets;
 			if (limits!=null){
 				batchIdGets = doRangeScan(keyPrefix, limits);
@@ -191,11 +191,11 @@ public class HBPrefixMatchUtil implements IHBasePrefixMatchRetrieve {
 			else{
 				batchIdGets = doRangeScan(keyPrefix);
 			}
-			long searchTime = System.currentTimeMillis() - startSearch;
+			//long searchTime = System.currentTimeMillis() - startSearch;
 
-			long startId2String = System.currentTimeMillis();
+			//long startId2String = System.currentTimeMillis();
 			Result[] id2StringResults = doBatchId2String(batchIdGets);
-			id2StringOverhead = System.currentTimeMillis()-startId2String;
+			//id2StringOverhead = System.currentTimeMillis()-startId2String;
 			
 			updateId2ValueMap(id2StringResults);			
 			
@@ -534,7 +534,7 @@ public class HBPrefixMatchUtil implements IHBasePrefixMatchRetrieve {
 		HTableInterface table = con.getTable(tableName);
 		ResultScanner results = table.getScanner(scan);
 
-		ArrayList<Get> batchGets = parseRangeScanResults(startKey.length, results);
+		ArrayList<Get> batchGets = parseRangeScanResults(prefix.length, results);
 		table.close();
 		return batchGets;
 	}

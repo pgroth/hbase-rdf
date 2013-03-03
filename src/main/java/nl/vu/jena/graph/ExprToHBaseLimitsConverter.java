@@ -4,8 +4,10 @@ import nl.vu.datalayer.hbase.id.TypedId;
 import nl.vu.datalayer.hbase.retrieve.RowLimitPair;
 
 import org.apache.hadoop.hbase.util.Bytes;
+import org.openjena.jenasesame.impl.Convert;
+import org.openrdf.model.Literal;
+import org.openrdf.model.impl.ValueFactoryImpl;
 
-import com.hp.hpl.jena.graph.Node;
 import com.hp.hpl.jena.sparql.expr.E_Equals;
 import com.hp.hpl.jena.sparql.expr.E_GreaterThan;
 import com.hp.hpl.jena.sparql.expr.E_LessThan;
@@ -15,62 +17,64 @@ import com.hp.hpl.jena.sparql.expr.NodeValue;
 
 public class ExprToHBaseLimitsConverter {
 
-	public static RowLimitPair getRowLimitPair(Expr e){
+	public static RowLimitPair getRowLimitPair(Expr e) throws Exception {
 		RowLimitPair ret = null;
 		if (!(e instanceof ExprFunction2)){
 			throw new RuntimeException("Simple filters are expected to have 2 arguments");
 		}
-		
-		if (e instanceof E_GreaterThan){
-			E_GreaterThan gt = (E_GreaterThan)e;
-			if (gt.getArg1().isConstant()){
-				TypedId limitValue = convertToPrimaryType(gt.getArg1().getConstant());
+
+		if (e instanceof E_GreaterThan) {
+			E_GreaterThan gt = (E_GreaterThan) e;
+			if (gt.getArg1().isConstant()) {
+				TypedId limitValue = convertNumericToPrimaryType(gt.getArg1().getConstant());
 				limitValue.adjustContent(-1);
 				ret = new RowLimitPair(limitValue, RowLimitPair.END_LIMIT);
-			}
-			else if (gt.getArg2().isConstant()){
-				TypedId limitValue = convertToPrimaryType(gt.getArg2().getConstant());
+			} else if (gt.getArg2().isConstant()) {
+				TypedId limitValue = convertNumericToPrimaryType(gt.getArg2().getConstant());
 				limitValue.adjustContent(1);
 				ret = new RowLimitPair(limitValue, RowLimitPair.START_LIMIT);
 			}
-		} 
-		else if (e instanceof E_LessThan){
-			E_LessThan lt = (E_LessThan)e;
-			if (lt.getArg1().isConstant()){
-				TypedId limitValue = convertToPrimaryType(lt.getArg1().getConstant());
+		} else if (e instanceof E_LessThan) {
+			E_LessThan lt = (E_LessThan) e;
+			if (lt.getArg1().isConstant()) {
+				TypedId limitValue = convertNumericToPrimaryType(lt.getArg1().getConstant());
 				limitValue.adjustContent(1);
 				ret = new RowLimitPair(limitValue, RowLimitPair.START_LIMIT);
-			}
-			else if (lt.getArg2().isConstant()){
-				TypedId limitValue = convertToPrimaryType(lt.getArg2().getConstant());
+			} else if (lt.getArg2().isConstant()) {
+				TypedId limitValue = convertNumericToPrimaryType(lt.getArg2().getConstant());
 				limitValue.adjustContent(-1);
 				ret = new RowLimitPair(limitValue, RowLimitPair.END_LIMIT);
 			}
-		}
-		else if (e instanceof E_Equals){
-			E_Equals eq = (E_Equals)e;
+		} else if (e instanceof E_Equals) {
+			E_Equals eq = (E_Equals) e;
 			NodeValue constantNode = null;
-			if (eq.getArg1().isConstant()){
+			if (eq.getArg1().isConstant()) {
 				constantNode = eq.getArg1().getConstant();
-			}
-			else if (eq.getArg2().isConstant()){
+			} else if (eq.getArg2().isConstant()) {
 				constantNode = eq.getArg2().getConstant();
 			}
-			
-			TypedId limitValue = convertToPrimaryType(constantNode);
-			return new RowLimitPair(limitValue, limitValue);
+
+			if (constantNode.isNumber()){
+				TypedId limitValue = convertNumericToPrimaryType(constantNode);
+				return new RowLimitPair(limitValue, limitValue);
+			}
+			else
+				throw new RuntimeException("Unsupported Simple Filter: "+eq.getOpName());//TODO
 		}
 		//TODO remaining
 		
 		return ret;
 	}
 	
-	private static TypedId convertToPrimaryType(NodeValue constant){
+	private static TypedId convertNumericToPrimaryType(NodeValue constant) throws Exception{
 		TypedId ret;
 		byte []backingArray = new byte[TypedId.SIZE];
-		if (constant.isInteger()){//TODO also check for long and BigInteger here
+		if (constant.isInteger()){
 			Bytes.putInt(backingArray, TypedId.SIZE-Integer.SIZE/8, constant.getInteger().intValue());
-			ret =  new TypedId(TypedId.XSD_INT, backingArray);
+			ret =  new TypedId(TypedId.XSD_INTEGER, backingArray);
+		}
+		else if (constant.isDecimal()){
+			ret = TypedId.createNumerical((Literal)Convert.nodeLiteralToValue(new ValueFactoryImpl(), constant.asNode()));
 		}
 		else if (constant.isFloat()){
 			Bytes.putFloat(backingArray, TypedId.SIZE-Float.SIZE/8, constant.getFloat());

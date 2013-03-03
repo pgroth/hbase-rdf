@@ -30,7 +30,7 @@ public class RowLimitPair {
 	}
 
 
-	public RowLimitPair(TypedId limit, byte whichLimit) {
+	public RowLimitPair(TypedId limit, byte whichLimit) {//TODO assuming positive integers
 		byte []backingArray = new byte[TypedId.SIZE];
 		switch (whichLimit){
 		case START_LIMIT: {
@@ -40,7 +40,7 @@ public class RowLimitPair {
 			break;
 		}
 		case END_LIMIT:{
-			Bytes.putLong(backingArray, 1, Long.MIN_VALUE);
+			Bytes.putLong(backingArray, 1, 0);
 			this.startLimit = new TypedId(limit.getNumericalType(), backingArray);
 			this.endLimit = limit;
 			break;
