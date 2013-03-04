@@ -11,7 +11,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Properties;
-import java.util.Random;
 
 import nl.vu.datalayer.hbase.connection.HBaseConnection;
 import nl.vu.datalayer.hbase.connection.NativeJavaConnection;
@@ -20,8 +19,10 @@ import nl.vu.datalayer.hbase.exceptions.NonNumericalException;
 import nl.vu.datalayer.hbase.exceptions.NumericalRangeException;
 import nl.vu.datalayer.hbase.id.BaseId;
 import nl.vu.datalayer.hbase.id.HBaseValue;
+import nl.vu.datalayer.hbase.id.Id;
 import nl.vu.datalayer.hbase.id.TypedId;
 import nl.vu.datalayer.hbase.loader.HBaseLoader;
+import nl.vu.datalayer.hbase.retrieve.HBaseGeneric;
 import nl.vu.datalayer.hbase.retrieve.IHBasePrefixMatchRetrieve;
 import nl.vu.datalayer.hbase.retrieve.RowLimitPair;
 import nl.vu.datalayer.hbase.schema.HBPrefixMatchSchema;
@@ -52,6 +53,9 @@ public class HBPrefixMatchUtil implements IHBasePrefixMatchRetrieve {
 	private static final int OBJECT_POSITION = 2;
 
 	private static final int MAX_RESULTS = 1000000;
+	
+	public static final byte MAP_IDS_ON = 0;
+	public static final byte MAP_IDS_OFF = 1;
 
 	private HBaseConnection con;
 	
@@ -78,9 +82,9 @@ public class HBPrefixMatchUtil implements IHBasePrefixMatchRetrieve {
 	/**
 	 * Internal map that stores associations between Ids in the results and the corresponding Value objects
 	 */
-	private HashMap<ByteArray, Value> id2ValueMap;
+	private HashMap<Id, Value> id2ValueMap;
 	
-	private ArrayList<ArrayList<ByteArray>> quadResults;
+	private ArrayList<ArrayList<Id>> quadResults;
 	
 	private ArrayList<Value> boundElements;
 	
@@ -98,14 +102,17 @@ public class HBPrefixMatchUtil implements IHBasePrefixMatchRetrieve {
 
 	private HashMap<ByteArray, Integer> spocOffsetMap = new HashMap<ByteArray, Integer>();
 
+	private ArrayList<Get> batchGets;
+
 	public HBPrefixMatchUtil(HBaseConnection con) {
 		super();
 		this.con = con;
 		patternInfo = new HashMap<String, PatternInfo>(16);
 		buildPattern2TableHashMap();
-		id2ValueMap = new HashMap<ByteArray, Value>();
-		quadResults = new ArrayList<ArrayList<ByteArray>>();
+		id2ValueMap = new HashMap<Id, Value>();
+		quadResults = new ArrayList<ArrayList<Id>>();
 		boundElements = new ArrayList<Value>();
+		batchGets = new ArrayList<Get>();
 		valueFactory = new ValueFactoryImpl();
 		
 		Properties prop = new Properties();
@@ -184,22 +191,21 @@ public class HBPrefixMatchUtil implements IHBasePrefixMatchRetrieve {
 			//long keyBuildOverhead = System.currentTimeMillis()-start;
 
 			//long startSearch = System.currentTimeMillis();
-			ArrayList<Get> batchIdGets;
 			if (limits!=null){
-				batchIdGets = doRangeScan(keyPrefix, limits);
+				doRangeScan(keyPrefix, limits, MAP_IDS_ON);
 			}
 			else{
-				batchIdGets = doRangeScan(keyPrefix);
+				doRangeScan(keyPrefix, MAP_IDS_ON);
 			}
 			//long searchTime = System.currentTimeMillis() - startSearch;
 
 			//long startId2String = System.currentTimeMillis();
-			Result[] id2StringResults = doBatchId2String(batchIdGets);
+			Result[] id2ValueResults = doBatchId2Value();
 			//id2StringOverhead = System.currentTimeMillis()-startId2String;
 			
-			updateId2ValueMap(id2StringResults);			
+			updateId2ValueMap(id2ValueResults);			
 			
-			ArrayList<ArrayList<Value>> ret = buildSPOCOrderResults();
+			ArrayList<ArrayList<Value>> ret = buildSPOCOrderValueResults();
 			
 			/*long totalTime = System.currentTimeMillis() - start;
 			System.out.println("Id2String number of results: "+id2StringResults.length);
@@ -215,8 +221,8 @@ public class HBPrefixMatchUtil implements IHBasePrefixMatchRetrieve {
 		} 
 	}
 
-	final private ArrayList<ArrayList<Value>> buildSPOCOrderResults() {
-		int queryElemNo = boundElements.size();
+	final private ArrayList<ArrayList<Value>> buildSPOCOrderValueResults() {
+		int numberOfBoundElements = boundElements.size();
 		ArrayList<ArrayList<Value>> ret = new ArrayList<ArrayList<Value>>(quadResults.size());
 		Value[] initValue = new Value[]{null, null, null, null};
 		ArrayList<Value> initList = new ArrayList<Value>();//using an ArrayList will prevent an extra copy
@@ -224,18 +230,18 @@ public class HBPrefixMatchUtil implements IHBasePrefixMatchRetrieve {
 														//-> see constructor ArrayList(Collection<? extends E> c)
 		initList.addAll(Arrays.asList(initValue));
 		
-		for (ArrayList<ByteArray> quadList : quadResults) {
+		for (ArrayList<Id> quadList : quadResults) {
 			ArrayList<Value> newQuadResult = new ArrayList<Value>(initList);			
 			
-			fillInUnboundElements(queryElemNo, quadList, newQuadResult);		
-			fillInBoundElements(newQuadResult);
+			fillInUnboundPositions(numberOfBoundElements, quadList, newQuadResult);		
+			fillInBoundPositions(newQuadResult);
 			
 			ret.add(newQuadResult);
 		}
 		return ret;
 	}
 
-	final private void fillInBoundElements(ArrayList<Value> newQuadResult) {
+	final private void fillInBoundPositions(ArrayList<Value> newQuadResult) {
 		for (int i = 0, j = 0; i<newQuadResult.size() && j<boundElements.size(); i++) {
 			if (newQuadResult.get(i) == null){
 				newQuadResult.set(i, boundElements.get(j++));
@@ -243,17 +249,16 @@ public class HBPrefixMatchUtil implements IHBasePrefixMatchRetrieve {
 		}
 	}
 
-	final private void fillInUnboundElements(int queryElemNo, ArrayList<ByteArray> quadList, ArrayList<Value> newQuadResult) {
+	final private void fillInUnboundPositions(int numberOfBoundElements, ArrayList<Id> quadList, ArrayList<Value> newQuadResult) {
 		for (int i = 0; i < quadList.size(); i++) {
-			ByteArray currentElem = quadList.get(i);
-			if ((i+queryElemNo) == HBPrefixMatchSchema.ORDER[currentTableIndex][2] && 
-					TypedId.getType(currentElem.getBytes()[0]) == TypedId.NUMERICAL){
+			Id currentElem = quadList.get(i);
+			if ((i+numberOfBoundElements) == HBPrefixMatchSchema.ORDER[currentTableIndex][OBJECT_POSITION] && 
+					currentElem instanceof TypedId && ((TypedId)currentElem).getType() == TypedId.NUMERICAL){
 				//handle numericals
-				TypedId id = new TypedId(currentElem.getBytes());
-				newQuadResult.set(2, id.toLiteral());
+				newQuadResult.set(OBJECT_POSITION, ((TypedId)currentElem).toLiteral());
 			}
 			else{
-				newQuadResult.set(HBPrefixMatchSchema.TO_SPOC_ORDER[currentTableIndex][(i+queryElemNo)], 
+				newQuadResult.set(HBPrefixMatchSchema.TO_SPOC_ORDER[currentTableIndex][(i+numberOfBoundElements)], 
 						id2ValueMap.get(currentElem));
 			}
 		}
@@ -276,19 +281,19 @@ public class HBPrefixMatchUtil implements IHBasePrefixMatchRetrieve {
 				byteStream.setArray(rowVal);		
 				hbaseValue.readFields(dataInputStream);
 				Value val = hbaseValue.getUnderlyingValue();
-				id2ValueMap.put(new ByteArray(rowKey), val);
+				id2ValueMap.put(new BaseId(rowKey), val);
 			}
 		}
 	}
 
-	final private Result[] doBatchId2String(ArrayList<Get> batchIdGets) throws IOException {
+	final private Result[] doBatchId2Value() throws IOException {
 		HTableInterface id2StringTable = con.getTable(HBPrefixMatchSchema.ID2STRING+schemaSuffix);
-		Result []id2StringResults = id2StringTable.get(batchIdGets);
+		Result []id2StringResults = id2StringTable.get(batchGets);
 		id2StringTable.close();
 		return id2StringResults;
 	}
 
-	final private ArrayList<Get> doRangeScan(byte[] startKey) throws IOException {
+	final private void doRangeScan(byte[] startKey, byte mapIdsSwitch) throws IOException {
 		Filter prefixFilter = new PrefixFilter(startKey);
 		Filter keyOnlyFilter = new FirstKeyOnlyFilter();
 		Filter filterList = new FilterList(FilterList.Operator.MUST_PASS_ALL, prefixFilter, keyOnlyFilter);
@@ -304,20 +309,23 @@ public class HBPrefixMatchUtil implements IHBasePrefixMatchRetrieve {
 		HTableInterface table = con.getTable(tableName);
 		ResultScanner results = table.getScanner(scan);
 
-		ArrayList<Get> batchGets = parseRangeScanResults(startKey.length, results);
+		parseRangeScanResults(startKey.length, results, mapIdsSwitch);
 		table.close();
-		return batchGets;
 	}
 
-	final private ArrayList<Get> parseRangeScanResults(int startKeyLength, ResultScanner results) throws IOException {
+	final private ArrayList<ArrayList<Id>> parseRangeScanResults(int startKeyLength, ResultScanner results, byte mapIdsSwitch) throws IOException {
 		Result r = null;
 		int sizeOfInterest = HBPrefixMatchSchema.KEY_LENGTH - startKeyLength;
-
-		ArrayList<Get> batchGets = new ArrayList<Get>();
+ 
 		int i = 0;
 		try{
 			while ((r = results.next()) != null && i<MAX_RESULTS) {
-				parseKey(r.getRow(), startKeyLength, sizeOfInterest, batchGets);
+				ArrayList<Id> currentQuad = parseKey(r.getRow(), startKeyLength, sizeOfInterest);
+				quadResults.add(currentQuad);
+				
+				if (mapIdsSwitch == MAP_IDS_ON){
+					buildId2ValueInfo(currentQuad);
+				}
 				i++;
 			}
 		}
@@ -325,12 +333,24 @@ public class HBPrefixMatchUtil implements IHBasePrefixMatchRetrieve {
 			results.close();
 		}
 		//System.out.println("Range scan returned: "+i+" results");
-		return batchGets;
+		return quadResults;
+	}
+
+	private void buildId2ValueInfo(ArrayList<Id> currentQuad) {
+		for (Id id : currentQuad) {
+			if (id instanceof BaseId && id2ValueMap.get(id) == null){
+				id2ValueMap.put(id, null);
+				Get g = new Get(((BaseId)id).getBytes());
+				g.addColumn(HBPrefixMatchSchema.COLUMN_FAMILY, HBPrefixMatchSchema.COLUMN_NAME);
+				batchGets.add(g);
+			}
+		}
 	}
 
 	final private void retrievalInit() {
 		id2ValueMap.clear();
 		quadResults.clear();
+		batchGets.clear();
 		boundElements.clear();
 		id2StringOverhead = 0;
 		string2IdOverhead = 0;
@@ -361,10 +381,10 @@ public class HBPrefixMatchUtil implements IHBasePrefixMatchRetrieve {
 		return id;
 	}
 	
-	final private void parseKey(byte []key, int startIndex, int sizeOfInterest, ArrayList<Get> batchGets){
+	final private ArrayList<Id> parseKey(byte []key, int startIndex, int sizeOfInterest){
 		
 		int elemNo = sizeOfInterest/BaseId.SIZE;
-		ArrayList<ByteArray> currentQuad = new ArrayList<ByteArray>(elemNo);
+		ArrayList<Id> currentQuad = new ArrayList<Id>(elemNo);
 		
 		int crtIndex = startIndex;
 		for (int i = 0; i < elemNo; i++) {
@@ -380,7 +400,7 @@ public class HBPrefixMatchUtil implements IHBasePrefixMatchRetrieve {
 					elemKey = new byte[TypedId.SIZE];
 					System.arraycopy(key, crtIndex, elemKey, 0, TypedId.SIZE);
 					crtIndex += length;
-					ByteArray newElem = new ByteArray(elemKey);
+					Id newElem = new TypedId(elemKey);
 					currentQuad.add(newElem);
 					continue;
 				}
@@ -391,20 +411,13 @@ public class HBPrefixMatchUtil implements IHBasePrefixMatchRetrieve {
 				System.arraycopy(key, crtIndex, elemKey, 0, length);
 			}
 			
-			ByteArray newElem = new ByteArray(elemKey);
+			Id newElem = new BaseId(elemKey);
 			currentQuad.add(newElem);
-			
-			if (id2ValueMap.get(newElem) == null){
-				id2ValueMap.put(newElem, null);
-				Get g = new Get(elemKey);
-				g.addColumn(HBPrefixMatchSchema.COLUMN_FAMILY, HBPrefixMatchSchema.COLUMN_NAME);
-				batchGets.add(g);
-			}
 			
 			crtIndex += length;
 		}
 		
-		quadResults.add(currentQuad);
+		return currentQuad;
 	}
 	
 	final private byte []buildRangeScanKeyFromQuad(Value []quad, RowLimitPair limitPair) throws IOException, NumericalRangeException, ElementNotFoundException
@@ -515,7 +528,7 @@ public class HBPrefixMatchUtil implements IHBasePrefixMatchRetrieve {
 		return string2IdGets;
 	}
 	
-	final private ArrayList<Get> doRangeScan(byte[] prefix, RowLimitPair limits) throws IOException {
+	final private void doRangeScan(byte[] prefix, RowLimitPair limits, byte mapIdSwitch) throws IOException {
 		byte []startKey = Bytes.add(prefix, limits.getStartLimit().getBytes());
 		byte []endKey = getAdjustedEndKey(Bytes.add(prefix, limits.getEndLimit().getBytes()), startKey);
 		
@@ -534,9 +547,8 @@ public class HBPrefixMatchUtil implements IHBasePrefixMatchRetrieve {
 		HTableInterface table = con.getTable(tableName);
 		ResultScanner results = table.getScanner(scan);
 
-		ArrayList<Get> batchGets = parseRangeScanResults(prefix.length, results);
+		parseRangeScanResults(prefix.length, results, mapIdSwitch);
 		table.close();
-		return batchGets;
 	}
 
 	private byte[] getAdjustedEndKey(byte []endKey, byte[] startKey) {
@@ -575,5 +587,19 @@ public class HBPrefixMatchUtil implements IHBasePrefixMatchRetrieve {
 			this.tableIndex = tableIndex;
 			this.scannerCachingSize = scannerCachingSize;
 		}
+	}
+
+	@Override
+	public ArrayList<ArrayList<Value>> getResults(HBaseGeneric[] triple)
+			throws IOException {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	@Override
+	public ArrayList<ArrayList<Value>> getResults(HBaseGeneric[] triple,
+			RowLimitPair limits) throws IOException {
+		// TODO Auto-generated method stub
+		return null;
 	}
 }

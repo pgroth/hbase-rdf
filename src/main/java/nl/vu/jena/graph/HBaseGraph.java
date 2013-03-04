@@ -54,9 +54,9 @@ public class HBaseGraph extends GraphBase {
 		Node predicate = m.getMatchPredicate();
 		Node object =  m.getMatchObject();
 	
-		Value []quad = {subject.isConcrete() ? Convert.nodeToValue(valFactory, subject):null, 
-				predicate.isConcrete() ? Convert.nodeToValue(valFactory, predicate):null, 
-				object.isConcrete() ? Convert.nodeToValue(valFactory, object):null, 
+		Value []quad = {(subject!=null && subject.isConcrete()) ? Convert.nodeToValue(valFactory, subject):null, 
+				(predicate!=null &&predicate.isConcrete()) ? Convert.nodeToValue(valFactory, predicate):null, 
+				(object!=null && object.isConcrete()) ? Convert.nodeToValue(valFactory, object):null, 
 				null};
 		
 		//retrieve results from HBase
