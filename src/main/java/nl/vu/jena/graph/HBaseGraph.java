@@ -5,8 +5,10 @@ import java.util.Collections;
 import java.util.Map;
 
 import nl.vu.datalayer.hbase.HBaseClientSolution;
+import nl.vu.datalayer.hbase.retrieve.HBaseGeneric;
 import nl.vu.datalayer.hbase.retrieve.IHBasePrefixMatchRetrieve;
 import nl.vu.datalayer.hbase.retrieve.RowLimitPair;
+import nl.vu.datalayer.hbase.util.HBPrefixMatchUtil;
 import nl.vu.jena.cache.JenaCache;
 
 import org.openjena.jenasesame.impl.Convert;
@@ -69,7 +71,8 @@ public class HBaseGraph extends GraphBase {
 				if (arg1.isConstant() && arg1.getConstant().isNumber() ||
 						arg2.isConstant() && arg2.getConstant().isNumber()){
 					RowLimitPair limitPair = ExprToHBaseLimitsConverter.getRowLimitPair(simpleFilter);
-					results = ((IHBasePrefixMatchRetrieve)hbase.util).getResults(quad, limitPair);
+					HBaseGeneric []genericPattern = ((HBPrefixMatchUtil)hbase.util).convertQuadToGenericPattern(quad);
+					results = ((IHBasePrefixMatchRetrieve)hbase.util).getMaterializedResults(genericPattern, limitPair);
 				}
 				else if (simpleFilter instanceof E_Equals && 
 						((arg1.isConstant()&&arg1.getConstant().isIRI()) 

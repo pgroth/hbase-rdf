@@ -65,16 +65,7 @@ private final Triple pattern ;
             
             ExtendedIterator<Triple> iter = graph.find(bindedPattern) ;
             
-            if ( false )
-            {
-                // Materialize the results now. Debugging only.
-                List<Triple> x = iter.toList() ;
-                this.graphIter = WrappedIterator.create(x.iterator()) ;
-                iter.close();
-            }
-            else
-                // Stream.
-                this.graphIter = iter ;
+            this.graphIter = iter ;
         }
 
         private Binding mapper(Triple r)
