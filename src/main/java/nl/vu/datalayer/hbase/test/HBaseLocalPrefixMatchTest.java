@@ -6,8 +6,8 @@ import java.util.ArrayList;
 import nl.vu.datalayer.hbase.HBaseClientSolution;
 import nl.vu.datalayer.hbase.HBaseFactory;
 import nl.vu.datalayer.hbase.connection.HBaseConnection;
+import nl.vu.datalayer.hbase.operations.IHBaseOperations;
 import nl.vu.datalayer.hbase.schema.HBPrefixMatchSchema;
-import nl.vu.datalayer.hbase.util.IHBaseUtil;
 
 import org.apache.hadoop.hbase.MasterNotRunningException;
 import org.apache.hadoop.hbase.ZooKeeperConnectionException;
@@ -84,7 +84,7 @@ public class HBaseLocalPrefixMatchTest {
 			
 			//HBaseConnection con = new HBaseConnection();
 			//HBaseClientSolution sol = HBaseFactory.getHBaseSolution(HBPrefixMatchSchema.SCHEMA_NAME, con, null);	
-			IHBaseUtil util = sol.util;
+			IHBaseOperations util = sol.util;
 			String []quad = new String[4];
 			quad[0] = "aa";
 			quad[1] = "?";

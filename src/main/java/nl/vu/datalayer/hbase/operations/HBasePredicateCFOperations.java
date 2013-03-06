@@ -1,4 +1,4 @@
-package nl.vu.datalayer.hbase.util;
+package nl.vu.datalayer.hbase.operations;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -20,12 +20,12 @@ import org.openrdf.model.Resource;
 import org.openrdf.model.Statement;
 import org.openrdf.model.Value;
 
-public class HBasePredicateCFUtil implements IHBaseUtil {
+public class HBasePredicateCFOperations implements IHBaseOperations {
 
 	private HBasePredicateCFSchema schema;
 	private HBaseConnection con;
 
-	public HBasePredicateCFUtil(HBaseConnection con, IHBaseSchema schema) {
+	public HBasePredicateCFOperations(HBaseConnection con, IHBaseSchema schema) {
 		this.schema = (HBasePredicateCFSchema) schema;
 		this.con = con;
 	}

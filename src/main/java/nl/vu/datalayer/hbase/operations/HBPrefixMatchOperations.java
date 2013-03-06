@@ -1,4 +1,4 @@
-package nl.vu.datalayer.hbase.util;
+package nl.vu.datalayer.hbase.operations;
 
 import java.io.DataInputStream;
 import java.io.FileInputStream;
@@ -24,7 +24,6 @@ import nl.vu.datalayer.hbase.id.TypedId;
 import nl.vu.datalayer.hbase.loader.HBaseLoader;
 import nl.vu.datalayer.hbase.retrieve.HBaseGeneric;
 import nl.vu.datalayer.hbase.retrieve.IHBasePrefixMatchRetrieve;
-import nl.vu.datalayer.hbase.retrieve.IdWrapper;
 import nl.vu.datalayer.hbase.retrieve.RowLimitPair;
 import nl.vu.datalayer.hbase.retrieve.ValueWrapper;
 import nl.vu.datalayer.hbase.schema.HBPrefixMatchSchema;
@@ -50,7 +49,7 @@ import org.openrdf.model.impl.ValueFactoryImpl;
  * Class that exposes operations with the tables in the PrefixMatch schema
  *
  */
-public class HBPrefixMatchUtil implements IHBasePrefixMatchRetrieve {
+public class HBPrefixMatchOperations implements IHBasePrefixMatchRetrieve {
 	
 	private static final int OBJECT_POSITION = 2;
 
@@ -107,7 +106,7 @@ public class HBPrefixMatchUtil implements IHBasePrefixMatchRetrieve {
 	private HBaseGeneric []genericPattern = {null, null, null, null};
 	private ValueWrapper []valuePattern;
 
-	public HBPrefixMatchUtil(HBaseConnection con) {
+	public HBPrefixMatchOperations(HBaseConnection con) {
 		super();
 		this.con = con;
 		patternInfo = new HashMap<String, PatternInfo>(16);
@@ -257,7 +256,7 @@ public class HBPrefixMatchUtil implements IHBasePrefixMatchRetrieve {
 					newQuadResult.set(i, ((ValueWrapper)boundElement).getValue());
 				}
 				else{
-					newQuadResult.set(i, id2ValueMap.get(((IdWrapper)boundElement).getId()));
+					newQuadResult.set(i, id2ValueMap.get(((Id)boundElement)));
 				}
 			}
 		}
@@ -539,8 +538,8 @@ public class HBPrefixMatchUtil implements IHBasePrefixMatchRetrieve {
 					string2IdGets.add(g);
 					spocOffsetMap.put(new ByteArray(md5Hash), i);
 				}
-				else if (quad[i] instanceof IdWrapper) {
-					Id id = ((IdWrapper) quad[i]).getId();
+				else if (quad[i] instanceof Id) {
+					Id id = ((Id) quad[i]);
 
 					if (i != OBJECT_POSITION) {
 						Bytes.putBytes(key, offset, id.getBytes(), 0,
@@ -642,7 +641,7 @@ public class HBPrefixMatchUtil implements IHBasePrefixMatchRetrieve {
 				doRangeScan(keyPrefix, MAP_IDS_OFF);
 			}
 			
-			//build the results in SPOC order using only Id elements
+			//TODO build the results in SPOC order using only Id elements
 			return null;
 		} catch (NumericalRangeException e) {
 			throw new IOException( "Bound numerical variable not in expected range: " + e.getMessage());

@@ -6,12 +6,12 @@ import java.util.ArrayList;
 import java.util.Properties;
 
 import nl.vu.datalayer.hbase.connection.HBaseConnection;
+import nl.vu.datalayer.hbase.operations.HBHexastoreOperations;
+import nl.vu.datalayer.hbase.operations.HBPrefixMatchOperations;
+import nl.vu.datalayer.hbase.operations.HBasePredicateCFOperations;
 import nl.vu.datalayer.hbase.schema.HBHexastoreSchema;
 import nl.vu.datalayer.hbase.schema.HBPrefixMatchSchema;
 import nl.vu.datalayer.hbase.schema.HBasePredicateCFSchema;
-import nl.vu.datalayer.hbase.util.HBHexastoreUtil;
-import nl.vu.datalayer.hbase.util.HBPrefixMatchUtil;
-import nl.vu.datalayer.hbase.util.HBasePredicateCFUtil;
 
 import org.openrdf.model.Statement;
 
@@ -23,7 +23,7 @@ public class HBaseFactory {
 		if (schemaName.equals(HBasePredicateCFSchema.SCHEMA_NAME)){
 			HBasePredicateCFSchema schema = new HBasePredicateCFSchema(con, statements);
 			return new HBaseClientSolution(schema,
-										new HBasePredicateCFUtil(con, schema));
+										new HBasePredicateCFOperations(con, schema));
 		}
 		else if (schemaName.endsWith(HBPrefixMatchSchema.SCHEMA_NAME)){
 			Properties prop = new Properties();
@@ -44,12 +44,12 @@ public class HBaseFactory {
 			}
 			
 			return new HBaseClientSolution(schema,
-					new HBPrefixMatchUtil(con));
+					new HBPrefixMatchOperations(con));
 		}
 		else{//default hexastore"
 			HBHexastoreSchema schema = new HBHexastoreSchema(con);
 			return new HBaseClientSolution(schema,
-										new HBHexastoreUtil(con, schema));
+										new HBHexastoreOperations(con, schema));
 		}
 	}
 }

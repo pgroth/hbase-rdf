@@ -18,29 +18,16 @@ public class TextTest {
 	 * @param args
 	 */
 	public static void main(String[] args) {
-		try{
-			/*Text t = new Text("abcdefg");
-			String s = Text.decode(t.getBytes(), 0, t.getLength());
-			System.out.println(t.toString());
-			System.out.println(t.getLength()+" "+t.getBytes().length+";");
-			
-			
-			long hash = hashFunction(s);
-			System.out.println(hash);*/
-			
-			byte b = (byte)0xa3;
-			//byte b2 = (byte)((short)b/2);
-			//String byteStr = ""+(byte)literal.charAt(literal.length()-1);
-			//System.out.println(byteStr);
-			//byte b = -1;
-			
-			//System.out.println(String.b2);
-			System.out.println(String.format("%04x", (byte)(b & 0xfe)));
-			//System.out.println(String.format("%02x", (byte)(literal.charAt(literal.length()-1))/2));
-		}
-		catch(Exception e){
-			e.printStackTrace();
-		}
+		byte b = (byte)0x85;
+		
+		System.out.println(Integer.toHexString(~b&0x80));
+		
+		System.out.println(Integer.toHexString(b&0x7f));
+		
+		
+		b = (byte)((~b&0x80) | (b&0x7f));
+		
+		System.out.println(Integer.toHexString(((~b&0x80) | (b&0x7f))));
 	}
 
 }

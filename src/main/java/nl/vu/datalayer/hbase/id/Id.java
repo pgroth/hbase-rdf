@@ -4,10 +4,12 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
+import nl.vu.datalayer.hbase.retrieve.HBaseGeneric;
+
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.WritableComparable;
 
-public abstract class Id implements WritableComparable<Id> {
+public abstract class Id implements WritableComparable<Id>, HBaseGeneric {
 	
 	public static final byte BASE_ID = 0;
 	public static final byte TYPED_ID = 1;

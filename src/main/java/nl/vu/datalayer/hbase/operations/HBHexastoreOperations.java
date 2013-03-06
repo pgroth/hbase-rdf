@@ -1,4 +1,4 @@
-package nl.vu.datalayer.hbase.util;
+package nl.vu.datalayer.hbase.operations;
 
 import java.io.IOException;
 import java.math.BigInteger;
@@ -17,7 +17,7 @@ import org.apache.log4j.Logger;
 import org.openrdf.model.Statement;
 import org.openrdf.model.Value;
 
-public class HBHexastoreUtil implements IHBaseUtil {
+public class HBHexastoreOperations implements IHBaseOperations {
 
 	private HBaseConnection con;
 	private HBHexastoreSchema schema;
@@ -29,7 +29,7 @@ public class HBHexastoreUtil implements IHBaseUtil {
 	private ArrayList<ArrayList<Integer>> keyPositions;
 	private ArrayList<ArrayList<Integer>> valuePositions;
 
-	public HBHexastoreUtil(HBaseConnection con, HBHexastoreSchema schema) {
+	public HBHexastoreOperations(HBaseConnection con, HBHexastoreSchema schema) {
 		super();
 		this.con = con;
 		this.schema = schema;

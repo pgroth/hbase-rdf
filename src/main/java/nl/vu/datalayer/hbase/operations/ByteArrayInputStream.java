@@ -1,4 +1,4 @@
-package nl.vu.datalayer.hbase.util;
+package nl.vu.datalayer.hbase.operations;
 
 public class ByteArrayInputStream extends java.io.ByteArrayInputStream {
 	

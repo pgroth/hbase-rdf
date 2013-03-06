@@ -3,17 +3,10 @@ package nl.vu.datalayer.hbase.id;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
-import java.io.UnsupportedEncodingException;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
-
-import nl.vu.datalayer.hbase.schema.HBPrefixMatchSchema;
-import nl.vu.datalayer.hbase.util.HBPrefixMatchUtil;
 
 import org.apache.hadoop.io.WritableComparable;
 import org.openrdf.model.BNode;
 import org.openrdf.model.Literal;
-import org.openrdf.model.Resource;
 import org.openrdf.model.URI;
 import org.openrdf.model.Value;
 import org.openrdf.model.impl.BNodeImpl;
