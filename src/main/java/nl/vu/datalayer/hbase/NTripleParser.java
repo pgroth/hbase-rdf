@@ -52,7 +52,7 @@ public class NTripleParser {
 			sol.schema.create();
 			
 			// populate table
-			sol.util.populateTables(myList);
+			sol.opsManager.populateTables(myList);
 			
 			con.close();
 		}

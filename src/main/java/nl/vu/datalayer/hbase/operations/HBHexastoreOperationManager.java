@@ -17,7 +17,7 @@ import org.apache.log4j.Logger;
 import org.openrdf.model.Statement;
 import org.openrdf.model.Value;
 
-public class HBHexastoreOperations implements IHBaseOperations {
+public class HBHexastoreOperationManager implements IHBaseOperationManager {
 
 	private HBaseConnection con;
 	private HBHexastoreSchema schema;
@@ -29,7 +29,7 @@ public class HBHexastoreOperations implements IHBaseOperations {
 	private ArrayList<ArrayList<Integer>> keyPositions;
 	private ArrayList<ArrayList<Integer>> valuePositions;
 
-	public HBHexastoreOperations(HBaseConnection con, HBHexastoreSchema schema) {
+	public HBHexastoreOperationManager(HBaseConnection con, HBHexastoreSchema schema) {
 		super();
 		this.con = con;
 		this.schema = schema;

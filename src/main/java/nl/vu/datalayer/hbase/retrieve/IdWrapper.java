@@ -2,7 +2,7 @@ package nl.vu.datalayer.hbase.retrieve;
 
 import nl.vu.datalayer.hbase.id.Id;
 
-public class IdWrapper implements HBaseGeneric {
+public class IdWrapper implements HBaseTripleElement {
 	
 	private Id id;
 

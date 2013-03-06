@@ -1,6 +1,6 @@
 package nl.vu.datalayer.hbase;
 
-import nl.vu.datalayer.hbase.operations.IHBaseOperations;
+import nl.vu.datalayer.hbase.operations.IHBaseOperationManager;
 import nl.vu.datalayer.hbase.schema.IHBaseSchema;
 
 /**
@@ -10,11 +10,11 @@ import nl.vu.datalayer.hbase.schema.IHBaseSchema;
  */
 public class HBaseClientSolution {
 	public IHBaseSchema schema;
-	public IHBaseOperations util;
+	public IHBaseOperationManager opsManager;
 	
-	public HBaseClientSolution(IHBaseSchema schema, IHBaseOperations util) {
+	public HBaseClientSolution(IHBaseSchema schema, IHBaseOperationManager opsManager) {
 		super();
 		this.schema = schema;
-		this.util = util;
+		this.opsManager = opsManager;
 	}
 }

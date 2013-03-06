@@ -1,13 +1,16 @@
 package nl.vu.jena.graph;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.Map;
 
 import nl.vu.datalayer.hbase.HBaseClientSolution;
-import nl.vu.datalayer.hbase.operations.HBPrefixMatchOperations;
-import nl.vu.datalayer.hbase.retrieve.HBaseGeneric;
-import nl.vu.datalayer.hbase.retrieve.IHBasePrefixMatchRetrieve;
+import nl.vu.datalayer.hbase.id.Id;
+import nl.vu.datalayer.hbase.operations.HBPrefixMatchOperationManager;
+import nl.vu.datalayer.hbase.retrieve.HBaseTripleElement;
+import nl.vu.datalayer.hbase.retrieve.IHBasePrefixMatchRetrieveOpsManager;
 import nl.vu.datalayer.hbase.retrieve.RowLimitPair;
 import nl.vu.jena.cache.JenaCache;
 
@@ -17,6 +20,7 @@ import org.openrdf.model.ValueFactory;
 import org.openrdf.model.impl.ValueFactoryImpl;
 
 import com.hp.hpl.jena.graph.Node;
+import com.hp.hpl.jena.graph.NodeId;
 import com.hp.hpl.jena.graph.Triple;
 import com.hp.hpl.jena.graph.TripleMatch;
 import com.hp.hpl.jena.graph.impl.GraphBase;
@@ -66,33 +70,10 @@ public class HBaseGraph extends GraphBase {
 		try {
 			if (m instanceof FilteredTriple){
 				ExprFunction2 simpleFilter = (ExprFunction2)(((FilteredTriple)m).getSimpleFilter());
-				Expr arg1 = simpleFilter.getArg1();
-				Expr arg2 = simpleFilter.getArg2();
-				if (arg1.isConstant() && arg1.getConstant().isNumber() ||
-						arg2.isConstant() && arg2.getConstant().isNumber()){
-					RowLimitPair limitPair = ExprToHBaseLimitsConverter.getRowLimitPair(simpleFilter);
-					HBaseGeneric []genericPattern = ((HBPrefixMatchOperations)hbase.util).convertQuadToGenericPattern(quad);
-					results = ((IHBasePrefixMatchRetrieve)hbase.util).getMaterializedResults(genericPattern, limitPair);
-				}
-				else if (simpleFilter instanceof E_Equals && 
-						((arg1.isConstant()&&arg1.getConstant().isIRI()) 
-						|| (arg2.isConstant()&&arg2.getConstant().isIRI()))){
-					E_Equals eq = (E_Equals) simpleFilter;
-					NodeValue constantNode = null;
-					if (eq.getArg1().isConstant()) {
-						constantNode = eq.getArg1().getConstant();
-					} else if (eq.getArg2().isConstant()) {
-						constantNode = eq.getArg2().getConstant();
-					}
-					
-					quad[2] = Convert.nodeToValue(valFactory, constantNode.asNode());
-					results = hbase.util.getResults(quad);
-				}
-				else 
-					throw new RuntimeException("Unsupported simple filter: "+simpleFilter.getOpName());//TODO
+				results = getFilteredResults(quad, simpleFilter);
 			}
 			else{
-				results = hbase.util.getResults(quad);
+				results = hbase.opsManager.getResults(quad);
 			}
 		} catch (Exception e) {
 			return NullIterator.instance();
@@ -112,6 +93,53 @@ public class HBaseGraph extends GraphBase {
 		cache.put(m, ret);
 		
 		return ret;
+	}
+	
+	public void mapNodeIdsToMaterializedNodes(Map<NodeId, Node> tempIdMap) throws IOException{
+		Map<Id, Value> toResolve = new HashMap<Id, Value>(tempIdMap.size());
+		for (Map.Entry<NodeId, Node> entry : tempIdMap.entrySet()) {
+			toResolve.put(entry.getKey().getId(), null);
+		}
+		
+		((IHBasePrefixMatchRetrieveOpsManager)hbase.opsManager).materializeIds(toResolve);
+		
+		for (Map.Entry<NodeId, Node> entry : tempIdMap.entrySet()) {
+			Id id = entry.getKey().getId();
+			Node newNode = Convert.valueToNode(toResolve.get(id));
+			entry.setValue(newNode);
+		}
+	}
+
+	private ArrayList<ArrayList<Value>> getFilteredResults(Value[] quad, ExprFunction2 simpleFilter)
+			throws Exception, IOException {
+		ArrayList<ArrayList<Value>> results;
+		
+		Expr arg1 = simpleFilter.getArg1();
+		Expr arg2 = simpleFilter.getArg2();
+		
+		if (arg1.isConstant() && arg1.getConstant().isNumber() ||
+				arg2.isConstant() && arg2.getConstant().isNumber()){
+			RowLimitPair limitPair = ExprToHBaseLimitsConverter.getRowLimitPair(simpleFilter);
+			HBaseTripleElement []genericPattern = ((HBPrefixMatchOperationManager)hbase.opsManager).convertQuadToGenericPattern(quad);
+			results = ((IHBasePrefixMatchRetrieveOpsManager)hbase.opsManager).getMaterializedResults(genericPattern, limitPair);
+		}
+		else if (simpleFilter instanceof E_Equals && 
+				((arg1.isConstant()&&arg1.getConstant().isIRI()) 
+				|| (arg2.isConstant()&&arg2.getConstant().isIRI()))){
+			E_Equals eq = (E_Equals) simpleFilter;
+			NodeValue constantNode = null;
+			if (eq.getArg1().isConstant()) {
+				constantNode = eq.getArg1().getConstant();
+			} else if (eq.getArg2().isConstant()) {
+				constantNode = eq.getArg2().getConstant();
+			}
+			
+			quad[2] = Convert.nodeToValue(valFactory, constantNode.asNode());
+			results = hbase.opsManager.getResults(quad);
+		}
+		else 
+			throw new RuntimeException("Unsupported simple filter: "+simpleFilter.getOpName());//TODO
+		return results;
 	}
 
 }

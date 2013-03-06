@@ -159,7 +159,7 @@ public class HBaseSailConnection extends NotifyingSailConnectionBase {
 				ArrayList<ArrayList<Value>> result = null;
 				try {
 					// reconstruct Statement objects
-					result = hbase.util.getResults(query);
+					result = hbase.opsManager.getResults(query);
 					myList.addAll(reconstructTriples(result, query));
 				}
 				catch (Exception e) {

@@ -3,7 +3,7 @@ package nl.vu.datalayer.hbase.retrieve;
 
 import org.openrdf.model.Value;
 
-public class ValueWrapper implements HBaseGeneric {
+public class ValueWrapper implements HBaseTripleElement {
 	
 	private Value value;
 

@@ -6,9 +6,9 @@ import java.util.ArrayList;
 import java.util.Properties;
 
 import nl.vu.datalayer.hbase.connection.HBaseConnection;
-import nl.vu.datalayer.hbase.operations.HBHexastoreOperations;
-import nl.vu.datalayer.hbase.operations.HBPrefixMatchOperations;
-import nl.vu.datalayer.hbase.operations.HBasePredicateCFOperations;
+import nl.vu.datalayer.hbase.operations.HBHexastoreOperationManager;
+import nl.vu.datalayer.hbase.operations.HBPrefixMatchOperationManager;
+import nl.vu.datalayer.hbase.operations.HBasePredicateCFOperationManager;
 import nl.vu.datalayer.hbase.schema.HBHexastoreSchema;
 import nl.vu.datalayer.hbase.schema.HBPrefixMatchSchema;
 import nl.vu.datalayer.hbase.schema.HBasePredicateCFSchema;
@@ -23,7 +23,7 @@ public class HBaseFactory {
 		if (schemaName.equals(HBasePredicateCFSchema.SCHEMA_NAME)){
 			HBasePredicateCFSchema schema = new HBasePredicateCFSchema(con, statements);
 			return new HBaseClientSolution(schema,
-										new HBasePredicateCFOperations(con, schema));
+										new HBasePredicateCFOperationManager(con, schema));
 		}
 		else if (schemaName.endsWith(HBPrefixMatchSchema.SCHEMA_NAME)){
 			Properties prop = new Properties();
@@ -44,12 +44,12 @@ public class HBaseFactory {
 			}
 			
 			return new HBaseClientSolution(schema,
-					new HBPrefixMatchOperations(con));
+					new HBPrefixMatchOperationManager(con));
 		}
 		else{//default hexastore"
 			HBHexastoreSchema schema = new HBHexastoreSchema(con);
 			return new HBaseClientSolution(schema,
-										new HBHexastoreOperations(con, schema));
+										new HBHexastoreOperationManager(con, schema));
 		}
 	}
 }

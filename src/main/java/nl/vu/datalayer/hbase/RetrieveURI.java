@@ -10,7 +10,7 @@ import java.util.ArrayList;
 import java.util.Iterator;
 
 import nl.vu.datalayer.hbase.connection.HBaseConnection;
-import nl.vu.datalayer.hbase.operations.HBasePredicateCFOperations;
+import nl.vu.datalayer.hbase.operations.HBasePredicateCFOperationManager;
 import nl.vu.datalayer.hbase.schema.HBasePredicateCFSchema;
 import nl.vu.datalayer.hbase.schema.IHBaseSchema;
 
@@ -21,7 +21,7 @@ public class RetrieveURI {
 		try {
 			HBaseConnection con = HBaseConnection.create(HBaseConnection.NATIVE_JAVA);
 			IHBaseSchema schema  = new HBasePredicateCFSchema(con, null);
-			HBasePredicateCFOperations util = new HBasePredicateCFOperations(con, schema);
+			HBasePredicateCFOperationManager util = new HBasePredicateCFOperationManager(con, schema);
 			
 			String []triplet = {URI, null, null};
 			ArrayList<ArrayList<String>> triples = util.getResults(triplet);
@@ -60,7 +60,7 @@ public class RetrieveURI {
 		try {
 			HBaseConnection con = HBaseConnection.create(HBaseConnection.NATIVE_JAVA);
 			IHBaseSchema schema  = new HBasePredicateCFSchema(con, null);
-			HBasePredicateCFOperations util = new HBasePredicateCFOperations(con, schema);
+			HBasePredicateCFOperationManager util = new HBasePredicateCFOperationManager(con, schema);
 			
 			String []triplet = {URI, null, null};
 			ArrayList<ArrayList<String>> triples = util.getResults(triplet);

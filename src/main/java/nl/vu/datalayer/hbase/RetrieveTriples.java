@@ -33,7 +33,7 @@ public class RetrieveTriples {
 				System.out.println("Query: " + strLine);
 				String[] triple = parseLine(strLine);
 				long start = System.currentTimeMillis();
-				ArrayList<ArrayList<String>> result = sol.util.getResults(triple);
+				ArrayList<ArrayList<String>> result = sol.opsManager.getResults(triple);
 				long end = System.currentTimeMillis();
 				System.out.println("Result retrieved in: " + (end - start) + " ms");
 				System.out.println(result.get(0).get(0));

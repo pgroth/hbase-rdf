@@ -8,7 +8,7 @@ import java.io.InputStreamReader;
 import java.util.ArrayList;
 
 import nl.vu.datalayer.hbase.connection.HBaseConnection;
-import nl.vu.datalayer.hbase.operations.IHBaseOperations;
+import nl.vu.datalayer.hbase.operations.IHBaseOperationManager;
 import nl.vu.datalayer.hbase.schema.HBPrefixMatchSchema;
 
 import org.openrdf.model.Value;
@@ -18,7 +18,7 @@ import org.openrdf.rio.ntriples.NTriplesUtil;
 
 public class RetrieveQuads {
 	
-	public static void recursiveResolveQuads(Value []valQuad, IHBaseOperations util) throws IOException{
+	public static void recursiveResolveQuads(Value []valQuad, IHBaseOperationManager util) throws IOException{
 		
 		long start = System.currentTimeMillis();
 		ArrayList<ArrayList<Value>> results = util.getResults(valQuad);
@@ -92,7 +92,7 @@ public class RetrieveQuads {
 					}
 				}
 				try{
-					recursiveResolveQuads(valQuad, sol.util);
+					recursiveResolveQuads(valQuad, sol.opsManager);
 				}
 				catch (IOException e) {
 					e.printStackTrace();

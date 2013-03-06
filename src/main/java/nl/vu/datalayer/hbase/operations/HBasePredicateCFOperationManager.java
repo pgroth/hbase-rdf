@@ -20,12 +20,12 @@ import org.openrdf.model.Resource;
 import org.openrdf.model.Statement;
 import org.openrdf.model.Value;
 
-public class HBasePredicateCFOperations implements IHBaseOperations {
+public class HBasePredicateCFOperationManager implements IHBaseOperationManager {
 
 	private HBasePredicateCFSchema schema;
 	private HBaseConnection con;
 
-	public HBasePredicateCFOperations(HBaseConnection con, IHBaseSchema schema) {
+	public HBasePredicateCFOperationManager(HBaseConnection con, IHBaseSchema schema) {
 		this.schema = (HBasePredicateCFSchema) schema;
 		this.con = con;
 	}
