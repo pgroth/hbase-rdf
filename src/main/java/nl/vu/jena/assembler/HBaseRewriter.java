@@ -2,7 +2,7 @@ package nl.vu.jena.assembler;
 
 import nl.vu.jena.sparql.engine.main.HBaseStageGenerator;
 import nl.vu.jena.sparql.engine.optimizer.HBaseOptimize;
-import nl.vu.jena.sparql.engine.optimizer.TransformFilterPlacementHBase;
+import nl.vu.jena.sparql.engine.optimizer.HBaseTransformFilterPlacement;
 
 import com.hp.hpl.jena.query.ARQ;
 import com.hp.hpl.jena.sparql.ARQConstants;
@@ -14,6 +14,6 @@ static {
 	StageBuilder.setGenerator(ARQ.getContext(), hbaseStageGenerator) ;
 	
 	ARQ.getContext().set(ARQConstants.sysOptimizerFactory, HBaseOptimize.hbaseOptimizationFactory);
-	ARQ.getContext().set(ARQ.optFilterPlacement, new TransformFilterPlacementHBase());
+	ARQ.getContext().set(ARQ.optFilterPlacement, new HBaseTransformFilterPlacement());
 }
 }

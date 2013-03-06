@@ -11,6 +11,8 @@ import org.openrdf.model.Value;
 
 public interface IHBasePrefixMatchRetrieveOpsManager extends IHBaseOperationManager {
 	
+	public void mapValuesToIds(Map<Value, Id> value2IdMap) throws IOException;
+	
 	public ArrayList<ArrayList<Value>> getMaterializedResults(HBaseTripleElement[] triple) throws IOException;
 	
 	public ArrayList<ArrayList<Value>> getMaterializedResults(HBaseTripleElement[] triple, RowLimitPair limits) throws IOException;
@@ -20,6 +22,6 @@ public interface IHBasePrefixMatchRetrieveOpsManager extends IHBaseOperationMana
 	
 	public ArrayList<ArrayList<Id>> getResults(HBaseTripleElement[] triple, RowLimitPair limits) throws IOException;
 	
-	public void materializeIds(Map<Id, Value> idMap) throws IOException;;
+	public void materializeIds(Map<Id, Value> id2ValueMap) throws IOException;;
 
 }

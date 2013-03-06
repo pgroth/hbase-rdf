@@ -26,7 +26,7 @@ import com.hp.hpl.jena.sparql.expr.ExprFunction2;
 import com.hp.hpl.jena.sparql.expr.ExprList;
 import com.hp.hpl.jena.sparql.util.VarUtils;
 
-public class TransformFilterPlacementHBase extends TransformCopy {
+public class HBaseTransformFilterPlacement extends TransformCopy {
 	static boolean doFilterPlacement = true ;
     
     public static Op transform(ExprList exprs, BasicPattern bgp)
@@ -50,7 +50,7 @@ public class TransformFilterPlacementHBase extends TransformCopy {
     }
     
 
-    public TransformFilterPlacementHBase()
+    public HBaseTransformFilterPlacement()
     { }
     
     @Override

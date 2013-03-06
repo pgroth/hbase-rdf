@@ -109,6 +109,20 @@ public class HBaseGraph extends GraphBase {
 			entry.setValue(newNode);
 		}
 	}
+	
+	public void mapMaterializedNodesToNodeIds(Map<Node, NodeId> node2nodeIdMap) throws IOException{
+		Map<Value, Id> toResolve = new HashMap<Value, Id>(node2nodeIdMap.size());
+		for (Map.Entry<Node, NodeId> mapEntry : node2nodeIdMap.entrySet()) {
+			toResolve.put(Convert.nodeToValue(valFactory, mapEntry.getKey()), null);
+		}
+		
+		((IHBasePrefixMatchRetrieveOpsManager)hbase.opsManager).mapValuesToIds(toResolve);
+		
+		for (Map.Entry<Node, NodeId> mapEntry : node2nodeIdMap.entrySet()) {
+			Id id = toResolve.get(mapEntry.getKey());
+			mapEntry.setValue((NodeId)Node.createId(id));
+		}
+	}
 
 	private ArrayList<ArrayList<Value>> getFilteredResults(Value[] quad, ExprFunction2 simpleFilter)
 			throws Exception, IOException {

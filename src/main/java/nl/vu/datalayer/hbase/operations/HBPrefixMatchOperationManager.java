@@ -449,15 +449,10 @@ public class HBPrefixMatchOperationManager implements IHBasePrefixMatchRetrieveO
 		byte []key = new byte[keySize];
 		
 		ArrayList<Get> string2IdGets = buildString2IdGets(quad, key);	
-		
-		//Query the String2Id table
-		
-		//if (numericalElement != null && keySize==TypedId.SIZE){//we have only a numerical in our key
-			//Bytes.putBytes(key, HBPrefixMatchSchema.OFFSETS[currentTableIndex][2], numericalElement, 0, numericalElement.length);
-		//}
-		//else{
-			key = buildRangeScanKeyFromMappedIds(string2IdGets, key);
-		//}
+		//long start = System.currentTimeMillis();
+		Result[] results = doValue2IdMapping(string2IdGets);
+		//string2IdOverhead += System.currentTimeMillis()-start;
+		key = buildRangeScanKeyFromMappedIds(results, key);
 		
 		return key;
 	}
@@ -474,13 +469,7 @@ public class HBPrefixMatchOperationManager implements IHBasePrefixMatchRetrieveO
 		}
 	}
 
-	final private byte[] buildRangeScanKeyFromMappedIds(ArrayList<Get> string2IdGets, byte []key) throws ElementNotFoundException, IOException {
-		//long start = System.currentTimeMillis();
-		HTableInterface table = con.getTable(HBPrefixMatchSchema.STRING2ID+schemaSuffix);
-		Result []results = table.get(string2IdGets);
-		table.close();
-		//string2IdOverhead += System.currentTimeMillis()-start;
-		
+	final private byte[] buildRangeScanKeyFromMappedIds(Result []results, byte []key) throws ElementNotFoundException, IOException {
 		for (Result result : results) {
 			byte[] value = result.getValue(HBPrefixMatchSchema.COLUMN_FAMILY, HBPrefixMatchSchema.COLUMN_NAME);
 			if (value == null) {
@@ -497,10 +486,15 @@ public class HBPrefixMatchOperationManager implements IHBasePrefixMatchRetrieveO
 				Bytes.putBytes(key, offset, value, 0, value.length);
 		}	
 		
-		/*if (numericalElement != null){
-			Bytes.putBytes(key, HBPrefixMatchSchema.OFFSETS[currentTableIndex][OBJECT_POSITION], numericalElement, 0, numericalElement.length);
-		}*/
 		return key;
+	}
+
+	private Result[] doValue2IdMapping(ArrayList<Get> string2IdGets)
+			throws IOException {
+		HTableInterface table = con.getTable(HBPrefixMatchSchema.STRING2ID+schemaSuffix);
+		Result []results = table.get(string2IdGets);
+		table.close();
+		return results;
 	}
 
 	private ArrayList<Get> buildString2IdGets(HBaseTripleElement[] quad, byte []key) throws UnsupportedEncodingException, NumericalRangeException {
@@ -523,7 +517,7 @@ public class HBPrefixMatchOperationManager implements IHBasePrefixMatchRetrieveO
 							if (l.getDatatype() != null) {
 								try {
 									TypedId id = TypedId.createNumerical(l);
-									Bytes.putBytes(key, offset, id.getBytes(), 0, TypedId.SIZE);
+									Bytes.putBytes(key, offset, id.getBytes(), 0, TypedId.SIZE);//TODO move this to buildRangeScanKeyFromMappedIds
 									continue;
 								} catch (NonNumericalException e) {
 									//TODO ??
@@ -542,7 +536,7 @@ public class HBPrefixMatchOperationManager implements IHBasePrefixMatchRetrieveO
 					string2IdGets.add(g);
 					spocOffsetMap.put(new ByteArray(md5Hash), i);
 				}
-				else if (quad[i] instanceof Id) {
+				else if (quad[i] instanceof Id) { //TODO move this to buildRangeScanKeyFromMappedIds
 					Id id = ((Id) quad[i]);
 
 					if (i != OBJECT_POSITION) {
@@ -702,6 +696,12 @@ public class HBPrefixMatchOperationManager implements IHBasePrefixMatchRetrieveO
 		catch (ElementNotFoundException e) {
 			throw new IOException(e.getMessage());
 		} 
+		
+	}
+
+	@Override
+	public void mapValuesToIds(Map<Value, Id> value2IdMap) throws IOException {
+		
 		
 	}
 	

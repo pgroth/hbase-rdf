@@ -7,6 +7,8 @@ import java.util.Map;
 
 import nl.vu.jena.graph.HBaseGraph;
 
+import org.openjena.atlas.lib.Closeable;
+
 import com.hp.hpl.jena.graph.Graph;
 import com.hp.hpl.jena.graph.Node;
 import com.hp.hpl.jena.graph.NodeId;
@@ -14,7 +16,7 @@ import com.hp.hpl.jena.sparql.core.Var;
 import com.hp.hpl.jena.sparql.engine.binding.Binding;
 import com.hp.hpl.jena.sparql.engine.binding.BindingMap;
 
-public class BindingMaterializer {
+public class BindingMaterializer implements Closeable {
 
 	private Map<NodeId, Node> idToMaterializedNodesCache = new HashMap<NodeId, Node>();
 	private Map<NodeId, Node> tempIdMap = new HashMap<NodeId, Node>();
@@ -47,13 +49,14 @@ public class BindingMaterializer {
 		while (it.hasNext()){
 			Var var = it.next();
 			NodeId nodeId = (NodeId) bindingMap.get(var);
-			Node concreteNode;
+			Node materializedNode;
 			
-			if ((concreteNode=idToMaterializedNodesCache.get(nodeId))!=null){
-				bindingMap.add(var, concreteNode);
+			if ((materializedNode=idToMaterializedNodesCache.get(nodeId))!=null){
+				bindingMap.add(var, materializedNode);
 			}
 			else{
 				bindingMap.add(var, tempIdMap.get(nodeId));
+				idToMaterializedNodesCache.put(nodeId, materializedNode);
 			}
 		}
 	}
@@ -69,6 +72,11 @@ public class BindingMaterializer {
 		}
 		
 		return tempIdMap;
+	}
+
+	@Override
+	public void close() {
+		idToMaterializedNodesCache.clear();
 	}
 
 }
