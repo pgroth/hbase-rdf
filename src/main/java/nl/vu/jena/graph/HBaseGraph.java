@@ -49,6 +49,7 @@ public class HBaseGraph extends GraphBase {
 
 	@Override
 	protected ExtendedIterator<Triple> graphBaseFind(TripleMatch m) {
+		//ASSUMPTION: only NodeIds are received in this function
 		
 		ExtendedIterator<Triple> ret;
 		if ((ret=cache.get(m))!=null){
@@ -60,20 +61,20 @@ public class HBaseGraph extends GraphBase {
 		Node predicate = m.getMatchPredicate();
 		Node object =  m.getMatchObject();
 	
-		Value []quad = {(subject!=null && subject.isConcrete()) ? Convert.nodeToValue(valFactory, subject):null, 
-				(predicate!=null &&predicate.isConcrete()) ? Convert.nodeToValue(valFactory, predicate):null, 
-				(object!=null && object.isConcrete()) ? Convert.nodeToValue(valFactory, object):null, 
+		Id []quad = {(subject!=null && subject.isConcrete()) ? subject.getId():null, 
+				(predicate!=null &&predicate.isConcrete()) ? predicate.getId():null, 
+				(object!=null && object.isConcrete()) ? object.getId():null, 
 				null};
 		
 		//retrieve results from HBase
-		ArrayList<ArrayList<Value>> results;
+		ArrayList<ArrayList<Id>> results;
 		try {
 			if (m instanceof FilteredTriple){
 				ExprFunction2 simpleFilter = (ExprFunction2)(((FilteredTriple)m).getSimpleFilter());
 				results = getFilteredResults(quad, simpleFilter);
 			}
 			else{
-				results = hbase.opsManager.getResults(quad);
+				results = ((IHBasePrefixMatchRetrieveOpsManager)hbase.opsManager).getResults(quad);
 			}
 		} catch (Exception e) {
 			return NullIterator.instance();
@@ -81,10 +82,10 @@ public class HBaseGraph extends GraphBase {
 		
 		//convert ArrayList<ArrayList<Value>> to ArrayList<Triple>
 		ArrayList<Triple> convertedTriples = new ArrayList<Triple>(results.size());
-		for (ArrayList<Value> arrayList : results) {
-			Triple newTriple = new Triple(Convert.valueToNode(arrayList.get(0)),
-									Convert.valueToNode(arrayList.get(1)),
-									Convert.valueToNode(arrayList.get(2)));
+		for (ArrayList<Id> arrayList : results) {
+			Triple newTriple = new Triple(Node.createId(arrayList.get(0)),
+									Node.createId(arrayList.get(1)),
+									Node.createId(arrayList.get(2)));
 			
 			convertedTriples.add(newTriple);
 		}	
@@ -112,21 +113,25 @@ public class HBaseGraph extends GraphBase {
 	
 	public void mapMaterializedNodesToNodeIds(Map<Node, NodeId> node2nodeIdMap) throws IOException{
 		Map<Value, Id> toResolve = new HashMap<Value, Id>(node2nodeIdMap.size());
+		Map<Node, Value> tempMapping = new HashMap<Node, Value>(node2nodeIdMap.size());
 		for (Map.Entry<Node, NodeId> mapEntry : node2nodeIdMap.entrySet()) {
-			toResolve.put(Convert.nodeToValue(valFactory, mapEntry.getKey()), null);
+			Value value = Convert.nodeToValue(valFactory, mapEntry.getKey());
+			tempMapping.put(mapEntry.getKey(), value);
+			toResolve.put(value, null);
 		}
 		
 		((IHBasePrefixMatchRetrieveOpsManager)hbase.opsManager).mapValuesToIds(toResolve);
 		
 		for (Map.Entry<Node, NodeId> mapEntry : node2nodeIdMap.entrySet()) {
-			Id id = toResolve.get(mapEntry.getKey());
+			Value toUpdate = tempMapping.get(mapEntry.getKey());
+			Id id = toResolve.get(toUpdate);
 			mapEntry.setValue((NodeId)Node.createId(id));
 		}
 	}
 
-	private ArrayList<ArrayList<Value>> getFilteredResults(Value[] quad, ExprFunction2 simpleFilter)
+	private ArrayList<ArrayList<Id>> getFilteredResults(Id[] quad, ExprFunction2 simpleFilter)
 			throws Exception, IOException {
-		ArrayList<ArrayList<Value>> results;
+		ArrayList<ArrayList<Id>> results;
 		
 		Expr arg1 = simpleFilter.getArg1();
 		Expr arg2 = simpleFilter.getArg2();
@@ -134,10 +139,9 @@ public class HBaseGraph extends GraphBase {
 		if (arg1.isConstant() && arg1.getConstant().isNumber() ||
 				arg2.isConstant() && arg2.getConstant().isNumber()){
 			RowLimitPair limitPair = ExprToHBaseLimitsConverter.getRowLimitPair(simpleFilter);
-			HBaseTripleElement []genericPattern = ((HBPrefixMatchOperationManager)hbase.opsManager).convertQuadToGenericPattern(quad);
-			results = ((IHBasePrefixMatchRetrieveOpsManager)hbase.opsManager).getMaterializedResults(genericPattern, limitPair);
+			results = ((IHBasePrefixMatchRetrieveOpsManager)hbase.opsManager).getResults(quad, limitPair);
 		}
-		else if (simpleFilter instanceof E_Equals && 
+		/*TODO else if (simpleFilter instanceof E_Equals && 
 				((arg1.isConstant()&&arg1.getConstant().isIRI()) 
 				|| (arg2.isConstant()&&arg2.getConstant().isIRI()))){
 			E_Equals eq = (E_Equals) simpleFilter;
@@ -148,9 +152,11 @@ public class HBaseGraph extends GraphBase {
 				constantNode = eq.getArg2().getConstant();
 			}
 			
-			quad[2] = Convert.nodeToValue(valFactory, constantNode.asNode());
+			Value constValue = Convert.nodeToValue(valFactory, constantNode.asNode());
+			TODO have to convert equality Filters to Ids before getting here
+			quad[2] = 
 			results = hbase.opsManager.getResults(quad);
-		}
+		}*/
 		else 
 			throw new RuntimeException("Unsupported simple filter: "+simpleFilter.getOpName());//TODO
 		return results;

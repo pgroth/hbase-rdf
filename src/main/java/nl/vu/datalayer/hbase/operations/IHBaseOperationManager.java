@@ -8,7 +8,7 @@ import nl.vu.datalayer.hbase.retrieve.RowLimitPair;
 import org.openrdf.model.Statement;
 import org.openrdf.model.Value;
 
-public interface IHBaseOperationManager {//TODO Look into using templates
+public interface IHBaseOperationManager {
 	/**
 	 * Retrieve parsed triple/quad
 	 * 

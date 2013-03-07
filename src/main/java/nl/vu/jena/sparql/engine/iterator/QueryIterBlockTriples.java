@@ -2,9 +2,9 @@ package nl.vu.jena.sparql.engine.iterator;
 
 import java.io.IOException;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.Map;
 
+import nl.vu.jena.graph.FilteredTriple;
 import nl.vu.jena.graph.HBaseGraph;
 import nl.vu.jena.sparql.engine.binding.BindingMaterializer;
 
@@ -15,14 +15,12 @@ import com.hp.hpl.jena.graph.Node;
 import com.hp.hpl.jena.graph.NodeId;
 import com.hp.hpl.jena.graph.Triple;
 import com.hp.hpl.jena.sparql.core.BasicPattern;
-import com.hp.hpl.jena.sparql.core.Var;
 import com.hp.hpl.jena.sparql.engine.ExecutionContext;
 import com.hp.hpl.jena.sparql.engine.QueryIterator;
 import com.hp.hpl.jena.sparql.engine.binding.Binding;
-import com.hp.hpl.jena.sparql.engine.binding.BindingMap;
+import com.hp.hpl.jena.sparql.engine.binding.BindingBase;
 import com.hp.hpl.jena.sparql.engine.iterator.QueryIter1;
 import com.hp.hpl.jena.sparql.serializer.SerializationContext;
-import com.hp.hpl.jena.sparql.util.FmtUtils;
 import com.hp.hpl.jena.sparql.util.Utils;
 
 public class QueryIterBlockTriples extends QueryIter1
@@ -82,7 +80,13 @@ public class QueryIterBlockTriples extends QueryIter1
 			Node newSubject = mapNode(node2NodeIdMap, triple.getSubject());
 			Node newPredicate = mapNode(node2NodeIdMap, triple.getPredicate());
 			Node newObject = mapNode(node2NodeIdMap, triple.getObject());
-			Triple idBasedTriple = new Triple(newSubject, newPredicate, newObject);
+			Triple idBasedTriple;
+			if (triple instanceof FilteredTriple){
+				idBasedTriple = new FilteredTriple(newSubject, newPredicate, newObject, ((FilteredTriple)triple).getSimpleFilter());
+			}
+			else{
+				idBasedTriple = new Triple(newSubject, newPredicate, newObject);
+			}
 			
 		    chain = new QueryIterTriplePattern(chain, idBasedTriple, execContext) ;
 		}
@@ -109,8 +113,12 @@ public class QueryIterBlockTriples extends QueryIter1
     protected Binding moveToNextBinding()
     {
         Binding binding = output.nextBinding() ;
-        if (binding instanceof BindingMap && graph instanceof HBaseGraph){
-        	bindingMaterializer.materialize((BindingMap)binding);
+        if (binding instanceof BindingBase && graph instanceof HBaseGraph){
+        	try {
+				binding = bindingMaterializer.materialize((BindingBase)binding);
+			} catch (IOException e) {
+				return null;
+			}
         }
         
         return binding;

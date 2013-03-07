@@ -81,14 +81,9 @@ public class HBPrefixMatchOperationManager implements IHBasePrefixMatchRetrieveO
 	 */
 	private long string2IdOverhead = 0;
 	
-	/**
-	 * Internal map that stores associations between Ids in the results and the corresponding Value objects
-	 */
-	private HashMap<Id, Value> id2ValueMap;
-	
 	private ArrayList<ArrayList<Id>> quadResults;
 	
-	private ArrayList<HBaseTripleElement> boundElements;
+	private ArrayList<Id> boundElements;
 	
 	private ValueFactory valueFactory;
 	
@@ -96,31 +91,21 @@ public class HBPrefixMatchOperationManager implements IHBasePrefixMatchRetrieveO
 	
 	private MessageDigest mDigest;
 
-	//private byte [] numericalElement;
-
 	private String currentPattern;
 
-	private HashMap<ByteArray, Integer> spocOffsetMap = new HashMap<ByteArray, Integer>();
+	private HashMap<ByteArray, Value> hash2ValueMap = new HashMap<ByteArray, Value>();
 
 	private ArrayList<Get> batchGets;
-	
-	private HBaseTripleElement []genericPattern = {null, null, null, null};
-	private ValueWrapper []valuePattern;
 
 	public HBPrefixMatchOperationManager(HBaseConnection con) {
 		super();
 		this.con = con;
 		patternInfo = new HashMap<String, PatternInfo>(16);
 		buildPattern2TableHashMap();
-		id2ValueMap = new HashMap<Id, Value>();
 		quadResults = new ArrayList<ArrayList<Id>>();
-		boundElements = new ArrayList<HBaseTripleElement>();
+		boundElements = new ArrayList<Id>();
 		batchGets = new ArrayList<Get>();
 		valueFactory = new ValueFactoryImpl();
-		valuePattern = new ValueWrapper[4];
-		for (int i = 0; i < valuePattern.length; i++) {
-			valuePattern[i] = new ValueWrapper(null);
-		}
 		
 		Properties prop = new Properties();
 		try{
@@ -180,56 +165,8 @@ public class HBPrefixMatchOperationManager implements IHBasePrefixMatchRetrieveO
 	public ArrayList<ArrayList<String>> getResults(String[] quad){
 		return null;
 	}
-	
-	
-	@Override
-	public ArrayList<ArrayList<Value>> getMaterializedResults(HBaseTripleElement[] quad)
-			throws IOException {//we expect the pattern in the order SPOC	
-		return getMaterializedResults(quad, null);
-	}
-	
-	@Override
-	public ArrayList<ArrayList<Value>> getMaterializedResults(HBaseTripleElement[] quad, RowLimitPair limits) throws IOException {
-		try {
-			retrievalInit();
-			
-			//long start = System.currentTimeMillis();
-			//convertQuadToGenericPattern(quad);
-			byte[] keyPrefix = buildRangeScanKeyFromQuad(quad, limits);
-			//long keyBuildOverhead = System.currentTimeMillis()-start;
 
-			//long startSearch = System.currentTimeMillis();
-			if (limits!=null){
-				doRangeScan(keyPrefix, limits, MAP_IDS_ON);
-			}
-			else{
-				doRangeScan(keyPrefix, MAP_IDS_ON);
-			}
-			//long searchTime = System.currentTimeMillis() - startSearch;
-
-			//long startId2String = System.currentTimeMillis();
-			Result[] id2ValueResults = doBatchId2Value();
-			//id2StringOverhead = System.currentTimeMillis()-startId2String;
-			
-			updateId2ValueMap(id2ValueResults, id2ValueMap);			
-			
-			ArrayList<ArrayList<Value>> ret = buildSPOCOrderValueResults();
-			
-			/*long totalTime = System.currentTimeMillis() - start;
-			System.out.println("Id2String number of results: "+id2StringResults.length);
-			System.out.println("TotalTime: "+totalTime+"; RangeScanOverhead: "+searchTime+"; Id2StringOverhead: "+id2StringOverhead+"; String2IdOverhead: "
-									+string2IdOverhead+"; KeyBuildOverhead: "+keyBuildOverhead);
-			*/
-			return ret;
-		
-		} catch (NumericalRangeException e) {
-			throw new IOException("Bound numerical variable not in expected range: "+e.getMessage());
-		} catch (ElementNotFoundException e) {
-			throw new IOException(e.getMessage());
-		} 
-	}
-
-	final private ArrayList<ArrayList<Value>> buildSPOCOrderValueResults() {
+	/*final private ArrayList<ArrayList<Value>> buildSPOCOrderValueResults() {
 		int numberOfBoundElements = boundElements.size();
 		ArrayList<ArrayList<Value>> ret = new ArrayList<ArrayList<Value>>(quadResults.size());
 		Value[] initValue = new Value[]{null, null, null, null};
@@ -276,7 +213,7 @@ public class HBPrefixMatchOperationManager implements IHBasePrefixMatchRetrieveO
 						id2ValueMap.get(currentElem));
 			}
 		}
-	}
+	}*/
 
 	final private void updateId2ValueMap(Result[] id2StringResults, Map<Id, Value> id2ValueMap) throws IOException, ElementNotFoundException {
 		HBaseValue hbaseValue = new HBaseValue();
@@ -307,7 +244,7 @@ public class HBPrefixMatchOperationManager implements IHBasePrefixMatchRetrieveO
 		return id2StringResults;
 	}
 
-	final private void doRangeScan(byte[] startKey, byte mapIdsSwitch) throws IOException {
+	final private void doRangeScan(byte[] startKey) throws IOException {
 		Filter prefixFilter = new PrefixFilter(startKey);
 		Filter keyOnlyFilter = new FirstKeyOnlyFilter();
 		Filter filterList = new FilterList(FilterList.Operator.MUST_PASS_ALL, prefixFilter, keyOnlyFilter);
@@ -323,11 +260,11 @@ public class HBPrefixMatchOperationManager implements IHBasePrefixMatchRetrieveO
 		HTableInterface table = con.getTable(tableName);
 		ResultScanner results = table.getScanner(scan);
 
-		parseRangeScanResults(startKey.length, results, mapIdsSwitch);
+		parseRangeScanResults(startKey.length, results);
 		table.close();
 	}
 
-	final private ArrayList<ArrayList<Id>> parseRangeScanResults(int startKeyLength, ResultScanner results, byte mapIdsSwitch) throws IOException {
+	final private ArrayList<ArrayList<Id>> parseRangeScanResults(int startKeyLength, ResultScanner results) throws IOException {
 		Result r = null;
 		int sizeOfInterest = HBPrefixMatchSchema.KEY_LENGTH - startKeyLength;
  
@@ -336,10 +273,6 @@ public class HBPrefixMatchOperationManager implements IHBasePrefixMatchRetrieveO
 			while ((r = results.next()) != null && i<MAX_RESULTS) {
 				ArrayList<Id> currentQuad = parseKey(r.getRow(), startKeyLength, sizeOfInterest);
 				quadResults.add(currentQuad);
-				
-				if (mapIdsSwitch == MAP_IDS_ON){
-					buildId2ValueInfo(currentQuad);
-				}
 				i++;
 			}
 		}
@@ -350,7 +283,7 @@ public class HBPrefixMatchOperationManager implements IHBasePrefixMatchRetrieveO
 		return quadResults;
 	}
 
-	private void buildId2ValueInfo(ArrayList<Id> currentQuad) {
+	/*private void buildId2ValueInfo(ArrayList<Id> currentQuad) {
 		for (Id id : currentQuad) {
 			if (id instanceof BaseId && id2ValueMap.get(id) == null){
 				id2ValueMap.put(id, null);
@@ -359,16 +292,16 @@ public class HBPrefixMatchOperationManager implements IHBasePrefixMatchRetrieveO
 				batchGets.add(g);
 			}
 		}
-	}
+	}*/
 
-	final private void retrievalInit() {
+	/*final private void retrievalInit() {
 		id2ValueMap.clear();
 		quadResults.clear();
 		batchGets.clear();
 		boundElements.clear();
 		id2StringOverhead = 0;
 		string2IdOverhead = 0;
-	}
+	}*/
 	
 	public static String hexaString(byte []b){
 		String ret = "";
@@ -434,10 +367,9 @@ public class HBPrefixMatchOperationManager implements IHBasePrefixMatchRetrieveO
 		return currentQuad;
 	}
 	
-	final private byte []buildRangeScanKeyFromQuad(HBaseTripleElement []quad, RowLimitPair limitPair) throws IOException, NumericalRangeException, ElementNotFoundException
+	final private byte []buildRangeScanKeyFromQuad(Id []quad, RowLimitPair limitPair) throws IOException, NumericalRangeException, ElementNotFoundException
 	{
 		currentPattern = "";
-		spocOffsetMap.clear();
 		
 		buildTriplePattern(quad, limitPair);
 		currentTableIndex = patternInfo.get(currentPattern).tableIndex;
@@ -447,12 +379,8 @@ public class HBPrefixMatchOperationManager implements IHBasePrefixMatchRetrieveO
 		}
 		
 		byte []key = new byte[keySize];
-		
-		ArrayList<Get> string2IdGets = buildString2IdGets(quad, key);	
-		//long start = System.currentTimeMillis();
-		Result[] results = doValue2IdMapping(string2IdGets);
 		//string2IdOverhead += System.currentTimeMillis()-start;
-		key = buildRangeScanKeyFromMappedIds(results, key);
+		key = buildRangeScanKeyFromMappedIds(quad, key);
 		
 		return key;
 	}
@@ -469,22 +397,39 @@ public class HBPrefixMatchOperationManager implements IHBasePrefixMatchRetrieveO
 		}
 	}
 
-	final private byte[] buildRangeScanKeyFromMappedIds(Result []results, byte []key) throws ElementNotFoundException, IOException {
-		for (Result result : results) {
+	final private byte[] buildRangeScanKeyFromMappedIds(Id[] quad, byte []key) throws NumericalRangeException, ElementNotFoundException, IOException {
+		for (int i = 0; i < quad.length; i++) {
+			if (quad[i] != null) {
+				boundElements.add(quad[i]);
+				int offset = HBPrefixMatchSchema.OFFSETS[currentTableIndex][i];
+				
+				if (i != OBJECT_POSITION) {
+					Bytes.putBytes(key, offset, quad[i].getBytes(), 0, BaseId.SIZE);
+				} else {// OBJECT position
+					if (quad[i] instanceof TypedId && ((TypedId) quad[i]).getType() == TypedId.NUMERICAL) {
+						Bytes.putBytes(key, offset, quad[i].getBytes(), 0, TypedId.SIZE);
+					} else {
+						Bytes.putBytes(key, offset + 1, quad[i].getBytes(), 0, BaseId.SIZE);
+					}
+				}
+			}
+		}
+		
+		/*for (Result result : results) {
 			byte[] value = result.getValue(HBPrefixMatchSchema.COLUMN_FAMILY, HBPrefixMatchSchema.COLUMN_NAME);
 			if (value == null) {
 				throw new ElementNotFoundException("Quad element not found: " + new String(result.toString()) + "\n" 
 												+ (result.getRow() == null ? null : hexaString(result.getRow())));
 			}
 
-			int spocIndex = spocOffsetMap.get(new ByteArray(result.getRow()));
+			int spocIndex = hash2ValueMap.get(new ByteArray(result.getRow()));
 			int offset = HBPrefixMatchSchema.OFFSETS[currentTableIndex][spocIndex];
 
 			if (spocIndex == OBJECT_POSITION)
 				Bytes.putBytes(key, offset + 1, value, 0, value.length);
 			else
 				Bytes.putBytes(key, offset, value, 0, value.length);
-		}	
+		}	*/
 		
 		return key;
 	}
@@ -497,67 +442,40 @@ public class HBPrefixMatchOperationManager implements IHBasePrefixMatchRetrieveO
 		return results;
 	}
 
-	private ArrayList<Get> buildString2IdGets(HBaseTripleElement[] quad, byte []key) throws UnsupportedEncodingException, NumericalRangeException {
+	private ArrayList<Get> buildValue2IdGetsAndMapNumericals(Map<Value, Id> value2IdMap) throws UnsupportedEncodingException, NumericalRangeException {
 		ArrayList<Get> string2IdGets = new ArrayList<Get>();
 		
-		for (int i = 0; i < quad.length; i++) {
-			if (quad[i] != null) {
-				boundElements.add(quad[i]);
-				int offset = HBPrefixMatchSchema.OFFSETS[currentTableIndex][i];
-				
-				if (quad[i] instanceof ValueWrapper) {
-					Value val = ((ValueWrapper) quad[i]).getValue();
+		for (Map.Entry<Value, Id> mapEntry : value2IdMap.entrySet()) {
+			Value val = mapEntry.getKey();
 
-					byte[] sBytes;
-					if (i != OBJECT_POSITION) {// not Object
-						sBytes = val.toString().getBytes("UTF-8");
-					} else {// Object
-						if (val instanceof Literal) {// literal
-							Literal l = (Literal) val;
-							if (l.getDatatype() != null) {
-								try {
-									TypedId id = TypedId.createNumerical(l);
-									Bytes.putBytes(key, offset, id.getBytes(), 0, TypedId.SIZE);//TODO move this to buildRangeScanKeyFromMappedIds
-									continue;
-								} catch (NonNumericalException e) {
-									//TODO ??
-								}
-							}
-							String lString = l.toString();
-							sBytes = lString.getBytes("UTF-8");
-						} else {// bNode or URI
-							sBytes = val.toString().getBytes("UTF-8");
-						}
-					}
-
-					byte[] md5Hash = mDigest.digest(sBytes);
-					Get g = new Get(md5Hash);
-					g.addColumn(HBPrefixMatchSchema.COLUMN_FAMILY, HBPrefixMatchSchema.COLUMN_NAME);
-					string2IdGets.add(g);
-					spocOffsetMap.put(new ByteArray(md5Hash), i);
-				}
-				else if (quad[i] instanceof Id) { //TODO move this to buildRangeScanKeyFromMappedIds
-					Id id = ((Id) quad[i]);
-
-					if (i != OBJECT_POSITION) {
-						Bytes.putBytes(key, offset, id.getBytes(), 0,
-								BaseId.SIZE);
-					} else {// OBJECT position
-						if (id instanceof TypedId
-								&& ((TypedId) id).getType() == TypedId.NUMERICAL) {
-							Bytes.putBytes(key, offset, id.getBytes(), 0, TypedId.SIZE);
-						} else {
-							Bytes.putBytes(key, offset + 1, id.getBytes(), 0, BaseId.SIZE);
-						}
+			byte[] sBytes;
+			if (val instanceof Literal) {// literal
+				Literal l = (Literal) val;
+				if (l.getDatatype() != null) {
+					try {
+						TypedId id = TypedId.createNumerical(l);
+						mapEntry.setValue(id);
+						continue;
+					} catch (NonNumericalException e) {
 					}
 				}
+				String lString = l.toString();
+				sBytes = lString.getBytes("UTF-8");
+			} else {// bNode or URI
+				sBytes = val.toString().getBytes("UTF-8");
 			}
+
+			byte[] md5Hash = mDigest.digest(sBytes);
+			Get g = new Get(md5Hash);
+			g.addColumn(HBPrefixMatchSchema.COLUMN_FAMILY, HBPrefixMatchSchema.COLUMN_NAME);
+			string2IdGets.add(g);
+			hash2ValueMap.put(new ByteArray(md5Hash), val);
 		}
 		
 		return string2IdGets;
 	}
 	
-	final private void doRangeScan(byte[] prefix, RowLimitPair limits, byte mapIdSwitch) throws IOException {
+	final private void doRangeScan(byte[] prefix, RowLimitPair limits) throws IOException {
 		byte []startKey = Bytes.add(prefix, limits.getStartLimit().getBytes());
 		byte []endKey = getAdjustedEndKey(Bytes.add(prefix, limits.getEndLimit().getBytes()), startKey);
 		
@@ -576,7 +494,7 @@ public class HBPrefixMatchOperationManager implements IHBasePrefixMatchRetrieveO
 		HTableInterface table = con.getTable(tableName);
 		ResultScanner results = table.getScanner(scan);
 
-		parseRangeScanResults(prefix.length, results, mapIdSwitch);
+		parseRangeScanResults(prefix.length, results);
 		table.close();
 	}
 
@@ -621,26 +539,27 @@ public class HBPrefixMatchOperationManager implements IHBasePrefixMatchRetrieveO
 	}
 
 	@Override
-	public ArrayList<ArrayList<Id>> getResults(HBaseTripleElement[] quad)
+	public ArrayList<ArrayList<Id>> getResults(Id[] quad)
 			throws IOException {		
 		return getResults(quad, null);
 	}
 
 	@Override
-	public ArrayList<ArrayList<Id>> getResults(HBaseTripleElement[] quad, RowLimitPair limits) throws IOException {
+	public ArrayList<ArrayList<Id>> getResults(Id[] quad, RowLimitPair limits) throws IOException {
 		try {
+			quadResults.clear();
+			boundElements.clear();
 			byte[] keyPrefix = buildRangeScanKeyFromQuad(quad, limits);
 			
 			//do the range scan
 			if (limits!=null){
-				doRangeScan(keyPrefix, limits, MAP_IDS_OFF);
+				doRangeScan(keyPrefix, limits);
 			}
 			else{
-				doRangeScan(keyPrefix, MAP_IDS_OFF);
+				doRangeScan(keyPrefix);
 			}
 			
-			//TODO build the results in SPOC order using only Id elements
-			return null;
+			return buildSPOCOrderIdQuads();
 		} catch (NumericalRangeException e) {
 			throw new IOException( "Bound numerical variable not in expected range: " + e.getMessage());
 		} catch (ElementNotFoundException e) {
@@ -648,14 +567,87 @@ public class HBPrefixMatchOperationManager implements IHBasePrefixMatchRetrieveO
 		}
 	}
 
+	public ArrayList<ArrayList<Id>> buildSPOCOrderIdQuads() {
+		int numberOfBoundElements = boundElements.size();
+		ArrayList<ArrayList<Id>> ret = new ArrayList<ArrayList<Id>>(quadResults.size());
+		Id[] initValue = new Id[]{null, null, null, null};
+		ArrayList<Id> initList = new ArrayList<Id>();//using an ArrayList will prevent an extra copy
+														//when creating newQuadResult during the loop
+														//-> see constructor ArrayList(Collection<? extends E> c)
+		initList.addAll(Arrays.asList(initValue));
+		
+		for (ArrayList<Id> quadList : quadResults) {
+			ArrayList<Id> newQuadResult = new ArrayList<Id>(initList);			
+			
+			fillInUnboundPositionsWithIds(numberOfBoundElements, quadList, newQuadResult);		
+			fillInBoundPositionsWithIds(newQuadResult);
+			
+			ret.add(newQuadResult);
+		}
+		
+		return ret;
+	}
+
+	private void fillInBoundPositionsWithIds(ArrayList<Id> newQuadResult) {
+		for (int i = 0, j = 0; i<newQuadResult.size() && j<boundElements.size(); i++) {
+			if (newQuadResult.get(i) == null){
+				Id boundElement = boundElements.get(j++);
+				newQuadResult.set(i, boundElement);
+			}
+		}
+	}
+
+	private void fillInUnboundPositionsWithIds(int numberOfBoundElements, ArrayList<Id> quadList, ArrayList<Id> newQuadResult) {
+		int offset = numberOfBoundElements;
+		for (int i = 0; i < quadList.size(); i++) {
+			Id currentElem = quadList.get(i);
+			
+			newQuadResult.set(HBPrefixMatchSchema.TO_SPOC_ORDER[currentTableIndex][offset], currentElem);
+			offset++;
+		}
+	}
+
 	@Override
 	public ArrayList<ArrayList<Value>> getResults(Value[] quad)
 			throws IOException {
-		convertQuadToGenericPattern(quad);
-		return getMaterializedResults(genericPattern);
+		
+		Map<Value, Id> value2IdMap = new HashMap<Value, Id>();
+		for (Value value : quad) {
+			value2IdMap.put(value, null);
+		}
+		
+		mapValuesToIds(value2IdMap);
+		
+		Id []idBasedQuad = new Id[quad.length];
+		for (int i = 0; i < idBasedQuad.length; i++) {
+			idBasedQuad[i] = value2IdMap.get(quad[i]);
+		}
+		
+		ArrayList<ArrayList<Id>> idResults = getResults(idBasedQuad);
+		
+		Map<Id, Value> id2ValueMap = new HashMap<Id, Value>();
+		for (ArrayList<Id> arrayList : idResults) {
+			for (Id id : arrayList) {
+				if (!id2ValueMap.containsKey(id)){
+					id2ValueMap.put(id, null);
+				}
+			}
+		}
+		
+		materializeIds(id2ValueMap);
+		
+		ArrayList<ArrayList<Value>> results = new ArrayList<ArrayList<Value>>(idResults.size());
+		for (ArrayList<Id> idQuad : idResults) {
+			ArrayList<Value> newQuad =  new ArrayList<Value>(4);
+			for (Id id : idQuad) {
+				newQuad.add(id2ValueMap.get(id));
+			}
+			results.add(newQuad);
+		}
+		return results;
 	}
 	
-	public HBaseTripleElement[] convertQuadToGenericPattern(Value[] quad) {
+	/*public HBaseTripleElement[] convertQuadToGenericPattern(Value[] quad) {
 		for (int i = 0; i < quad.length; i++) {
 			if (quad[i] != null){
 				valuePattern[i].setValue(quad[i]);
@@ -666,7 +658,7 @@ public class HBPrefixMatchOperationManager implements IHBasePrefixMatchRetrieveO
 			}
 		}
 		return genericPattern;
-	}
+	}*/
 
 	@Override
 	public void materializeIds(Map<Id, Value> id2ValueMap) throws IOException {
@@ -701,7 +693,27 @@ public class HBPrefixMatchOperationManager implements IHBasePrefixMatchRetrieveO
 
 	@Override
 	public void mapValuesToIds(Map<Value, Id> value2IdMap) throws IOException {
+		hash2ValueMap.clear();
+		batchGets.clear();
 		
+		ArrayList<Get> hbaseGetOps;
+		try {
+			hbaseGetOps = buildValue2IdGetsAndMapNumericals(value2IdMap);
+			Result[] results = doValue2IdMapping(hbaseGetOps);
+			
+			for (Result result : results) {
+				byte[] idBytes = result.getValue(HBPrefixMatchSchema.COLUMN_FAMILY, HBPrefixMatchSchema.COLUMN_NAME);
+				if (idBytes == null) {
+					throw new IOException("Quad element not found: " + new String(result.toString()) + "\n" 
+													+ (result.getRow() == null ? null : hexaString(result.getRow())));
+				}
+				
+				Value toUpdate = hash2ValueMap.get(new ByteArray(result.getRow()));
+				value2IdMap.put(toUpdate, new BaseId(idBytes));
+			}
+		} catch (NumericalRangeException e) {
+			throw new IOException(e.getMessage());
+		}
 		
 	}
 	

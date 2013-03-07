@@ -1,7 +1,5 @@
 package nl.vu.jena.sparql.engine.iterator;
 
-import java.util.List;
-
 import nl.vu.jena.graph.TripleBinder;
 
 import com.hp.hpl.jena.graph.Graph;
@@ -19,7 +17,6 @@ import com.hp.hpl.jena.sparql.engine.iterator.QueryIterRepeatApply;
 import com.hp.hpl.jena.util.iterator.ClosableIterator;
 import com.hp.hpl.jena.util.iterator.ExtendedIterator;
 import com.hp.hpl.jena.util.iterator.NiceIterator;
-import com.hp.hpl.jena.util.iterator.WrappedIterator;
 
 public class QueryIterTriplePattern extends QueryIterRepeatApply {
 

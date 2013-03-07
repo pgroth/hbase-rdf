@@ -34,7 +34,11 @@ public class NodeId extends Node {
 
 	@Override
 	public boolean equals(Object o) {
-		return label.equals(o);
+		if (!(o instanceof NodeId)){
+			return false;
+		}
+		Id toCompare = ((NodeId)o).getId();
+		return label.equals(toCompare);
 	}
 
 }

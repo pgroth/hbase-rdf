@@ -13,14 +13,13 @@ public interface IHBasePrefixMatchRetrieveOpsManager extends IHBaseOperationMana
 	
 	public void mapValuesToIds(Map<Value, Id> value2IdMap) throws IOException;
 	
-	public ArrayList<ArrayList<Value>> getMaterializedResults(HBaseTripleElement[] triple) throws IOException;
+	//public ArrayList<ArrayList<Value>> getMaterializedResults(HBaseTripleElement[] triple) throws IOException;
 	
-	public ArrayList<ArrayList<Value>> getMaterializedResults(HBaseTripleElement[] triple, RowLimitPair limits) throws IOException;
+	//public ArrayList<ArrayList<Value>> getMaterializedResults(HBaseTripleElement[] triple, RowLimitPair limits) throws IOException;
 	
-	//TODO switch to Id array as input
-	public ArrayList<ArrayList<Id>> getResults(HBaseTripleElement[] triple) throws IOException;
+	public ArrayList<ArrayList<Id>> getResults(Id[] triple) throws IOException;
 	
-	public ArrayList<ArrayList<Id>> getResults(HBaseTripleElement[] triple, RowLimitPair limits) throws IOException;
+	public ArrayList<ArrayList<Id>> getResults(Id[] triple, RowLimitPair limits) throws IOException;
 	
 	public void materializeIds(Map<Id, Value> id2ValueMap) throws IOException;;
 

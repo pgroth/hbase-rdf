@@ -14,7 +14,11 @@ import com.hp.hpl.jena.graph.Node;
 import com.hp.hpl.jena.graph.NodeId;
 import com.hp.hpl.jena.sparql.core.Var;
 import com.hp.hpl.jena.sparql.engine.binding.Binding;
+import com.hp.hpl.jena.sparql.engine.binding.BindingBase;
+import com.hp.hpl.jena.sparql.engine.binding.BindingFactory;
+import com.hp.hpl.jena.sparql.engine.binding.BindingHashMap;
 import com.hp.hpl.jena.sparql.engine.binding.BindingMap;
+import com.hp.hpl.jena.sparql.engine.binding.BindingRoot;
 
 public class BindingMaterializer implements Closeable {
 
@@ -28,37 +32,57 @@ public class BindingMaterializer implements Closeable {
 		this.graph = graph;
 	}
 	
-	public void materialize(BindingMap bindingMap){
+	public BindingMap materialize(BindingBase bindingBase) throws IOException{
 		tempIdMap.clear();
     	
-    	tempIdMap = buildIdMapToResolve(bindingMap);
+    	tempIdMap = buildIdMapToResolve(bindingBase);
     	        
-    	try {
-			((HBaseGraph)graph).mapNodeIdsToMaterializedNodes(tempIdMap);
-		} catch (IOException e) {
-			e.printStackTrace();
-			return ;
-		}
+    	((HBaseGraph)graph).mapNodeIdsToMaterializedNodes(tempIdMap);
     	
-    	updateBindingWithMaterializedNodes(bindingMap);	
+    	return updateBindingWithMaterializedNodes((BindingHashMap)bindingBase);	
 	}
 	
-	private void updateBindingWithMaterializedNodes(BindingMap bindingMap) {
-		Iterator<Var> it = bindingMap.vars();
+	private BindingMap updateBindingWithMaterializedNodes(BindingHashMap bindingHashMap) {
 		
+		
+		//search first binding parent which does not map a NodeId
+		Binding lastMaterialized = searchLastMaterializedBinding(bindingHashMap);	
+		BindingMap materializedBinding = BindingFactory.create(lastMaterialized);
+		
+		Iterator<Var> it = bindingHashMap.vars();
 		while (it.hasNext()){
 			Var var = it.next();
-			NodeId nodeId = (NodeId) bindingMap.get(var);
+			NodeId nodeId = (NodeId) bindingHashMap.get(var);
 			Node materializedNode;
 			
 			if ((materializedNode=idToMaterializedNodesCache.get(nodeId))!=null){
-				bindingMap.add(var, materializedNode);
+				materializedBinding.add(var, materializedNode);
 			}
 			else{
-				bindingMap.add(var, tempIdMap.get(nodeId));
-				idToMaterializedNodesCache.put(nodeId, materializedNode);
+				materializedBinding.add(var, tempIdMap.get(nodeId));
+				idToMaterializedNodesCache.put(nodeId, tempIdMap.get(nodeId));
 			}
 		}
+		return materializedBinding;
+	}
+
+	public Binding searchLastMaterializedBinding(Binding bindingStart) {
+		Binding b = bindingStart;
+		while(true){
+			if (b instanceof BindingRoot){
+				break;
+			}
+			
+			BindingHashMap bHMap = (BindingHashMap)b;
+			if (bHMap.vars1().hasNext()) {
+				Var first = bHMap.vars1().next();
+				if (!(b.get(first) instanceof NodeId)) {
+					break;
+				}
+			}
+			b = bHMap.getParent();
+		}
+		return b;
 	}
 
 	private Map<NodeId, Node> buildIdMapToResolve(Binding binding) {
