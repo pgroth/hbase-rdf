@@ -704,8 +704,9 @@ public class HBPrefixMatchOperationManager implements IHBasePrefixMatchRetrieveO
 			for (Result result : results) {
 				byte[] idBytes = result.getValue(HBPrefixMatchSchema.COLUMN_FAMILY, HBPrefixMatchSchema.COLUMN_NAME);
 				if (idBytes == null) {
-					throw new IOException("Quad element not found: " + new String(result.toString()) + "\n" 
-													+ (result.getRow() == null ? null : hexaString(result.getRow())));
+					//TODO replace with error logging throw new IOException("Quad element not found: " + new String(result.toString()) + "\n" 
+						//							+ (result.getRow() == null ? null : hexaString(result.getRow())));
+					continue;
 				}
 				
 				Value toUpdate = hash2ValueMap.get(new ByteArray(result.getRow()));

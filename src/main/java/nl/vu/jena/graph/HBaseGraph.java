@@ -126,7 +126,9 @@ public class HBaseGraph extends GraphBase {
 		for (Map.Entry<Node, Node_Literal> mapEntry : node2nodeIdMap.entrySet()) {
 			Value toUpdate = tempMapping.get(mapEntry.getKey());
 			Id id = toResolve.get(toUpdate);
-			mapEntry.setValue((Node_Literal)Node.createUncachedLiteral(id, null));
+			if (id != null){
+				mapEntry.setValue((Node_Literal)Node.createUncachedLiteral(id, null));
+			}
 		}
 	}
 

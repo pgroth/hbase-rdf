@@ -81,14 +81,17 @@ public class QueryIterBlockTriples extends QueryIter1
 			Node newPredicate = mapNode(node2NodeIdMap, triple.getPredicate());
 			Node newObject = mapNode(node2NodeIdMap, triple.getObject());
 			Triple idBasedTriple;
-			if (triple instanceof FilteredTriple){
-				idBasedTriple = new FilteredTriple(newSubject, newPredicate, newObject, ((FilteredTriple)triple).getSimpleFilter());
+			//if one of the concrete elements did not have a matching Id, we don't create a triple for them
+			if (newSubject!=null && newPredicate!=null && newObject!=null) { 
+				if (triple instanceof FilteredTriple) {
+					idBasedTriple = new FilteredTriple(newSubject, newPredicate, newObject,
+							((FilteredTriple) triple).getSimpleFilter());
+				} else {
+					idBasedTriple = new Triple(newSubject, newPredicate, newObject);
+				}
+
+				chain = new QueryIterTriplePattern(chain, idBasedTriple, execContext);
 			}
-			else{
-				idBasedTriple = new Triple(newSubject, newPredicate, newObject);
-			}
-			
-		    chain = new QueryIterTriplePattern(chain, idBasedTriple, execContext) ;
 		}
 		return chain;
 	}
