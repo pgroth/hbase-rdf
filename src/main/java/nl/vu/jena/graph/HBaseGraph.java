@@ -37,99 +37,65 @@ public class HBaseGraph extends GraphBase {
 	private static final int CACHE_SIZE = 500;
 	private HBaseClientSolution hbase;
 	ExtendedIterator<Triple> it;
-	private ValueFactory valFactory;
+	ValueIdMapper valIdMapper;
 	
 	private Map<TripleMatch, ExtendedIterator<Triple>> cache = Collections.synchronizedMap(new JenaCache<TripleMatch, ExtendedIterator<Triple>>(CACHE_SIZE));
 	
 	public HBaseGraph(HBaseClientSolution hbase) {
 		super();
 		this.hbase = hbase;
-		valFactory = new ValueFactoryImpl();
+		valIdMapper = new ValueIdMapper(hbase);
 	}
 
 	@Override
-	protected ExtendedIterator<Triple> graphBaseFind(TripleMatch m) {
-		//ASSUMPTION: only NodeIds are received in this function
-		
+	protected ExtendedIterator<Triple> graphBaseFind(TripleMatch m) {	
 		ExtendedIterator<Triple> ret;
 		if ((ret=cache.get(m))!=null){
 			return ret;
 		}
 		
-		//convert TripleMatch to Value[]
-		Node subject = m.getMatchSubject();
-		Node predicate = m.getMatchPredicate();
-		Node object =  m.getMatchObject();
-	
-		Id []quad = {(subject!=null && subject.isConcrete()) ? (Id)subject.getLiteralValue():null, 
-				(predicate!=null &&predicate.isConcrete()) ? (Id)predicate.getLiteralValue():null, 
-				(object!=null && object.isConcrete()) ? (Id)object.getLiteralValue():null, 
-				null};
-		
-		//retrieve results from HBase
-		ArrayList<ArrayList<Id>> results;
 		try {
-			if (m instanceof FilteredTriple){
-				ExprFunction2 simpleFilter = (ExprFunction2)(((FilteredTriple)m).getSimpleFilter());
+			//TODO should try to get only Ids here, in order to minimize the number of lookups
+			Id[] quad = valIdMapper.getIdsFromTriple(m);
+
+			// retrieve results from HBase
+			ArrayList<ArrayList<Id>> results;
+
+			if (m instanceof FilteredTriple) {
+				ExprFunction2 simpleFilter = (ExprFunction2) (((FilteredTriple) m)
+						.getSimpleFilter());
 				results = getFilteredResults(quad, simpleFilter);
+			} else {
+				results = ((IHBasePrefixMatchRetrieveOpsManager) hbase.opsManager).getResults(quad);
 			}
-			else{
-				results = ((IHBasePrefixMatchRetrieveOpsManager)hbase.opsManager).getResults(quad);
+
+		
+			ArrayList<Triple> convertedTriples = new ArrayList<Triple>(results.size());
+			for (ArrayList<Id> arrayList : results) {
+				Triple newTriple = new Triple(Node.createUncachedLiteral(
+						arrayList.get(0), null), Node.createUncachedLiteral(
+						arrayList.get(1), null), Node.createUncachedLiteral(
+						arrayList.get(2), null));
+
+				convertedTriples.add(newTriple);
 			}
+
+			ret = WrappedIterator.createNoRemove(convertedTriples.iterator());
+			cache.put(m, ret);
+
 		} catch (Exception e) {
+			e.printStackTrace();
 			return NullIterator.instance();
 		}
-		
-		//convert ArrayList<ArrayList<Value>> to ArrayList<Triple>
-		ArrayList<Triple> convertedTriples = new ArrayList<Triple>(results.size());
-		for (ArrayList<Id> arrayList : results) {
-			Triple newTriple = new Triple(Node.createUncachedLiteral(arrayList.get(0), null),
-									Node.createUncachedLiteral(arrayList.get(1), null),
-									Node.createUncachedLiteral(arrayList.get(2), null));
-			
-			convertedTriples.add(newTriple);
-		}	
-		
-		ret = WrappedIterator.createNoRemove(convertedTriples.iterator()) ;
-		cache.put(m, ret);
-		
 		return ret;
 	}
 	
 	public void mapNodeIdsToMaterializedNodes(Map<Node_Literal, Node> tempIdMap) throws IOException{
-		Map<Id, Value> toResolve = new HashMap<Id, Value>(tempIdMap.size());
-		for (Map.Entry<Node_Literal, Node> entry : tempIdMap.entrySet()) {
-			toResolve.put((Id)entry.getKey().getLiteralValue(), null);
-		}
-		
-		((IHBasePrefixMatchRetrieveOpsManager)hbase.opsManager).materializeIds(toResolve);
-		
-		for (Map.Entry<Node_Literal, Node> entry : tempIdMap.entrySet()) {
-			Id id = (Id)entry.getKey().getLiteralValue();
-			Node newNode = Convert.valueToNode(toResolve.get(id));
-			entry.setValue(newNode);
-		}
+		valIdMapper.mapNodeIdsToMaterializedNodes(tempIdMap);
 	}
 	
 	public void mapMaterializedNodesToNodeIds(Map<Node, Node_Literal> node2nodeIdMap) throws IOException{
-		Map<Value, Id> toResolve = new HashMap<Value, Id>(node2nodeIdMap.size());
-		Map<Node, Value> tempMapping = new HashMap<Node, Value>(node2nodeIdMap.size());
-		
-		for (Map.Entry<Node, Node_Literal> mapEntry : node2nodeIdMap.entrySet()) {
-			Value value = Convert.nodeToValue(valFactory, mapEntry.getKey());
-			tempMapping.put(mapEntry.getKey(), value);
-			toResolve.put(value, null);
-		}
-		
-		((IHBasePrefixMatchRetrieveOpsManager)hbase.opsManager).mapValuesToIds(toResolve);
-		
-		for (Map.Entry<Node, Node_Literal> mapEntry : node2nodeIdMap.entrySet()) {
-			Value toUpdate = tempMapping.get(mapEntry.getKey());
-			Id id = toResolve.get(toUpdate);
-			if (id != null){
-				mapEntry.setValue((Node_Literal)Node.createUncachedLiteral(id, null));
-			}
-		}
+		valIdMapper.mapMaterializedNodesToNodeIds(node2nodeIdMap);
 	}
 
 	private ArrayList<ArrayList<Id>> getFilteredResults(Id[] quad, ExprFunction2 simpleFilter)
