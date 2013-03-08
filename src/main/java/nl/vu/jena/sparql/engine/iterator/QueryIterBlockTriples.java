@@ -118,7 +118,7 @@ public class QueryIterBlockTriples extends QueryIter1
         Binding binding = output.nextBinding() ;
         if (binding instanceof BindingBase && graph instanceof HBaseGraph){
         	try {
-				binding = bindingMaterializer.materialize((BindingBase)binding);
+				binding = bindingMaterializer.materialize(binding);
 			} catch (IOException e) {
 				return null;
 			}

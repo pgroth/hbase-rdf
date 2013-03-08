@@ -36,24 +36,28 @@ public class BindingMaterializer implements Closeable {
 		this.graph = graph;
 	}
 	
-	public BindingMap materialize(BindingBase bindingBase) throws IOException{
+	public Binding materialize(Binding inputBinding) throws IOException{
 		toResolveIdMap.clear();
 		toUpdateVars.clear();
     	
-    	toResolveIdMap = buildIdMapToResolve(bindingBase);
+    	toResolveIdMap = buildIdMapToResolve(inputBinding);
     	        
     	((HBaseGraph)graph).mapNodeIdsToMaterializedNodes(toResolveIdMap);
     	
-    	return updateBindingWithMaterializedNodes((BindingHashMap)bindingBase);	
+    	return updateBindingWithMaterializedNodes(inputBinding);	
 	}
 	
-	private BindingMap updateBindingWithMaterializedNodes(BindingHashMap bindingHashMap) {
+	private Binding updateBindingWithMaterializedNodes(Binding binding) {
 		//search first binding parent which does not map a NodeId
-		Binding lastMaterialized = searchLastMaterializedBinding(bindingHashMap);	
+		Binding lastMaterialized = searchLastMaterializedBinding(binding);	
+		if (lastMaterialized == binding){
+			return binding;
+		}
+		
 		BindingMap materializedBinding = BindingFactory.create(lastMaterialized);	
 		
 		for (Var var : toUpdateVars) {
-			Node_Literal nodeId = (Node_Literal) bindingHashMap.get(var);
+			Node_Literal nodeId = (Node_Literal) binding.get(var);
 			Node materializedNode;
 			
 			if ((materializedNode=idToMaterializedNodesCache.get(nodeId))!=null){
