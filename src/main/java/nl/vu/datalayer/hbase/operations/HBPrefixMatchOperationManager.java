@@ -56,9 +56,6 @@ public class HBPrefixMatchOperationManager implements IHBasePrefixMatchRetrieveO
 
 	private static final int MAX_RESULTS = 1000000;
 	
-	public static final byte MAP_IDS_ON = 0;
-	public static final byte MAP_IDS_OFF = 1;
-
 	private HBaseConnection con;
 	
 	/**
