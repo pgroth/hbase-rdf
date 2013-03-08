@@ -12,7 +12,7 @@ import org.openjena.atlas.io.IndentedWriter;
 
 import com.hp.hpl.jena.graph.Graph;
 import com.hp.hpl.jena.graph.Node;
-import com.hp.hpl.jena.graph.NodeId;
+import com.hp.hpl.jena.graph.Node_Literal;
 import com.hp.hpl.jena.graph.Triple;
 import com.hp.hpl.jena.sparql.core.BasicPattern;
 import com.hp.hpl.jena.sparql.engine.ExecutionContext;
@@ -61,7 +61,7 @@ public class QueryIterBlockTriples extends QueryIter1
     }
 
 	private QueryIterator buildChainOfIdBasedTriples(BasicPattern pattern, HBaseGraph graph, ExecutionContext execContext) {
-		Map<Node, NodeId> node2NodeIdMap = new HashMap<Node, NodeId>();
+		Map<Node, Node_Literal> node2NodeIdMap = new HashMap<Node, Node_Literal>();
 		for (Triple triple : pattern) {
 			addNodeToMap(node2NodeIdMap, triple.getSubject());
 			addNodeToMap(node2NodeIdMap, triple.getPredicate());
@@ -93,11 +93,11 @@ public class QueryIterBlockTriples extends QueryIter1
 		return chain;
 	}
 
-	private Node mapNode(Map<Node, NodeId> node2NodeIdMap, Node oldNode) {
+	private Node mapNode(Map<Node, Node_Literal> node2NodeIdMap, Node oldNode) {
 		return oldNode.isConcrete() ? node2NodeIdMap.get(oldNode) : oldNode;
 	}
 
-	private void addNodeToMap(Map<Node, NodeId> node2NodeIdMap, Node node) {
+	private void addNodeToMap(Map<Node, Node_Literal> node2NodeIdMap, Node node) {
 		if (node.isConcrete()){
 			node2NodeIdMap.put(node, null);
 		}
@@ -129,7 +129,9 @@ public class QueryIterBlockTriples extends QueryIter1
     {
         if ( output != null ){
             output.close() ;
-            bindingMaterializer.close();
+            if (graph instanceof HBaseGraph){
+            	bindingMaterializer.close();
+            }
         }
         output = null ;
     }

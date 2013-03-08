@@ -20,7 +20,7 @@ import org.openrdf.model.ValueFactory;
 import org.openrdf.model.impl.ValueFactoryImpl;
 
 import com.hp.hpl.jena.graph.Node;
-import com.hp.hpl.jena.graph.NodeId;
+import com.hp.hpl.jena.graph.Node_Literal;
 import com.hp.hpl.jena.graph.Triple;
 import com.hp.hpl.jena.graph.TripleMatch;
 import com.hp.hpl.jena.graph.impl.GraphBase;
@@ -61,9 +61,9 @@ public class HBaseGraph extends GraphBase {
 		Node predicate = m.getMatchPredicate();
 		Node object =  m.getMatchObject();
 	
-		Id []quad = {(subject!=null && subject.isConcrete()) ? subject.getId():null, 
-				(predicate!=null &&predicate.isConcrete()) ? predicate.getId():null, 
-				(object!=null && object.isConcrete()) ? object.getId():null, 
+		Id []quad = {(subject!=null && subject.isConcrete()) ? (Id)subject.getLiteralValue():null, 
+				(predicate!=null &&predicate.isConcrete()) ? (Id)predicate.getLiteralValue():null, 
+				(object!=null && object.isConcrete()) ? (Id)object.getLiteralValue():null, 
 				null};
 		
 		//retrieve results from HBase
@@ -83,9 +83,9 @@ public class HBaseGraph extends GraphBase {
 		//convert ArrayList<ArrayList<Value>> to ArrayList<Triple>
 		ArrayList<Triple> convertedTriples = new ArrayList<Triple>(results.size());
 		for (ArrayList<Id> arrayList : results) {
-			Triple newTriple = new Triple(Node.createId(arrayList.get(0)),
-									Node.createId(arrayList.get(1)),
-									Node.createId(arrayList.get(2)));
+			Triple newTriple = new Triple(Node.createUncachedLiteral(arrayList.get(0), null),
+									Node.createUncachedLiteral(arrayList.get(1), null),
+									Node.createUncachedLiteral(arrayList.get(2), null));
 			
 			convertedTriples.add(newTriple);
 		}	
@@ -96,25 +96,26 @@ public class HBaseGraph extends GraphBase {
 		return ret;
 	}
 	
-	public void mapNodeIdsToMaterializedNodes(Map<NodeId, Node> tempIdMap) throws IOException{
+	public void mapNodeIdsToMaterializedNodes(Map<Node_Literal, Node> tempIdMap) throws IOException{
 		Map<Id, Value> toResolve = new HashMap<Id, Value>(tempIdMap.size());
-		for (Map.Entry<NodeId, Node> entry : tempIdMap.entrySet()) {
-			toResolve.put(entry.getKey().getId(), null);
+		for (Map.Entry<Node_Literal, Node> entry : tempIdMap.entrySet()) {
+			toResolve.put((Id)entry.getKey().getLiteralValue(), null);
 		}
 		
 		((IHBasePrefixMatchRetrieveOpsManager)hbase.opsManager).materializeIds(toResolve);
 		
-		for (Map.Entry<NodeId, Node> entry : tempIdMap.entrySet()) {
-			Id id = entry.getKey().getId();
+		for (Map.Entry<Node_Literal, Node> entry : tempIdMap.entrySet()) {
+			Id id = (Id)entry.getKey().getLiteralValue();
 			Node newNode = Convert.valueToNode(toResolve.get(id));
 			entry.setValue(newNode);
 		}
 	}
 	
-	public void mapMaterializedNodesToNodeIds(Map<Node, NodeId> node2nodeIdMap) throws IOException{
+	public void mapMaterializedNodesToNodeIds(Map<Node, Node_Literal> node2nodeIdMap) throws IOException{
 		Map<Value, Id> toResolve = new HashMap<Value, Id>(node2nodeIdMap.size());
 		Map<Node, Value> tempMapping = new HashMap<Node, Value>(node2nodeIdMap.size());
-		for (Map.Entry<Node, NodeId> mapEntry : node2nodeIdMap.entrySet()) {
+		
+		for (Map.Entry<Node, Node_Literal> mapEntry : node2nodeIdMap.entrySet()) {
 			Value value = Convert.nodeToValue(valFactory, mapEntry.getKey());
 			tempMapping.put(mapEntry.getKey(), value);
 			toResolve.put(value, null);
@@ -122,10 +123,10 @@ public class HBaseGraph extends GraphBase {
 		
 		((IHBasePrefixMatchRetrieveOpsManager)hbase.opsManager).mapValuesToIds(toResolve);
 		
-		for (Map.Entry<Node, NodeId> mapEntry : node2nodeIdMap.entrySet()) {
+		for (Map.Entry<Node, Node_Literal> mapEntry : node2nodeIdMap.entrySet()) {
 			Value toUpdate = tempMapping.get(mapEntry.getKey());
 			Id id = toResolve.get(toUpdate);
-			mapEntry.setValue((NodeId)Node.createId(id));
+			mapEntry.setValue((Node_Literal)Node.createUncachedLiteral(id, null));
 		}
 	}
 

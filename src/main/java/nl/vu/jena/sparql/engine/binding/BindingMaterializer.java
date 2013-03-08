@@ -11,7 +11,7 @@ import org.openjena.atlas.lib.Closeable;
 
 import com.hp.hpl.jena.graph.Graph;
 import com.hp.hpl.jena.graph.Node;
-import com.hp.hpl.jena.graph.NodeId;
+import com.hp.hpl.jena.graph.Node_Literal;
 import com.hp.hpl.jena.sparql.core.Var;
 import com.hp.hpl.jena.sparql.engine.binding.Binding;
 import com.hp.hpl.jena.sparql.engine.binding.BindingBase;
@@ -22,8 +22,8 @@ import com.hp.hpl.jena.sparql.engine.binding.BindingRoot;
 
 public class BindingMaterializer implements Closeable {
 
-	private Map<NodeId, Node> idToMaterializedNodesCache = new HashMap<NodeId, Node>();
-	private Map<NodeId, Node> tempIdMap = new HashMap<NodeId, Node>();
+	private Map<Node_Literal, Node> idToMaterializedNodesCache = new HashMap<Node_Literal, Node>();
+	private Map<Node_Literal, Node> tempIdMap = new HashMap<Node_Literal, Node>();
 
 	private Graph graph;
 
@@ -52,7 +52,7 @@ public class BindingMaterializer implements Closeable {
 		Iterator<Var> it = bindingHashMap.vars();
 		while (it.hasNext()){
 			Var var = it.next();
-			NodeId nodeId = (NodeId) bindingHashMap.get(var);
+			Node_Literal nodeId = (Node_Literal) bindingHashMap.get(var);
 			Node materializedNode;
 			
 			if ((materializedNode=idToMaterializedNodesCache.get(nodeId))!=null){
@@ -76,7 +76,7 @@ public class BindingMaterializer implements Closeable {
 			BindingHashMap bHMap = (BindingHashMap)b;
 			if (bHMap.vars1().hasNext()) {
 				Var first = bHMap.vars1().next();
-				if (!(b.get(first) instanceof NodeId)) {
+				if (!(b.get(first) instanceof Node_Literal)) {
 					break;
 				}
 			}
@@ -85,11 +85,11 @@ public class BindingMaterializer implements Closeable {
 		return b;
 	}
 
-	private Map<NodeId, Node> buildIdMapToResolve(Binding binding) {
+	private Map<Node_Literal, Node> buildIdMapToResolve(Binding binding) {
 		Iterator<Var> it = binding.vars();
 		while (it.hasNext()){
 			//build temp map for NodeIds not found in the cache
-			NodeId nodeId = (NodeId) binding.get(it.next());
+			Node_Literal nodeId = (Node_Literal) binding.get(it.next());
 			if (!idToMaterializedNodesCache.containsKey(nodeId)){
 				tempIdMap.put(nodeId, null);
 			}
