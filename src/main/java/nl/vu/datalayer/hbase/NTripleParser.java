@@ -12,7 +12,7 @@ import org.openrdf.rio.RDFHandlerException;
 import org.openrdf.rio.RDFParseException;
 import org.openrdf.rio.RDFParser;
 import org.openrdf.rio.helpers.StatementCollector;
-import org.openrdf.rio.ntriples.NTriplesParser;;
+import org.openrdf.rio.ntriples.NTriplesParser;
 
 
 public class NTripleParser {

@@ -17,7 +17,6 @@ import com.hp.hpl.jena.graph.Node;
 import com.hp.hpl.jena.graph.Node_Literal;
 import com.hp.hpl.jena.sparql.core.Var;
 import com.hp.hpl.jena.sparql.engine.binding.Binding;
-import com.hp.hpl.jena.sparql.engine.binding.BindingBase;
 import com.hp.hpl.jena.sparql.engine.binding.BindingFactory;
 import com.hp.hpl.jena.sparql.engine.binding.BindingHashMap;
 import com.hp.hpl.jena.sparql.engine.binding.BindingMap;

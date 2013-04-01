@@ -1,7 +1,6 @@
 package nl.vu.datalayer.hbase.coprocessor;
 
 import java.io.IOException;
-import java.util.List;
 
 import nl.vu.datalayer.hbase.bulkload.AbstractPrefixMatchBulkLoad;
 import nl.vu.datalayer.hbase.bulkload.BulkLoad;
@@ -13,10 +12,7 @@ import nl.vu.datalayer.hbase.schema.HBPrefixMatchSchema;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.client.HTable;
-import org.apache.hadoop.hbase.client.HTableInterface;
-import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.coprocessor.Batch;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.io.NullWritable;

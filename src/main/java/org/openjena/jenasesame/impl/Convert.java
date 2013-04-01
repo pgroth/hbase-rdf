@@ -6,17 +6,17 @@
 
 package org.openjena.jenasesame.impl;
 
-import org.openrdf.model.BNode ;
-import org.openrdf.model.Literal ;
-import org.openrdf.model.Resource ;
-import org.openrdf.model.Statement ;
-import org.openrdf.model.URI ;
-import org.openrdf.model.Value ;
-import org.openrdf.model.ValueFactory ;
+import org.openrdf.model.BNode;
+import org.openrdf.model.Literal;
+import org.openrdf.model.Resource;
+import org.openrdf.model.Statement;
+import org.openrdf.model.URI;
+import org.openrdf.model.Value;
+import org.openrdf.model.ValueFactory;
 
-import com.hp.hpl.jena.graph.Node ;
-import com.hp.hpl.jena.graph.Triple ;
-import com.hp.hpl.jena.rdf.model.AnonId ;
+import com.hp.hpl.jena.graph.Node;
+import com.hp.hpl.jena.graph.Triple;
+import com.hp.hpl.jena.rdf.model.AnonId;
 
 public class Convert
 {

@@ -3,31 +3,21 @@ package nl.vu.jena.graph;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.Map;
 
 import nl.vu.datalayer.hbase.HBaseClientSolution;
 import nl.vu.datalayer.hbase.id.Id;
-import nl.vu.datalayer.hbase.operations.HBPrefixMatchOperationManager;
-import nl.vu.datalayer.hbase.retrieve.HBaseTripleElement;
 import nl.vu.datalayer.hbase.retrieve.IHBasePrefixMatchRetrieveOpsManager;
 import nl.vu.datalayer.hbase.retrieve.RowLimitPair;
 import nl.vu.jena.cache.JenaCache;
-
-import org.openjena.jenasesame.impl.Convert;
-import org.openrdf.model.Value;
-import org.openrdf.model.ValueFactory;
-import org.openrdf.model.impl.ValueFactoryImpl;
 
 import com.hp.hpl.jena.graph.Node;
 import com.hp.hpl.jena.graph.Node_Literal;
 import com.hp.hpl.jena.graph.Triple;
 import com.hp.hpl.jena.graph.TripleMatch;
 import com.hp.hpl.jena.graph.impl.GraphBase;
-import com.hp.hpl.jena.sparql.expr.E_Equals;
 import com.hp.hpl.jena.sparql.expr.Expr;
 import com.hp.hpl.jena.sparql.expr.ExprFunction2;
-import com.hp.hpl.jena.sparql.expr.NodeValue;
 import com.hp.hpl.jena.util.iterator.ExtendedIterator;
 import com.hp.hpl.jena.util.iterator.NullIterator;
 import com.hp.hpl.jena.util.iterator.WrappedIterator;

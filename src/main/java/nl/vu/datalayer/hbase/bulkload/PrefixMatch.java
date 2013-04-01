@@ -2,7 +2,6 @@ package nl.vu.datalayer.hbase.bulkload;
 
 import java.io.IOException;
 
-import nl.vu.datalayer.hbase.id.BaseId;
 import nl.vu.datalayer.hbase.schema.HBPrefixMatchSchema;
 
 import org.apache.hadoop.hbase.client.Put;

@@ -5,7 +5,6 @@ import static com.hp.hpl.jena.sparql.engine.optimizer.reorder.PatternElements.VA
 
 import java.util.List;
 
-
 import org.openjena.atlas.iterator.Iter;
 import org.openjena.atlas.iterator.Transform;
 

@@ -3,8 +3,6 @@ package nl.vu.datalayer.hbase.operations;
 import java.io.IOException;
 import java.util.ArrayList;
 
-import nl.vu.datalayer.hbase.retrieve.RowLimitPair;
-
 import org.openrdf.model.Statement;
 import org.openrdf.model.Value;
 
