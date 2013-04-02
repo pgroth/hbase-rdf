@@ -105,7 +105,7 @@ public class HBPrefixMatchSchema implements IHBaseSchema {
 	private static long numericalCount = 0;
 	
 	private String schemaSuffix;
-	
+
 	private byte coprocessorFlag = WITHOUT_COPROCESSORS;
 	
 	private int numberOfRegions;
@@ -189,6 +189,8 @@ public class HBPrefixMatchSchema implements IHBaseSchema {
 		}
 	}
 	
+	//COUNTER TABLE: META_COL column - 2 rows FIRST_COUNTER_ROWKEY, LAST_COUNTER_ROWKEY
+	//			rest of the columns correspond to 1 partition; 1 row = local counter for that partitions
 	public void createCounterTable(HBaseAdmin admin) throws IOException{
 		
 		String fullName = COUNTER_TABLE+schemaSuffix;
@@ -214,6 +216,18 @@ public class HBPrefixMatchSchema implements IHBaseSchema {
 			h.put(p);
 			h.close();
 		}
+	}
+	
+	public static long getCounterValue(long counterColumn, Configuration conf, String schemaSuffix) throws IOException{
+		HTable h = new HTable(conf, COUNTER_TABLE+schemaSuffix);
+		
+		Get g = new Get(new byte[0]);
+		g.addColumn(COLUMN_FAMILY, Bytes.toBytes(counterColumn));
+		Result r = h.get(g);
+		byte []counterBytes = r.getValue(COLUMN_FAMILY, Bytes.toBytes(counterColumn));
+		h.close();
+		
+		return Bytes.toLong(counterBytes);
 	}
 	
 	public static void updateCounter(int partitionId, long localRowCount, String schemaSuffix) throws IOException{
@@ -529,5 +543,8 @@ public class HBPrefixMatchSchema implements IHBaseSchema {
 		//printSplits(splits);
 		return splits;
 	}
-	
+
+	public String getSchemaSuffix() {
+		return schemaSuffix;
+	}
 }

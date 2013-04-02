@@ -1,11 +1,13 @@
 package nl.vu.datalayer.hbase;
 
+import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.util.ArrayList;
 
 import nl.vu.datalayer.hbase.connection.HBaseConnection;
 import nl.vu.datalayer.hbase.connection.NativeJavaConnection;
+import nl.vu.datalayer.hbase.schema.HBPrefixMatchSchema;
 
 import org.openrdf.model.Statement;
 import org.openrdf.rio.RDFHandlerException;
@@ -17,42 +19,47 @@ import org.openrdf.rio.ntriples.NTriplesParser;
 
 public class NTripleParser {
 	
-	public static void parse(String file, String schemaName) throws IOException {
+	public static void parse(String directoryPath, String schemaName) throws IOException {
 		
 		try {
 			//HBaseUtil util = new HBaseUtil(confPath);
-			FileInputStream is = new FileInputStream(file);
-			RDFParser rdfParser = new NTriplesParser();
-			
-			ArrayList<Statement> myList = new ArrayList<Statement>();
-			StatementCollector collector = new StatementCollector(myList);
-			rdfParser.setRDFHandler(collector);
-			
-			System.out.println("Started parsing ..");
-			try {
-			   rdfParser.parse(is, "");
-			} 
-			catch (IOException e) {
-			  // handle IO problems (e.g. the file could not be read)
-				e.printStackTrace();
-			}
-			catch (RDFParseException e) {
-			  // handle unrecoverable parse error
-				e.printStackTrace();
-			}
-			catch (RDFHandlerException e) {
-			  // handle a problem encountered by the RDFHandler
-				e.printStackTrace();
-			}
-			System.out.println("Finished parsing");
-			
 			//connect to HBase
 			NativeJavaConnection con = (NativeJavaConnection)HBaseConnection.create(HBaseConnection.NATIVE_JAVA);
-			HBaseClientSolution sol = HBaseFactory.getHBaseSolution(schemaName, con, myList);
+			HBaseClientSolution sol = HBaseFactory.getHBaseSolution(schemaName, con, null);
 			sol.schema.create();
+			((HBPrefixMatchSchema)sol.schema).createCounterTable(con.getAdmin());
+			//HBPrefixMatchSchema.updateCounter(0, 0, ((HBPrefixMatchSchema)sol.schema).getSchemaSuffix());
+			//HBPrefixMatchSchema.updateLastCounter(1, con.getConfiguration(), ((HBPrefixMatchSchema)sol.schema).getSchemaSuffix());
 			
-			// populate table
-			sol.opsManager.populateTables(myList);
+			File directory = new File(directoryPath);
+			for (File child : directory.listFiles()) {
+				FileInputStream is = new FileInputStream(child);
+				RDFParser rdfParser = new NTriplesParser();
+				
+				ArrayList<Statement> myList = new ArrayList<Statement>();
+				StatementCollector collector = new StatementCollector(myList);
+				rdfParser.setRDFHandler(collector);
+				
+				System.out.println("Started parsing ..");
+				try {
+				   rdfParser.parse(is, "");
+				} 
+				catch (IOException e) {
+				  // handle IO problems (e.g. the file could not be read)
+					e.printStackTrace();
+				}
+				catch (RDFParseException e) {
+				  // handle unrecoverable parse error
+					e.printStackTrace();
+				}
+				catch (RDFHandlerException e) {
+				  // handle a problem encountered by the RDFHandler
+					e.printStackTrace();
+				}
+				System.out.println("Finished parsing");
+				// populate table
+				sol.opsManager.populateTables(myList);
+			}		
 			
 			con.close();
 		}

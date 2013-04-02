@@ -19,8 +19,11 @@ import nl.vu.datalayer.hbase.id.BaseId;
 import nl.vu.datalayer.hbase.id.HBaseValue;
 import nl.vu.datalayer.hbase.id.Id;
 import nl.vu.datalayer.hbase.id.TypedId;
+import nl.vu.datalayer.hbase.operations.IHBaseOperationManager;
+import nl.vu.datalayer.hbase.retrieve.IHBasePrefixMatchRetrieveOpsManager;
 import nl.vu.datalayer.hbase.schema.HBPrefixMatchSchema;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.HTableInterface;
 import org.apache.hadoop.hbase.client.Put;
@@ -34,27 +37,70 @@ public class HBaseLoader {
 	
 	public static final String DEFAULT_CONTEXT = "http://DEFAULT_CONTEXT";
 	private static long idCounter;
-	private static HashMap<Value, ValueIdPair> dictionary;
+	//private static HashMap<Value, ValueIdPair> dictionary;
 	private static List<Put> spocTableData;
 	
+	private IHBasePrefixMatchRetrieveOpsManager retOpsManager;
+	private MessageDigest mDigest;
+	private HBaseValue hbaseValue;
+	private ByteArrayOutputStream byteStream;
+	private DataOutputStream dataOutputStream;
+	private HTableInterface id2StringTable;	
+	
+	private HBaseConnection con;
+	private String schemaSuffix;
+	private HTableInterface string2IdTable;
+	
+	public HBaseLoader(IHBasePrefixMatchRetrieveOpsManager retOpsManager, HBaseConnection con, String schemaSuffix) {
+		super();
+		this.retOpsManager = retOpsManager;
+		try {
+			mDigest = MessageDigest.getInstance("MD5");
+		} catch (NoSuchAlgorithmException e) {
+			e.printStackTrace();
+		}
+		
+		this.con = con;
+		this.schemaSuffix = schemaSuffix;
+		
+		hbaseValue = new HBaseValue();
+		byteStream = new ByteArrayOutputStream(100);
+		dataOutputStream = new DataOutputStream(byteStream);
+		
+		try {
+			id2StringTable = con.getTable(HBPrefixMatchSchema.ID2STRING+schemaSuffix);
+			((HTable)id2StringTable).setAutoFlush(false);
+			
+			string2IdTable = con.getTable(HBPrefixMatchSchema.STRING2ID+schemaSuffix);
+			((HTable)string2IdTable).setAutoFlush(false);
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+	}
+
 	//assuming all triples can fit into memory
-	public static void load(HBaseConnection con, String schemaSuffix, ArrayList<Statement> statements) throws Exception{
+	public void load(ArrayList<Statement> statements) throws Exception{
 		if (!(con instanceof NativeJavaConnection)){
 			throw new Exception("Expected NativeJavaConnection upon loading");
 		}
 		
-		idCounter = 0;//assuming no triples loaded before
-		dictionary = new HashMap<Value, HBaseLoader.ValueIdPair>();
+		Configuration configuration = ((NativeJavaConnection)con).getConfiguration();
+		long lastCounterCol = HBPrefixMatchSchema.getLastCounter(configuration, schemaSuffix);
+		idCounter = HBPrefixMatchSchema.getCounterValue(lastCounterCol, configuration, schemaSuffix);
+		
+		//dictionary = new HashMap<Value, HBaseLoader.ValueIdPair>();
 		spocTableData = new ArrayList<Put>(statements.size());
 		
 		quadBreakDown(statements);	
 		
-		loadDictionaryTables(con, schemaSuffix);
+		//loadDictionaryTables(con, schemaSuffix);
 			
-		loadIndexTables(con, schemaSuffix);
+		loadIndexTables();
+		
+		HBPrefixMatchSchema.updateCounter((int)(lastCounterCol-1), idCounter, schemaSuffix);
 	}
 
-	private static void loadIndexTables(HBaseConnection con, String schemaSuffix)
+	private void loadIndexTables()
 			throws IOException {
 		HTableInterface spocTable = con.getTable(HBPrefixMatchSchema.TABLE_NAMES[HBPrefixMatchSchema.SPOC]+schemaSuffix);
 		HTableInterface pocsTable = con.getTable(HBPrefixMatchSchema.TABLE_NAMES[HBPrefixMatchSchema.POCS]+schemaSuffix);
@@ -74,43 +120,7 @@ public class HBaseLoader {
 		}
 	}
 
-	private static void loadDictionaryTables(HBaseConnection con,
-			String schemaSuffix) throws NoSuchAlgorithmException, IOException,
-			UnsupportedEncodingException {
-		MessageDigest mDigest = MessageDigest.getInstance("MD5");
-		HBaseValue hbaseValue = new HBaseValue();
-		//we create the byte stream in advance to avoid reallocation for each result
-		ByteArrayOutputStream byteStream = new ByteArrayOutputStream(100);
-		DataOutputStream dataOutputStream = new DataOutputStream(byteStream);
-		
-		
-		HTableInterface string2IdTable = con.getTable(HBPrefixMatchSchema.STRING2ID+schemaSuffix);
-		((HTable)string2IdTable).setAutoFlush(false);
-		HTableInterface id2StringTable = con.getTable(HBPrefixMatchSchema.ID2STRING+schemaSuffix);
-		((HTable)id2StringTable).setAutoFlush(false);
-		for (Map.Entry<Value, ValueIdPair> entry : dictionary.entrySet()) {
-			ValueIdPair valueIdPair = entry.getValue();
-			Value val = valueIdPair.value;
-			byte []valBytes = val.toString().getBytes("UTF-8");
-			byte []md5Hash = mDigest.digest(valBytes);
-			
-			Put string2IdPut = new Put(md5Hash);
-			string2IdPut.add(HBPrefixMatchSchema.COLUMN_FAMILY, HBPrefixMatchSchema.COLUMN_NAME, valueIdPair.id.getContent());
-			string2IdTable.put(string2IdPut);
-			
-			byteStream.reset();
-			hbaseValue.setValue(val);
-			hbaseValue.write(dataOutputStream);
-			byte []serializedValue = byteStream.toByteArray();
-			
-			Put id2StringPut = new Put(valueIdPair.id.getContent());
-			id2StringPut.add(HBPrefixMatchSchema.COLUMN_FAMILY, HBPrefixMatchSchema.COLUMN_NAME, serializedValue);
-			id2StringTable.put(id2StringPut);
-		}
-	}
-
-	private static void quadBreakDown(ArrayList<Statement> statements)
-			throws NumericalRangeException {
+	private void quadBreakDown(ArrayList<Statement> statements) throws IOException, NumericalRangeException {
 		for (Statement statement : statements) {
 			Value subject = statement.getSubject();
 			Id subjectId = generateId(idCounter, subject, Id.BASE_ID);
@@ -151,7 +161,7 @@ public class HBaseLoader {
 		}
 	}
 
-	private static byte[] buildSPOCKey(Id subjectId, Id predicateId,
+	private byte[] buildSPOCKey(Id subjectId, Id predicateId,
 											Id objectId, Id contextId) {
 		byte []spoc = new byte[HBPrefixMatchSchema.KEY_LENGTH];
 		System.arraycopy(subjectId.getBytes(), subjectId.getContentOffset(), spoc, 0, BaseId.SIZE);
@@ -166,7 +176,7 @@ public class HBaseLoader {
 		return spoc;
 	}
 	
-	public static Put build(int sOffset, int pOffset, int oOffset, int cOffset, byte []source) throws IOException
+	public Put build(int sOffset, int pOffset, int oOffset, int cOffset, byte []source) throws IOException
 	{
 		byte []outBytes = new byte[HBPrefixMatchSchema.KEY_LENGTH];
 		
@@ -181,25 +191,46 @@ public class HBaseLoader {
 		return put;
 	}
 	
-	public static Id generateId(long oldCounter, Value value, byte idType){
-		ValueIdPair existingPair;
+	public Id generateId(long oldCounter, Value value, byte idType) throws IOException{
 		Id retId;
-		if ((existingPair = dictionary.get(value)) == null) {
+		byte []idBytes;
+		if ((idBytes=retOpsManager.retrieveId(value)) == null) {
 			retId = Id.build(oldCounter, idType);
-			ValueIdPair valueIdPair = new ValueIdPair(value, retId);
+			//ValueIdPair valueIdPair = new ValueIdPair(value, retId);
 
-			dictionary.put(value, valueIdPair);
+			addValue2IdMapping(value, retId);
+			addId2ValueMapping(retId, value);
+			//dictionary.put(value, valueIdPair);
 			idCounter = oldCounter + 1;
 		}
 		else{
-			retId = existingPair.id;
+			retId = Id.build(idBytes);
 		}
 		
 		return retId;
 	}
 	
+	private void addValue2IdMapping(Value val, Id id) throws IOException{
+		byte []valBytes = val.toString().getBytes("UTF-8");
+		byte []md5Hash = mDigest.digest(valBytes);
+		
+		Put string2IdPut = new Put(md5Hash);
+		string2IdPut.add(HBPrefixMatchSchema.COLUMN_FAMILY, HBPrefixMatchSchema.COLUMN_NAME, id.getContent());
+		string2IdTable.put(string2IdPut);
+	}
 	
-	static class ValueIdPair{
+	public void addId2ValueMapping(Id id, Value val) throws IOException{		
+		byteStream.reset();
+		hbaseValue.setValue(val);
+		hbaseValue.write(dataOutputStream);
+		byte []serializedValue = byteStream.toByteArray();
+		
+		Put id2StringPut = new Put(id.getContent());
+		id2StringPut.add(HBPrefixMatchSchema.COLUMN_FAMILY, HBPrefixMatchSchema.COLUMN_NAME, serializedValue);
+		id2StringTable.put(id2StringPut);
+	}
+	
+	/*static class ValueIdPair{
 		public Value value;
 		public Id id;
 		
@@ -208,6 +239,6 @@ public class HBaseLoader {
 			this.value = value;
 			this.id = id;
 		}
-	}
+	}*/
 
 }

@@ -17,6 +17,8 @@ public interface IHBasePrefixMatchRetrieveOpsManager extends IHBaseOperationMana
 	
 	public ArrayList<ArrayList<Id>> getResults(Id[] triple, RowLimitPair limits) throws IOException;
 	
-	public void materializeIds(Map<Id, Value> id2ValueMap) throws IOException;;
+	public void materializeIds(Map<Id, Value> id2ValueMap) throws IOException;
+
+	public byte [] retrieveId(Value val) throws IOException;
 
 }

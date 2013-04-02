@@ -454,7 +454,8 @@ public class HBPrefixMatchOperationManager implements IHBasePrefixMatchRetrieveO
 	@Override
 	public void populateTables(ArrayList<Statement> statements)
 			throws Exception {
-		HBaseLoader.load(con, schemaSuffix, statements);
+		HBaseLoader loader = new HBaseLoader(this, con, schemaSuffix);
+		loader.load(statements);
 	}	
 	
 	//========================== HELPER OR UNIMPLEMENTED ================================ 
@@ -473,8 +474,9 @@ public class HBPrefixMatchOperationManager implements IHBasePrefixMatchRetrieveO
 		return ret;
 	}
 	
-	public byte []retrieveId(String s) throws IOException{
-		byte []sBytes = s.getBytes();
+	@Override
+	public byte []retrieveId(Value val) throws IOException{
+		byte []sBytes = val.toString().getBytes("UTF-8");
 		byte []md5Hash = mDigest.digest(sBytes);
 		
 		Get g = new Get(md5Hash);
@@ -483,9 +485,9 @@ public class HBPrefixMatchOperationManager implements IHBasePrefixMatchRetrieveO
 		HTableInterface table = con.getTable(HBPrefixMatchSchema.STRING2ID+schemaSuffix);
 		Result r = table.get(g);
 		byte []id = r.getValue(HBPrefixMatchSchema.COLUMN_FAMILY, HBPrefixMatchSchema.COLUMN_NAME);
-		if (id == null){
-			System.err.println("Id does not exist for: "+s);
-		}
+		//if (id == null){
+			//System.err.println("Id does not exist for: "+s);
+		//}
 		
 		return id;
 	}
