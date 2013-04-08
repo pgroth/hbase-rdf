@@ -9,6 +9,7 @@ import java.util.Set;
 import nl.vu.jena.graph.FilteredTriple;
 
 import com.hp.hpl.jena.graph.Node;
+import com.hp.hpl.jena.graph.Node_Variable;
 import com.hp.hpl.jena.graph.Triple;
 import com.hp.hpl.jena.sparql.algebra.Op;
 import com.hp.hpl.jena.sparql.algebra.OpVars;
@@ -21,9 +22,11 @@ import com.hp.hpl.jena.sparql.algebra.op.OpSequence;
 import com.hp.hpl.jena.sparql.algebra.op.OpTable;
 import com.hp.hpl.jena.sparql.core.BasicPattern;
 import com.hp.hpl.jena.sparql.core.Var;
+import com.hp.hpl.jena.sparql.expr.E_Equals;
 import com.hp.hpl.jena.sparql.expr.Expr;
 import com.hp.hpl.jena.sparql.expr.ExprFunction2;
 import com.hp.hpl.jena.sparql.expr.ExprList;
+import com.hp.hpl.jena.sparql.expr.NodeValue;
 import com.hp.hpl.jena.sparql.util.VarUtils;
 
 public class HBaseTransformFilterPlacement extends TransformCopy {
@@ -105,7 +108,7 @@ public class HBaseTransformFilterPlacement extends TransformCopy {
     }
 
     private static Op transformSimpleFilterBGP(ExprList exprs, BasicPattern pattern/*list of triple patterns*/){
-    	//check if we have simple filter expressions which are applicable to any of the triple patterns
+    	//assuming we have simple filter expressions
     	
     	List<Triple> modifiedTriplePatterns = new ArrayList<Triple>(pattern.size());
     	
@@ -115,8 +118,15 @@ public class HBaseTransformFilterPlacement extends TransformCopy {
     	for (Triple triple : pattern) {
 			
     		if (VarUtils.getVars(triple).containsAll(exprVars)){
-    			FilteredTriple fTriple = new FilteredTriple(triple, expr);
-    			modifiedTriplePatterns.add(fTriple);
+    			if (expr instanceof E_Equals){
+    				//bind the constant in the triple
+    				Triple newTriple = bindConstantInTriple((E_Equals)expr, triple);
+    				modifiedTriplePatterns.add(newTriple);
+    			}
+    			else {
+    				FilteredTriple fTriple = new FilteredTriple(triple, expr);
+    				modifiedTriplePatterns.add(fTriple);
+    			}
     		}
     		else{
     			modifiedTriplePatterns.add(triple);
@@ -127,7 +137,39 @@ public class HBaseTransformFilterPlacement extends TransformCopy {
     	return new OpBGP(BasicPattern.wrap(modifiedTriplePatterns));
     }
     
-    private static Op transformFilterBGP(ExprList exprs, Set<Var> patternVarsScope, BasicPattern pattern)
+    private static Triple bindConstantInTriple(E_Equals expr, Triple triple) {
+    	NodeValue val;
+    	String varName;
+		if (expr.getArg1().isConstant()){
+			val = expr.getArg1().getConstant();
+			varName = expr.getArg2().getExprVar().getVarName();
+		}
+		else if (expr.getArg2().isConstant()){
+			val = expr.getArg2().getConstant();
+			varName = expr.getArg1().getExprVar().getVarName();
+		}
+		else{
+			throw new RuntimeException("bindConstantInTriple: this shouldn't happen");
+		}
+		
+		Triple newTriple;
+		if (triple.getSubject() instanceof Node_Variable && triple.getSubject().getName().equals(varName)){
+			newTriple = new Triple(val.asNode(), triple.getPredicate(), triple.getObject());
+		}
+		else if (triple.getPredicate() instanceof Node_Variable && triple.getPredicate().getName().equals(varName)){
+			newTriple = new Triple(triple.getSubject(), val.asNode(), triple.getObject());
+		}
+		else if (triple.getObject() instanceof Node_Variable && triple.getObject().getName().equals(varName)){
+			newTriple = new Triple(triple.getSubject(), triple.getPredicate(), val.asNode());
+		}
+		else{
+			throw new RuntimeException("bindConstantInTriple: No triple position bound by expression value");
+		}
+		
+		return newTriple;
+	}
+
+	private static Op transformFilterBGP(ExprList exprs, Set<Var> patternVarsScope, BasicPattern pattern)
     {
     	if (isSimpleFilter(exprs)){
     		return transformSimpleFilterBGP(exprs, pattern);
@@ -171,7 +213,7 @@ public class HBaseTransformFilterPlacement extends TransformCopy {
 			return false;
 		
 		ExprFunction2 exFunc2 = (ExprFunction2)expr;
-		if (exFunc2.getArg1().isConstant() || exFunc2.getArg2().isConstant()){
+		if ((exFunc2.getArg1().isConstant() || exFunc2.getArg2().isConstant()) && expr.getVarsMentioned().size()==1){
 			return true;
 		}
 		
