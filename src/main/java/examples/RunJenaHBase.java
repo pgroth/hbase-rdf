@@ -1,6 +1,10 @@
 package examples;
 
 import java.io.IOException;
+import java.util.Iterator;
+
+import org.openjena.atlas.io.IndentedLineBuffer;
+import org.openjena.atlas.io.IndentedWriter;
 
 import nl.vu.datalayer.hbase.HBaseClientSolution;
 import nl.vu.datalayer.hbase.HBaseFactory;
@@ -9,9 +13,10 @@ import nl.vu.datalayer.hbase.schema.HBPrefixMatchSchema;
 import nl.vu.jena.graph.HBaseGraph;
 import nl.vu.jena.sparql.engine.main.HBaseStageGenerator;
 import nl.vu.jena.sparql.engine.optimizer.HBaseOptimize;
-import nl.vu.jena.sparql.engine.optimizer.TransformFilterPlacementHBase;
+import nl.vu.jena.sparql.engine.optimizer.HBaseTransformFilterPlacement;
 
 import com.hp.hpl.jena.graph.Graph;
+import com.hp.hpl.jena.graph.Triple;
 import com.hp.hpl.jena.query.ARQ;
 import com.hp.hpl.jena.query.Query;
 import com.hp.hpl.jena.query.QueryExecution;
@@ -26,7 +31,13 @@ import com.hp.hpl.jena.rdf.model.Resource;
 import com.hp.hpl.jena.rdf.model.Statement;
 import com.hp.hpl.jena.rdf.model.StmtIterator;
 import com.hp.hpl.jena.sparql.ARQConstants;
+import com.hp.hpl.jena.sparql.algebra.Algebra;
+import com.hp.hpl.jena.sparql.algebra.Op;
+import com.hp.hpl.jena.sparql.engine.QueryExecutionBase;
 import com.hp.hpl.jena.sparql.engine.main.StageBuilder;
+import com.hp.hpl.jena.sparql.serializer.SerializationContext;
+import com.hp.hpl.jena.sparql.sse.WriterSSE;
+import com.hp.hpl.jena.sparql.util.QueryOutputUtils;
 
 public class RunJenaHBase {
 
@@ -59,7 +70,7 @@ public class RunJenaHBase {
 	}
 
 	public static void runSPARQLQuery(Model model) {
-		String queryString = BSBMQueries.Q1;
+		String queryString = BSBMQueries.Q5;
 
 		System.out.println("Query: \""+queryString+" \"");
 		//Query query = QueryFactory.create(queryString);
@@ -67,21 +78,41 @@ public class RunJenaHBase {
 		StageBuilder.setGenerator(ARQ.getContext(), hbaseStageGenerator) ;
 		
 		ARQ.getContext().set(ARQConstants.sysOptimizerFactory, HBaseOptimize.hbaseOptimizationFactory);
-		ARQ.getContext().set(ARQ.optFilterPlacement, new TransformFilterPlacementHBase());
+		ARQ.getContext().set(ARQ.optFilterPlacement, new HBaseTransformFilterPlacement());
 		
-		QueryExecution qexec = QueryExecutionFactory.create(queryString, model);
+		QueryExecutionBase qexec = (QueryExecutionBase)QueryExecutionFactory.create(queryString, model);
 		
-		ResultSet results;
 		try {
-			results = qexec.execSelect();
-			//ResultSetFormatter.asRDF(result, results);
-			System.out.println("Solutions: "+results.getRowNumber());
-			while (results.hasNext()){
-				QuerySolution solution = results.next();
-				System.out.println(solution.toString());
-			}
+			executeSelect(qexec);
+			//executeDescribe(qexec, model);
 		} finally {
 			qexec.close();
+		}
+	}
+	
+	private static void executeDescribe(QueryExecutionBase qexec, Model model){
+		Iterator<Triple> it = qexec.execDescribeTriples();
+		while (it.hasNext()){
+			System.out.println(it.next());
+		}
+	}
+
+	private static void executeSelect(QueryExecutionBase qexec) {
+		ResultSet results;
+		results = qexec.execSelect();
+		
+		/*IndentedLineBuffer buff = new IndentedLineBuffer() ;
+		Op op = Algebra.compile(qexec.getQuery()) ;
+		op = Algebra.optimize(op) ;
+		WriterSSE.out(buff, op, qexec.getQuery()) ;
+		String str = buff.toString() ;
+		
+		System.out.println(str);*/
+		//ResultSetFormatter.asRDF(result, results);
+		System.out.println("Solutions: "+results.getRowNumber());
+		while (results.hasNext()){
+			QuerySolution solution = results.next();
+			System.out.println(solution.toString());
 		}
 	}
 

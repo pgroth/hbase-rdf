@@ -7,7 +7,7 @@ public class BSBMQueries {
 			+"PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#> "
 			+"PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> "
 
-			+"SELECT DISTINCT ?product ?label "
+			+"SELECT DISTINCT ?product ?label ?value1 "
 			+"WHERE { "
 			 +"?product rdfs:label ?label ."
 			 +"?product a bsbm-inst:ProductType1 ."
@@ -23,8 +23,8 @@ public class BSBMQueries {
 +"PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>"
 +"PREFIX dc: <http://purl.org/dc/elements/1.1/>"
 +"PREFIX fromProducer1:  <http://www4.wiwiss.fu-berlin.de/bizer/bsbm/v01/instances/dataFromProducer1/>"
-+"SELECT ?label ?comment ?producer ?productFeature ?propertyTextual1 ?propertyTextual2 ?propertyTextual3"
-+" ?propertyNumeric1 ?propertyNumeric2 " 
++"SELECT ?label ?comment ?producer ?f ?productFeature ?propertyTextual1 ?propertyTextual2 ?propertyTextual3"
++" ?propertyNumeric1 ?propertyNumeric2" 
 +"WHERE {"
  +"fromProducer1:Product1 rdfs:label ?label ."
 	+"fromProducer1:Product1 rdfs:comment ?comment ."
@@ -35,12 +35,35 @@ public class BSBMQueries {
 	+"?f rdfs:label ?productFeature ."
 	+"fromProducer1:Product1 bsbm:productPropertyTextual1 ?propertyTextual1 ."
 	+"fromProducer1:Product1 bsbm:productPropertyTextual2 ?propertyTextual2 ."	
- +"fromProducer1:Product1 bsbm:productPropertyTextual3 ?propertyTextual3 ."
+    +"fromProducer1:Product1 bsbm:productPropertyTextual3 ?propertyTextual3 ."
 	+"fromProducer1:Product1 bsbm:productPropertyNumeric1 ?propertyNumeric1 ."
 	+"fromProducer1:Product1 bsbm:productPropertyNumeric2 ?propertyNumeric2 ."
-	/*
+	//+"FILTER( 831 = ?propertyNumeric1 )"	
 	+"OPTIONAL { fromProducer1:Product1 bsbm:productPropertyTextual4 ?propertyTextual4 }"
  +"OPTIONAL { fromProducer1:Product1 bsbm:productPropertyTextual5 ?propertyTextual5 }"
- +"OPTIONAL { fromProducer1:Product1 bsbm:productPropertyNumeric4 ?propertyNumeric4 }"*/
+ +"OPTIONAL { fromProducer1:Product1 bsbm:productPropertyNumeric4 ?propertyNumeric4 }"
 +"}";
+	
+	public static final String Q9 = "PREFIX rev: <http://purl.org/stuff/rev#>  " +
+			"DESCRIBE ?x " +
+			"WHERE { " +
+			"<http://www4.wiwiss.fu-berlin.de/bizer/bsbm/v01/instances/dataFromRatingSite1/Review1> rev:reviewer ?x " +
+			"}";
+	
+	public static final String Q5 = "PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#> " +
+			"PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> " +
+			"PREFIX bsbm: <http://www4.wiwiss.fu-berlin.de/bizer/bsbm/v01/vocabulary/>  " +
+			"SELECT DISTINCT ?product ?productLabel WHERE {          " +
+			"?product rdfs:label ?productLabel .     " +
+			"FILTER (<http://www4.wiwiss.fu-berlin.de/bizer/bsbm/v01/instances/dataFromProducer494/Product24290> != ?product)   " +
+			"<http://www4.wiwiss.fu-berlin.de/bizer/bsbm/v01/instances/dataFromProducer494/Product24290> bsbm:productFeature ?prodFeature .   " +
+			"?product bsbm:productFeature ?prodFeature .   " +
+			"<http://www4.wiwiss.fu-berlin.de/bizer/bsbm/v01/instances/dataFromProducer494/Product24290> bsbm:productPropertyNumeric1 ?origProperty1 .     " +
+			"?product bsbm:productPropertyNumeric1 ?simProperty1 .   " +
+			"FILTER (?simProperty1 < (?origProperty1 + 120) && ?simProperty1 > (?origProperty1 - 120))     " +
+			"<http://www4.wiwiss.fu-berlin.de/bizer/bsbm/v01/instances/dataFromProducer494/Product24290> bsbm:productPropertyNumeric2 ?origProperty2 .     " +
+			"?product bsbm:productPropertyNumeric2 ?simProperty2 .   " +
+			"FILTER (?simProperty2 < (?origProperty2 + 170) && ?simProperty2 > (?origProperty2 - 170)) " +
+			"} " +
+			"ORDER BY ?productLabel LIMIT 5";
 }
