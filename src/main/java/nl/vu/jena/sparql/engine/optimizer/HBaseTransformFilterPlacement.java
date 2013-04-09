@@ -1,6 +1,7 @@
 package nl.vu.jena.sparql.engine.optimizer;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
@@ -23,6 +24,12 @@ import com.hp.hpl.jena.sparql.algebra.op.OpTable;
 import com.hp.hpl.jena.sparql.core.BasicPattern;
 import com.hp.hpl.jena.sparql.core.Var;
 import com.hp.hpl.jena.sparql.expr.E_Equals;
+import com.hp.hpl.jena.sparql.expr.E_GreaterThan;
+import com.hp.hpl.jena.sparql.expr.E_GreaterThanOrEqual;
+import com.hp.hpl.jena.sparql.expr.E_LessThan;
+import com.hp.hpl.jena.sparql.expr.E_LessThanOrEqual;
+import com.hp.hpl.jena.sparql.expr.E_NotEquals;
+import com.hp.hpl.jena.sparql.expr.E_NotExists;
 import com.hp.hpl.jena.sparql.expr.Expr;
 import com.hp.hpl.jena.sparql.expr.ExprFunction2;
 import com.hp.hpl.jena.sparql.expr.ExprList;
@@ -31,6 +38,12 @@ import com.hp.hpl.jena.sparql.util.VarUtils;
 
 public class HBaseTransformFilterPlacement extends TransformCopy {
 	static boolean doFilterPlacement = true ;
+	
+	private static List<Class> supportedFunctionForSimpleFilters = Arrays.asList(new Class[]{ E_Equals.class,
+			E_LessThanOrEqual.class,
+			E_LessThan.class,
+			E_GreaterThan.class,
+			E_GreaterThanOrEqual.class});
     
     public static Op transform(ExprList exprs, BasicPattern bgp)
     {
@@ -107,17 +120,17 @@ public class HBaseTransformFilterPlacement extends TransformCopy {
         return  transformFilterBGP(exprs, patternVarsScope, x.getPattern()) ;
     }
 
-    private static Op transformSimpleFilterBGP(ExprList exprs, BasicPattern pattern/*list of triple patterns*/){
+    private static List<Triple> transformSimpleFilterBGP(Expr expr, List<Triple> inputTriplePatterns/*list of triple patterns*/){
     	//assuming we have simple filter expressions
     	
-    	List<Triple> modifiedTriplePatterns = new ArrayList<Triple>(pattern.size());
+    	List<Triple> modifiedTriplePatterns = new ArrayList<Triple>(inputTriplePatterns.size());
     	
-    	Expr expr = exprs.get(exprs.size()-1);
+    	//Expr expr = exprs.get(exprs.size()-1);
     	Set<Var> exprVars = expr.getVarsMentioned();
     	
-    	for (Triple triple : pattern) {
-			
-    		if (VarUtils.getVars(triple).containsAll(exprVars)){
+    	boolean modified = false;
+    	for (Triple triple : inputTriplePatterns) {		
+    		if (VarUtils.getVars(triple).containsAll(exprVars) && !(triple instanceof FilteredTriple)){
     			if (expr instanceof E_Equals){
     				//bind the constant in the triple
     				Triple newTriple = bindConstantInTriple((E_Equals)expr, triple);
@@ -127,14 +140,18 @@ public class HBaseTransformFilterPlacement extends TransformCopy {
     				FilteredTriple fTriple = new FilteredTriple(triple, expr);
     				modifiedTriplePatterns.add(fTriple);
     			}
+    			modified = true;
     		}
     		else{
     			modifiedTriplePatterns.add(triple);
     		}
 		}
-    	exprs.getList().clear();
     	
-    	return new OpBGP(BasicPattern.wrap(modifiedTriplePatterns));
+    	if (modified){
+    		return modifiedTriplePatterns;
+    	} else {
+    		return inputTriplePatterns;
+    	}
     }
     
     private static Triple bindConstantInTriple(E_Equals expr, Triple triple) {
@@ -171,13 +188,26 @@ public class HBaseTransformFilterPlacement extends TransformCopy {
 
 	private static Op transformFilterBGP(ExprList exprs, Set<Var> patternVarsScope, BasicPattern pattern)
     {
-    	if (isSimpleFilter(exprs)){
-    		return transformSimpleFilterBGP(exprs, pattern);
-    	}
+		List<Triple> triplePatterns = pattern.getList();
+		for (Iterator<Expr> exprIt = exprs.iterator(); exprIt.hasNext();) {
+			Expr expr = (Expr) exprIt.next();
+			if (isSimpleFilter(expr)){
+				List<Triple> modifiedTriplePatterns = transformSimpleFilterBGP(expr, triplePatterns);
+				if (modifiedTriplePatterns != triplePatterns){
+					exprIt.remove();
+				}
+				triplePatterns = modifiedTriplePatterns;
+	    	}
+		}
+		
+		if (exprs.isEmpty()){
+			new OpBGP(BasicPattern.wrap(triplePatterns));
+		}
+    
         // Any filters that depend on no variables. 
         Op op = insertAnyFilter(exprs, patternVarsScope, null) ;
         
-        for ( Triple triple : pattern )
+        for ( Triple triple : triplePatterns )
         {
             OpBGP opBGP = getBGP(op) ;
             if ( opBGP == null )
@@ -203,17 +233,19 @@ public class HBaseTransformFilterPlacement extends TransformCopy {
         return op ;
     }
     
-    private static boolean isSimpleFilter(ExprList exprs) {
-		if (exprs.size() != 1){
+    private static boolean isSimpleFilter(Expr expr) {
+		/*if (exprs.size() != 1){
 			return false;
-		}
+		}*/
 		
-		Expr expr = exprs.get(exprs.size()-1);
+		//Expr expr = exprs.get(exprs.size()-1);
 		if (!(expr instanceof ExprFunction2))
 			return false;
 		
 		ExprFunction2 exFunc2 = (ExprFunction2)expr;
-		if ((exFunc2.getArg1().isConstant() || exFunc2.getArg2().isConstant()) && expr.getVarsMentioned().size()==1){
+		if (((exFunc2.getArg1().isConstant() && exFunc2.getArg1().getConstant().isNumber()) || 
+				(exFunc2.getArg2().isConstant() && exFunc2.getArg2().getConstant().isNumber())) 
+				&& supportedFunctionForSimpleFilters.contains(exFunc2.getClass())){
 			return true;
 		}
 		
@@ -346,7 +378,7 @@ public class HBaseTransformFilterPlacement extends TransformCopy {
             Expr expr = iter.next() ;
             // Cache
             Set<Var> exprVars = expr.getVarsMentioned() ;
-            if ( patternVarsScope.containsAll(exprVars) )
+            if ( patternVarsScope.containsAll(exprVars) && !(expr instanceof E_NotEquals) )
             {
                 if ( op == null )
                     op = OpTable.unit() ;

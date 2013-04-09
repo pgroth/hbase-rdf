@@ -28,8 +28,8 @@ public class NTripleParser {
 			HBaseClientSolution sol = HBaseFactory.getHBaseSolution(schemaName, con, null);
 			sol.schema.create();
 			((HBPrefixMatchSchema)sol.schema).createCounterTable(con.getAdmin());
-			//HBPrefixMatchSchema.updateCounter(0, 0, ((HBPrefixMatchSchema)sol.schema).getSchemaSuffix());
-			//HBPrefixMatchSchema.updateLastCounter(1, con.getConfiguration(), ((HBPrefixMatchSchema)sol.schema).getSchemaSuffix());
+			HBPrefixMatchSchema.updateCounter(0, 0, ((HBPrefixMatchSchema)sol.schema).getSchemaSuffix());
+			HBPrefixMatchSchema.updateLastCounter(1, con.getConfiguration(), ((HBPrefixMatchSchema)sol.schema).getSchemaSuffix());
 			
 			File directory = new File(directoryPath);
 			for (File child : directory.listFiles()) {
@@ -56,7 +56,7 @@ public class NTripleParser {
 				  // handle a problem encountered by the RDFHandler
 					e.printStackTrace();
 				}
-				System.out.println("Finished parsing");
+				System.out.println("Finished parsing: "+myList.size());
 				// populate table
 				sol.opsManager.populateTables(myList);
 			}		

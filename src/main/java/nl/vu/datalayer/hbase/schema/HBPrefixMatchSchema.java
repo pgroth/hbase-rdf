@@ -31,7 +31,9 @@ public class HBPrefixMatchSchema implements IHBaseSchema {
 	private HBaseConnection con;	
 	
 	public static final String SCHEMA_NAME = "prefix-match";
-	public static final String SUFFIX_PROPERTY = "suffix_property";
+	public static final String SUFFIX_PROPERTY = "schema_suffix";
+	public static final String ONLY_TRIPLES_PROPERTY = "only_triples";
+	public static final String NUMBER_OF_SLAVE_NODES_PROPERTY = "slave_nodes";
 
 	public static final byte [] COLUMN_FAMILY = "F".getBytes();
 	public static final byte [] COLUMN_NAME = "".getBytes();

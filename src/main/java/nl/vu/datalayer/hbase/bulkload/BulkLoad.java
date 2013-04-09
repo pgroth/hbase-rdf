@@ -1,6 +1,8 @@
 package nl.vu.datalayer.hbase.bulkload;
 
+import java.io.FileInputStream;
 import java.io.IOException;
+import java.util.Properties;
 
 import nl.vu.datalayer.hbase.connection.HBaseConnection;
 import nl.vu.datalayer.hbase.connection.NativeJavaConnection;
@@ -35,8 +37,8 @@ public class BulkLoad extends AbstractPrefixMatchBulkLoad{
 	 */
 	private static HTableInterface currentTable = null;
 	
-	public BulkLoad(Path input, int inputEstimateSize, String outputPath, String schemaSuffix, boolean onlyTriples) {
-		super(input, inputEstimateSize, outputPath, schemaSuffix, onlyTriples);
+	public BulkLoad(Path input, int inputEstimateSize, String outputPath, String schemaSuffix, boolean onlyTriples, int numberOfSlaveNodes) {
+		super(input, inputEstimateSize, outputPath, schemaSuffix, onlyTriples, numberOfSlaveNodes);
 	}
 
 	protected void bulkLoadQuadTables(Path convertedTripletsPath) throws Exception {
@@ -110,7 +112,7 @@ public class BulkLoad extends AbstractPrefixMatchBulkLoad{
 	}
 	
 	protected HBPrefixMatchSchema createPrefixMatchSchema() {
-		return new HBPrefixMatchSchema(con, schemaSuffix);
+		return new HBPrefixMatchSchema(con, schemaSuffix, rdfUnitType==RDFUnit.TRIPLE, 2*numberOfSlaveNodes);
 	}
 
 	private Job createResourceToTripleJob(Path input, Path output) throws IOException {
@@ -161,15 +163,24 @@ public class BulkLoad extends AbstractPrefixMatchBulkLoad{
 	 */
 	public static void main(String[] args) {
 		try {
-			if (args.length != 5){
-				System.out.println("Usage: bulkLoad <inputPath> <inputSizeEstimate in MB> <outputPath> <schemaSuffix> <onlyTriples(true/false)>");
+			if (args.length != 3){
+				System.out.println("Usage: bulkLoad <inputPath> <inputSizeEstimate in MB> <outputPath>");
 				return;
 			}		
+			
+			Properties prop = new Properties();
+			prop.load(new FileInputStream("config.properties"));
+			
+			String schemaSuffix = prop.getProperty(HBPrefixMatchSchema.SUFFIX_PROPERTY, "");
+			boolean onlyTriples = Boolean.parseBoolean(prop.getProperty(HBPrefixMatchSchema.ONLY_TRIPLES_PROPERTY, ""));
+			int slaveNodes = Integer.parseInt(prop.getProperty(HBPrefixMatchSchema.NUMBER_OF_SLAVE_NODES_PROPERTY, ""));
+			
 			AbstractPrefixMatchBulkLoad bulkLoad = new BulkLoad(new Path(args[0]),
 									Integer.parseInt(args[1]),
 									args[2],
-									args[3],
-									Boolean.parseBoolean(args[4]));
+									schemaSuffix,
+									onlyTriples,
+									slaveNodes);
 			
 			bulkLoad.run();
 			

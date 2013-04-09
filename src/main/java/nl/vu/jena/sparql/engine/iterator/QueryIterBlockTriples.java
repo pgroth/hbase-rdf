@@ -92,6 +92,7 @@ public class QueryIterBlockTriples extends QueryIter1
 
 				chain = new QueryIterTriplePattern(chain, idBasedTriple, execContext);
 			}
+			//TODO else apply recursive algorithm for eliminating subqueries dependent on this one (which has a missing element)
 		}
 		return chain;
 	}

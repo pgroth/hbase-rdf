@@ -54,8 +54,7 @@ public class HBaseGraph extends GraphBase {
 			ArrayList<ArrayList<Id>> results;
 
 			if (m instanceof FilteredTriple) {
-				ExprFunction2 simpleFilter = (ExprFunction2) (((FilteredTriple) m)
-						.getSimpleFilter());
+				ExprFunction2 simpleFilter = (ExprFunction2) (((FilteredTriple) m).getSimpleFilter());
 				results = getFilteredResults(quad, simpleFilter);
 			} else {
 				results = ((IHBasePrefixMatchRetrieveOpsManager) hbase.opsManager).getResults(quad);

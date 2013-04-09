@@ -17,8 +17,8 @@
    ) .
 
 # HBase
-[] ja:loadClass "sparqlrank.SPARQLRankLoader" .
-
+#[] ja:loadClass "sparqlrank.SPARQLRankLoader" .
+[] ja:loadClass "nl.vu.jena.assembler.HBaseRewriter" .
 
 ## ---------------------------------------------------------------
 ## Read-only HBase dataset (only read services enabled).
@@ -39,6 +39,7 @@
 ja:GraphHBase rdf:type ja:GraphHBaseType .
 
 ja:GraphHBaseType  ja:assembler "nl.vu.jena.assembler.HBaseAssembler" .
+
 
 
 

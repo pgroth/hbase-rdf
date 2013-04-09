@@ -1,6 +1,8 @@
 package nl.vu.datalayer.hbase.coprocessor;
 
+import java.io.FileInputStream;
 import java.io.IOException;
+import java.util.Properties;
 
 import nl.vu.datalayer.hbase.bulkload.AbstractPrefixMatchBulkLoad;
 import nl.vu.datalayer.hbase.bulkload.BulkLoad;
@@ -25,9 +27,9 @@ public class CoprocessorBulkLoad extends AbstractPrefixMatchBulkLoad {
 	private String coprocessorPath;
 	
 	public CoprocessorBulkLoad(Path input, int inputEstimateSize, String outputPath, 
-								String schemaSuffix, boolean onlyTriples,
+								String schemaSuffix, boolean onlyTriples, int numberOfSlaveNodes,
 								String coprocessorPath) {
-		super(input, inputEstimateSize, outputPath, schemaSuffix, onlyTriples);
+		super(input, inputEstimateSize, outputPath, schemaSuffix, onlyTriples, numberOfSlaveNodes);
 		this.coprocessorPath = coprocessorPath;
 	}
 
@@ -110,17 +112,26 @@ public class CoprocessorBulkLoad extends AbstractPrefixMatchBulkLoad {
 
 	public static void main(String[] args) {
 		try {
-			if (args.length != 6){
+			if (args.length != 4){
 				System.out.println("Usage: bulkLoad <inputPath> <inputSizeEstimate in MB> <outputPath> "
-										+"<schemaSuffix> <onlyTriples(true/false)> <coprocessorPath>");
+										+"<coprocessorPath>");
 				return;
-			}		
+			}
+			
+			Properties prop = new Properties();
+			prop.load(new FileInputStream("config.properties"));
+			
+			String schemaSuffix = prop.getProperty(HBPrefixMatchSchema.SUFFIX_PROPERTY, "");
+			boolean onlyTriples = Boolean.parseBoolean(prop.getProperty(HBPrefixMatchSchema.ONLY_TRIPLES_PROPERTY, ""));
+			int slaveNodes = Integer.parseInt(prop.getProperty(HBPrefixMatchSchema.NUMBER_OF_SLAVE_NODES_PROPERTY, ""));
+			
 			CoprocessorBulkLoad bulkLoad = new CoprocessorBulkLoad(new Path(args[0]),
 									Integer.parseInt(args[1]),
 									args[2],
-									args[3],
-									Boolean.parseBoolean(args[4]),
-									args[5]);
+									schemaSuffix,
+									onlyTriples,
+									slaveNodes,
+									args[3]);
 			
 			bulkLoad.run();
 			

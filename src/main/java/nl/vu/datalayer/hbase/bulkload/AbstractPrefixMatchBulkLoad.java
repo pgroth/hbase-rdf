@@ -67,8 +67,9 @@ public abstract class AbstractPrefixMatchBulkLoad {
 	protected FileSystem fs;
 	protected long inputSplitSize;
 	protected HBPrefixMatchSchema prefMatchSchema;
+	protected int numberOfSlaveNodes;
 
-	public AbstractPrefixMatchBulkLoad(Path input, int inputEstimateSize, String outputPath, String schemaSuffix, boolean onlyTriples) {
+	public AbstractPrefixMatchBulkLoad(Path input, int inputEstimateSize, String outputPath, String schemaSuffix, boolean onlyTriples, int numberOfSlaveNodes) {
 		this.schemaSuffix = schemaSuffix;
 		this.input = input;
 		this.inputEstimateSize = inputEstimateSize;
@@ -77,6 +78,8 @@ public abstract class AbstractPrefixMatchBulkLoad {
 			rdfUnitType = RDFUnit.TRIPLE;
 		else
 			rdfUnitType = RDFUnit.QUAD;
+		
+		this.numberOfSlaveNodes = numberOfSlaveNodes;
 	}
 
 	protected void run() throws IOException, Exception, InterruptedException, ClassNotFoundException {
@@ -91,6 +94,7 @@ public abstract class AbstractPrefixMatchBulkLoad {
 		Path resourceIds = new Path(outputPath+"/"+QuadBreakDown.RESOURCE_IDS_DIR);
 		fs = FileSystem.get(con.getConfiguration());
 		inputSplitSize = con.getConfiguration().getLong("dfs.block.size", DEFAULT_BLOCK_SIZE);
+		System.out.println("Input split size: "+inputSplitSize);
 		
 		runTripleToResourceJob(idStringAssocInput, resourceIds, prefMatchSchema);
 		
