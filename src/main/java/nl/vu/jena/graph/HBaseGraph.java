@@ -15,6 +15,7 @@ import nl.vu.jena.cache.JenaCache;
 
 import com.hp.hpl.jena.graph.Node;
 import com.hp.hpl.jena.graph.Node_Literal;
+import com.hp.hpl.jena.graph.Node_NULL;
 import com.hp.hpl.jena.graph.Triple;
 import com.hp.hpl.jena.graph.TripleMatch;
 import com.hp.hpl.jena.graph.impl.GraphBase;
@@ -48,6 +49,13 @@ public class HBaseGraph extends GraphBase {
 		}
 		
 		try {
+			//this happens when there are missing bound elements
+			if (m.getMatchSubject() instanceof Node_NULL &&
+					m.getMatchPredicate() instanceof Node_NULL &&
+					m.getMatchObject() instanceof Node_NULL){
+				return NullIterator.instance();
+			}
+			
 			Id[] quad = valIdMapper.getIdsFromTriple(m);
 
 			// retrieve results from HBase

@@ -13,6 +13,7 @@ import org.openjena.atlas.io.IndentedWriter;
 import com.hp.hpl.jena.graph.Graph;
 import com.hp.hpl.jena.graph.Node;
 import com.hp.hpl.jena.graph.Node_Literal;
+import com.hp.hpl.jena.graph.Node_NULL;
 import com.hp.hpl.jena.graph.Triple;
 import com.hp.hpl.jena.sparql.core.BasicPattern;
 import com.hp.hpl.jena.sparql.engine.ExecutionContext;
@@ -92,7 +93,13 @@ public class QueryIterBlockTriples extends QueryIter1
 
 				chain = new QueryIterTriplePattern(chain, idBasedTriple, execContext);
 			}
-			//TODO else apply recursive algorithm for eliminating subqueries dependent on this one (which has a missing element)
+			else {
+				//this subquery has missing elements so it won't return any results
+				//we still insert it with dummy nodes so that we get empty bindings when we resolve it
+				Triple dummyTriple = new Triple(Node.NULL, Node.NULL, Node.NULL);
+				chain = new QueryIterTriplePattern(chain, dummyTriple, execContext);
+			}
+			
 		}
 		return chain;
 	}
