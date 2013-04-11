@@ -211,8 +211,8 @@ public abstract class AbstractPrefixMatchBulkLoad {
 		double maximumElementPerPartition = Math.pow(2.0, 24.0);
 		double numPartitions = (double)totalNumberOfUniqueElements/maximumElementPerPartition;
 		int taskEstimate = (int)(Math.ceil(numPartitions)* LOAD_BALANCER_FACTOR) ;
-		tripleToResourceReduceTasks = CLUSTER_SIZE > taskEstimate ?
-										CLUSTER_SIZE : taskEstimate;
+		tripleToResourceReduceTasks = numberOfSlaveNodes > taskEstimate ?
+				numberOfSlaveNodes : taskEstimate;
 		
 		System.out.println("Number of reduce tasks: "+tripleToResourceReduceTasks);
 		

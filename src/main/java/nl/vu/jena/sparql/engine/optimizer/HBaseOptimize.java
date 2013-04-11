@@ -82,11 +82,12 @@ public class HBaseOptimize implements Rewrite {
         // Either, do filter placement and other sequence generating transformations.
         // or improve to place in a sequence (latter is better?)
         
-        if ( context.isTrueOrUndef(ARQ.optFilterEquality) )
+        /*TODO eliminated this to work with jena-arq.2.9.2
+         * if ( context.isTrueOrUndef(ARQ.optFilterEquality) )
         {
             //boolean termStrings = context.isDefined(ARQ.optTermStrings) ;
             op = Optimize.apply("Filter Equality", new TransformFilterEquality(), op) ;
-        }
+        }*/
         
         if ( context.isTrueOrUndef(ARQ.optFilterDisjunction) )
             op = Optimize.apply("Filter Disjunction", new TransformFilterDisjunction(), op) ;

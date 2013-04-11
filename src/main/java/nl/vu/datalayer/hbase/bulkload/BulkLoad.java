@@ -112,7 +112,7 @@ public class BulkLoad extends AbstractPrefixMatchBulkLoad{
 	}
 	
 	protected HBPrefixMatchSchema createPrefixMatchSchema() {
-		return new HBPrefixMatchSchema(con, schemaSuffix, rdfUnitType==RDFUnit.TRIPLE, 2*numberOfSlaveNodes);
+		return new HBPrefixMatchSchema(con, schemaSuffix, rdfUnitType==RDFUnit.TRIPLE, numberOfSlaveNodes);
 	}
 
 	private Job createResourceToTripleJob(Path input, Path output) throws IOException {
