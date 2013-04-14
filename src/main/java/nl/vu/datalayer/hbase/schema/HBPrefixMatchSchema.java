@@ -405,7 +405,7 @@ public class HBPrefixMatchSchema implements IHBaseSchema {
 		HColumnDescriptor famDesc = new HColumnDescriptor(COLUMN_FAMILY);
 		
 		famDesc.setBloomFilterType(StoreFile.BloomType.ROW);
-		famDesc.setMaxVersions(1);
+		//famDesc.setMaxVersions(1);
 		if (compressionStatus == COMPRESSED){//by default it is disabled
 			famDesc.setCompactionCompressionType(Algorithm.LZO);
 			famDesc.setCompressionType(Algorithm.LZO);
