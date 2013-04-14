@@ -45,9 +45,12 @@ public class CoprocessorBulkLoad extends AbstractPrefixMatchBulkLoad {
 	private Job createResourceToTripleJob(Path input, Path output) throws IOException {
 		Configuration conf = new Configuration();
 		
+		int childJVMSize = getChildJVMSize(conf);
+		
 		ShuffleStageOptimizer shuffleOptimizer = new ShuffleStageOptimizer(inputSplitSize,
 				ResourceToTriple.getMapOutputRecordSizeEstimate(),
-				ResourceToTriple.getMapOutputRecordSizeEstimate());
+				ResourceToTriple.getMapOutputRecordSizeEstimate(),
+				childJVMSize);
 		configureShuffle(conf, shuffleOptimizer);
 		
 		conf.set("SUFFIX", schemaSuffix);
@@ -57,7 +60,7 @@ public class CoprocessorBulkLoad extends AbstractPrefixMatchBulkLoad {
 		Job j = new Job(conf);
 		j.setJobName("TableInsertResourceToTriple");
 		
-		int reduceTasks = (int)(1.75*(double)CLUSTER_SIZE*(double)TASK_PER_NODE);
+		int reduceTasks = (int)(1.75*(double)numberOfSlaveNodes*(double)TASK_PER_NODE);
 		j.setNumReduceTasks(reduceTasks);
 	
 		j.setJarByClass(BulkLoad.class);

@@ -86,10 +86,14 @@ public class BulkLoad extends AbstractPrefixMatchBulkLoad{
 		Configuration conf = new Configuration();
 		conf.setBoolean("mapred.map.tasks.speculative.execution", false);
 		conf.setBoolean("mapred.reduce.tasks.speculative.execution", false);
+		conf.setBoolean("mapred.compress.map.output", true);
+		
+		int childJVMSize = getChildJVMSize(conf);
 		
 		ShuffleStageOptimizer shuffleOptimizer = new ShuffleStageOptimizer(inputSplitSize,
 														HBPrefixMatchSchema.KEY_LENGTH+Bytes.SIZEOF_INT+Bytes.SIZEOF_LONG,
-														PrefixMatch.getMapOutputRecordSizeEstimate());		
+														PrefixMatch.getMapOutputRecordSizeEstimate(),
+														childJVMSize);		
 		configureShuffle(conf, shuffleOptimizer);
 		Job j = new Job(conf);
 
@@ -112,7 +116,7 @@ public class BulkLoad extends AbstractPrefixMatchBulkLoad{
 	}
 	
 	protected HBPrefixMatchSchema createPrefixMatchSchema() {
-		return new HBPrefixMatchSchema(con, schemaSuffix, rdfUnitType==RDFUnit.TRIPLE, numberOfSlaveNodes);
+		return new HBPrefixMatchSchema(con, schemaSuffix, rdfUnitType==RDFUnit.TRIPLE, 2*numberOfSlaveNodes);
 	}
 
 	private Job createResourceToTripleJob(Path input, Path output) throws IOException {
@@ -120,16 +124,20 @@ public class BulkLoad extends AbstractPrefixMatchBulkLoad{
 		Configuration conf = new Configuration();
 		conf.setBoolean("mapred.map.tasks.speculative.execution", false);
 		conf.setBoolean("mapred.reduce.tasks.speculative.execution", false);
+		conf.setBoolean("mapred.compress.map.output", true);
+		
+		int childJVMSize = getChildJVMSize(conf);
 		
 		ShuffleStageOptimizer shuffleOptimizer = new ShuffleStageOptimizer(inputSplitSize,
 													ResourceToTriple.getMapOutputRecordSizeEstimate(),
-													ResourceToTriple.getMapOutputRecordSizeEstimate());
+													ResourceToTriple.getMapOutputRecordSizeEstimate(),
+													childJVMSize);
 		configureShuffle(conf, shuffleOptimizer);
 		
 		Job j = new Job(conf);
 		j.setJobName("ResourceToTriple");
 		
-		int reduceTasks = (int)(1.75*(double)CLUSTER_SIZE*(double)TASK_PER_NODE);
+		int reduceTasks = (int)(1.75*(double)numberOfSlaveNodes*(double)TASK_PER_NODE);
 		j.setNumReduceTasks(reduceTasks);
 	
 		j.setJarByClass(BulkLoad.class);

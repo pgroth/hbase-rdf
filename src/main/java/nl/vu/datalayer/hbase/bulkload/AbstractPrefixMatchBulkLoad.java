@@ -4,6 +4,8 @@ import java.io.BufferedReader;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import nl.vu.datalayer.hbase.connection.HBaseConnection;
 import nl.vu.datalayer.hbase.connection.NativeJavaConnection;
@@ -40,7 +42,6 @@ public abstract class AbstractPrefixMatchBulkLoad {
 	/**
 	 * Cluster parameters used to estimate number of reducers 
 	 */
-	public  int CLUSTER_SIZE = 13;
 	public  int TASK_PER_NODE = 2;
 	/**
 	 * Estimate of a quad size  
@@ -191,10 +192,15 @@ public abstract class AbstractPrefixMatchBulkLoad {
 		Configuration conf = new Configuration();
 		conf.setBoolean("mapred.map.tasks.speculative.execution", false);
 		conf.setBoolean("mapred.reduce.tasks.speculative.execution", false);
+		conf.setBoolean("mapred.compress.map.output", true);
+		
+		int childJVMSize = getChildJVMSize(conf);
 		
 		ShuffleStageOptimizer shuffleOptimizer = new ShuffleStageOptimizer(inputSplitSize, 
 													QuadBreakDown.QUAD_MEDIAN_SIZE, 
-													QuadBreakDown.getMapOutputRecordSizeEstimate(), 1.4, 4);
+													QuadBreakDown.getMapOutputRecordSizeEstimate(), 
+													1.4, 4,
+													childJVMSize);
 		configureShuffle(conf, shuffleOptimizer);	
 		
 		conf.set("schemaSuffix", schemaSuffix);
@@ -211,8 +217,8 @@ public abstract class AbstractPrefixMatchBulkLoad {
 		double maximumElementPerPartition = Math.pow(2.0, 24.0);
 		double numPartitions = (double)totalNumberOfUniqueElements/maximumElementPerPartition;
 		int taskEstimate = (int)(Math.ceil(numPartitions)* LOAD_BALANCER_FACTOR) ;
-		tripleToResourceReduceTasks = numberOfSlaveNodes > taskEstimate ?
-				numberOfSlaveNodes : taskEstimate;
+		tripleToResourceReduceTasks = numberOfSlaveNodes*TASK_PER_NODE > taskEstimate ?
+				numberOfSlaveNodes*TASK_PER_NODE : taskEstimate;
 		
 		System.out.println("Number of reduce tasks: "+tripleToResourceReduceTasks);
 		
@@ -240,10 +246,13 @@ public abstract class AbstractPrefixMatchBulkLoad {
 		JobConf conf = new JobConf(); 
 		conf.setBoolean("mapred.map.tasks.speculative.execution", false);
 		conf.setBoolean("mapred.reduce.tasks.speculative.execution", false);
+		conf.setBoolean("mapred.compress.map.output", true);
+		
+		int childJVMSize = getChildJVMSize(conf);
 		
 		ShuffleStageOptimizer shuffleOptimizer = new ShuffleStageOptimizer(inputSplitSize, 
 				QuadBreakDown.QUAD_MEDIAN_SIZE/4+BaseId.SIZE+Bytes.SIZEOF_INT+Bytes.SIZEOF_LONG, 
-				StringIdAssoc.String2IdMapper.getMapOutputRecordSizeEstimate(), 1.4);
+				StringIdAssoc.String2IdMapper.getMapOutputRecordSizeEstimate(), 1.4, childJVMSize);
 		configureShuffle(conf, shuffleOptimizer);
 		conf.setInt("hbase.mapreduce.hfileoutputformat.blocksize", 8*1024);
 		Job j = new Job(conf);
@@ -266,14 +275,30 @@ public abstract class AbstractPrefixMatchBulkLoad {
 		return j;
 	}
 
+	protected int getChildJVMSize(Configuration conf) {
+		String childOptsString = conf.get("mapred.child.java.opts");
+		System.out.println("ChildOpts: "+childOptsString);
+		Pattern p = Pattern.compile("-Xmx([0-9]*)m");
+		Matcher m =p.matcher(childOptsString);
+		int childJVMSize = 1024;
+		if (m.find()){
+			childJVMSize = Integer.parseInt(m.group(1));
+		}
+		System.out.println("ChildJVM: "+childJVMSize);
+		return childJVMSize;
+	}
+
 	public  Job createId2StringJob(HBaseConnection con, Path input, Path output) throws Exception {
 		JobConf conf = new JobConf(); 
 		conf.setBoolean("mapred.map.tasks.speculative.execution", false);
 		conf.setBoolean("mapred.reduce.tasks.speculative.execution", false);
+		conf.setBoolean("mapred.compress.map.output", true);
+		
+		int childJVMSize = getChildJVMSize(conf);
 		
 		ShuffleStageOptimizer shuffleOptimizer = new ShuffleStageOptimizer(inputSplitSize, 
 				QuadBreakDown.QUAD_MEDIAN_SIZE/4+BaseId.SIZE+Bytes.SIZEOF_INT+Bytes.SIZEOF_LONG, 
-				StringIdAssoc.Id2StringMapper.getMapOutputRecordSizeEstimate(), 1.4);
+				StringIdAssoc.Id2StringMapper.getMapOutputRecordSizeEstimate(), 1.4, childJVMSize);
 		configureShuffle(conf, shuffleOptimizer);
 		conf.setInt("hbase.mapreduce.hfileoutputformat.blocksize", 8*1024);
 		Job j = new Job(conf);
@@ -368,10 +393,16 @@ public abstract class AbstractPrefixMatchBulkLoad {
 	}
 	
 	final protected void configureShuffle(Configuration conf, ShuffleStageOptimizer shuffleOptimizer) {
+		System.out.println("Shuffle optimizations: ioSortMB "+shuffleOptimizer.getIoSortMB()+
+				"; ioSpillPercent "+shuffleOptimizer.getIoSortSpillThreshold()+
+				"; ioRecordPercent "+shuffleOptimizer.getIoSortRecordPercent()+
+				"; ioSortFactor "+shuffleOptimizer.getIoSortFactor());
+		
 		conf.setInt("io.sort.mb", shuffleOptimizer.getIoSortMB());
 		conf.setFloat("io.sort.spill.percent", shuffleOptimizer.getIoSortSpillThreshold());
 		conf.setFloat("io.sort.record.percent", shuffleOptimizer.getIoSortRecordPercent());
 		conf.setInt("io.sort.factor", shuffleOptimizer.getIoSortFactor());
+		conf.setFloat("mapred.job.reduce.input.buffer.percent", ShuffleStageOptimizer.REDUCE_BUFFER_PERCENT);
 	}
 
 	/*public static long getIntermediateBufferSize(long inputSplitSizeBytes, int inputRecordSize, long mapOutRecordSize){		 		
