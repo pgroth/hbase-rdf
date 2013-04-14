@@ -200,7 +200,7 @@ public class HBPrefixMatchSchema implements IHBaseSchema {
 			HTableDescriptor desc = new HTableDescriptor(fullName);
 
 			HColumnDescriptor famDesc = new HColumnDescriptor(COLUMN_FAMILY);
-			famDesc.setMaxVersions(1);
+			//famDesc.setMaxVersions(1);
 			desc.addFamily(famDesc);
 
 			System.out.println("Creating table: " + fullName);
@@ -421,7 +421,7 @@ public class HBPrefixMatchSchema implements IHBaseSchema {
 			famDesc.setInMemory(true);
 		}
 		else{
-			famDesc.setBlockCacheEnabled(false);
+			famDesc.setBlockCacheEnabled(true);
 		}
 		desc.addFamily(famDesc);
 		
