@@ -27,10 +27,13 @@ import com.hp.hpl.jena.util.iterator.WrappedIterator;
 
 public class HBaseGraph extends GraphBase {
 
-	private static final int CACHE_SIZE = 500;
+	private static final int CACHE_SIZE = 100000000;
 	private HBaseClientSolution hbase;
 	ExtendedIterator<Triple> it;
 	ValueIdMapper valIdMapper;
+	
+	//private int totalRequests = 0;
+	//private int cacheHits = 0;
 	
 	private Map<TripleMatch, List<Triple>> cache = Collections.synchronizedMap(new JenaCache<TripleMatch, List<Triple>>(CACHE_SIZE));
 	
@@ -42,9 +45,11 @@ public class HBaseGraph extends GraphBase {
 
 	@Override
 	protected ExtendedIterator<Triple> graphBaseFind(TripleMatch m) {	
+		//totalRequests++;
 		ExtendedIterator<Triple> ret;
 		List<Triple> tripleList;
 		if ((tripleList=cache.get(m))!=null){
+			//cacheHits++;
 			return WrappedIterator.createNoRemove(tripleList.iterator());
 		}
 		
@@ -85,6 +90,9 @@ public class HBaseGraph extends GraphBase {
 			e.printStackTrace();
 			return NullIterator.instance();
 		}
+		/*if (totalRequests % 1000 == 0){
+			System.out.println("Cache hits: "+(double)cacheHits/(double)totalRequests);
+		}*/
 		return ret;
 	}
 	

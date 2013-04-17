@@ -52,8 +52,6 @@ import org.openrdf.model.impl.ValueFactoryImpl;
 public class HBPrefixMatchOperationManager implements IHBasePrefixMatchRetrieveOpsManager {
 	
 	private static final int OBJECT_POSITION = 2;
-
-	private static final int MAX_RESULTS = 1000000;
 	
 	private HBaseConnection con;
 	
@@ -277,12 +275,10 @@ public class HBPrefixMatchOperationManager implements IHBasePrefixMatchRetrieveO
 		Result r = null;
 		int sizeOfInterest = HBPrefixMatchSchema.KEY_LENGTH - startKeyLength;
  
-		int i = 0;
 		try{
-			while ((r = results.next()) != null && i<MAX_RESULTS) {
+			while ((r = results.next()) != null) {
 				ArrayList<Id> currentQuad = parseKey(r.getRow(), startKeyLength, sizeOfInterest);
-				quadResults.add(currentQuad);
-				i++;
+				quadResults.add(currentQuad);	
 			}
 		}
 		finally{
