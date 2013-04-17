@@ -180,7 +180,7 @@ public class HBPrefixMatchOperationManager implements IHBasePrefixMatchRetrieveO
 	}
 	
 	@Override
-	public ArrayList<ArrayList<Id>> getResults(Id[] quad, RowLimitPair limits) throws IOException {
+	public synchronized ArrayList<ArrayList<Id>> getResults(Id[] quad, RowLimitPair limits) throws IOException {
 		try {
 			quadResults.clear();
 			boundElements.clear();
@@ -498,7 +498,7 @@ public class HBPrefixMatchOperationManager implements IHBasePrefixMatchRetrieveO
 	
 	//===================================== MAPPING FUNCTIONS ===========================================
 	@Override
-	public void materializeIds(Map<Id, Value> id2ValueMap) throws IOException {
+	public synchronized void materializeIds(Map<Id, Value> id2ValueMap) throws IOException {
 		batchGets.clear();
 		
 		for (Map.Entry<Id, Value> mapEntry : id2ValueMap.entrySet()) {
@@ -557,7 +557,7 @@ public class HBPrefixMatchOperationManager implements IHBasePrefixMatchRetrieveO
 	}
 
 	@Override
-	public void mapValuesToIds(Map<Value, Id> value2IdMap) throws IOException {
+	public synchronized void mapValuesToIds(Map<Value, Id> value2IdMap) throws IOException {
 		hash2ValueMap.clear();
 		batchGets.clear();
 		
