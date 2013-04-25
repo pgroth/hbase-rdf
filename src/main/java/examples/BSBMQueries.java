@@ -66,4 +66,12 @@ public class BSBMQueries {
 			"FILTER (?simProperty2 < (?origProperty2 + 170) && ?simProperty2 > (?origProperty2 - 170)) " +
 			"} " +
 			"ORDER BY ?productLabel LIMIT 5";
+	
+	public static final String Q08 = "PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>"+
+"PREFIX skos: <http://www.w3.org/2004/02/skos/core#>"+
+"SELECT ?var3 ?var6 WHERE { "+
+"?var4 rdfs:label \"Climate forcing\"@en ."+
+"?var3 skos:broader ?var4 ."+
+"?var3 rdfs:label ?var6 ."+
+"FILTER langMatches( lang(?var6), 'en') }";
 }
