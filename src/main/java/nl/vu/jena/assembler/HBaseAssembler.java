@@ -1,6 +1,8 @@
 package nl.vu.jena.assembler;
 
+import java.io.FileInputStream;
 import java.io.IOException;
+import java.util.Properties;
 
 import nl.vu.datalayer.hbase.HBaseClientSolution;
 import nl.vu.datalayer.hbase.HBaseFactory;
@@ -48,7 +50,22 @@ public class HBaseAssembler extends AssemblerBase {
 		HBaseClientSolution hbaseSol = HBaseFactory.getHBaseSolution(
 				"local-" + HBPrefixMatchSchema.SCHEMA_NAME, con, null);
 
-		Graph g = new HBaseGraph(hbaseSol);
+		Properties prop = new Properties();
+		try{
+			prop.load(new FileInputStream("config.properties"));
+		}
+		catch (IOException e) {
+			//continue to use the default properties
+		}
+		String caching = prop.getProperty("engine_caching", "off");
+		
+		Graph g;
+		if (caching.equals("on")){
+			g = new HBaseGraph(hbaseSol, HBaseGraph.CACHING_ON);
+		}
+		else{
+			g = new HBaseGraph(hbaseSol, HBaseGraph.CACHING_OFF);
+		}
 		
 		return ModelFactory.createModelForGraph(g);
 	}

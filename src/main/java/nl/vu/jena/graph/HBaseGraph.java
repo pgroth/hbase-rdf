@@ -27,20 +27,25 @@ import com.hp.hpl.jena.util.iterator.WrappedIterator;
 
 public class HBaseGraph extends GraphBase {
 
-	private static final int CACHE_SIZE = 100000000;
+	public static final byte CACHING_ON = 1;
+	public static final byte CACHING_OFF = 0;
+	
+	private static final int CACHE_SIZE = 1000000;
 	private HBaseClientSolution hbase;
 	ExtendedIterator<Triple> it;
 	ValueIdMapper valIdMapper;
+	private byte caching;
 	
 	//private int totalRequests = 0;
 	//private int cacheHits = 0;
 	
 	private Map<TripleMatch, List<Triple>> cache = Collections.synchronizedMap(new JenaCache<TripleMatch, List<Triple>>(CACHE_SIZE));
 	
-	public HBaseGraph(HBaseClientSolution hbase) {
+	public HBaseGraph(HBaseClientSolution hbase, byte caching) {
 		super();
 		this.hbase = hbase;
 		valIdMapper = new ValueIdMapper(hbase);
+		this.caching = caching;
 	}
 
 	@Override
@@ -48,7 +53,7 @@ public class HBaseGraph extends GraphBase {
 		//totalRequests++;
 		ExtendedIterator<Triple> ret;
 		List<Triple> tripleList;
-		if ((tripleList=cache.get(m))!=null){
+		if (caching==CACHING_ON && (tripleList=cache.get(m))!=null){
 			//cacheHits++;
 			return WrappedIterator.createNoRemove(tripleList.iterator());
 		}
@@ -84,7 +89,9 @@ public class HBaseGraph extends GraphBase {
 			}
 
 			ret = WrappedIterator.createNoRemove(convertedTriples.iterator());
-			cache.put(m, convertedTriples);
+			if (caching==CACHING_ON){
+				cache.put(m, convertedTriples);
+			}
 
 		} catch (Exception e) {
 			e.printStackTrace();

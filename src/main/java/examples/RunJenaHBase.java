@@ -54,7 +54,7 @@ public class RunJenaHBase {
 		HBaseClientSolution hbaseSol = HBaseFactory.getHBaseSolution(
 				"local-"+HBPrefixMatchSchema.SCHEMA_NAME, con, null);
 
-		Graph g = new HBaseGraph(hbaseSol);
+		Graph g = new HBaseGraph(hbaseSol, HBaseGraph.CACHING_ON);
 		Model model = ModelFactory.createModelForGraph(g);
 		//FileManager.get().addLocatorClassLoader(RunJenaHBase.class.getClassLoader());
         //Model model = FileManager.get().loadModel("data/tbl-card2.ttl", null, "TURTLE");
@@ -70,7 +70,7 @@ public class RunJenaHBase {
 	}
 
 	public static void runSPARQLQuery(Model model) {
-		String queryString = BSBMQueries.Q5;
+		String queryString = BSBMQueries.Q08;
 
 		System.out.println("Query: \""+queryString+" \"");
 		//Query query = QueryFactory.create(queryString);

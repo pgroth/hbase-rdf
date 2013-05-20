@@ -58,7 +58,7 @@
 		</plugins>
 	<resources>
                	<resource>
-                        <directory>/cm/shared/package/hbase/hbase-0.94.0/conf</directory>
+                        <directory>/cm/shared/package/hbase/hbase-0.92.0/conf</directory>
                         <includes>
                             <include>hbase-site.xml</include>
                         </includes>

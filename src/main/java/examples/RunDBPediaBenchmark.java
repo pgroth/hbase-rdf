@@ -49,7 +49,7 @@ public class RunDBPediaBenchmark {
 		HBaseClientSolution hbaseSol = HBaseFactory.getHBaseSolution(
 				"local-"+HBPrefixMatchSchema.SCHEMA_NAME, con, null);
 
-		Graph g = new HBaseGraph(hbaseSol);
+		Graph g = new HBaseGraph(hbaseSol, HBaseGraph.CACHING_OFF);
 		Model model = ModelFactory.createModelForGraph(g);
 		
 		prepareHBaseEngine();
@@ -90,7 +90,7 @@ public class RunDBPediaBenchmark {
 			writer2.write("Q"+i+": ");
 			for (QueryMetrics queryMetric : recordedTimes.get(i)) {
 				writer1.write(String.format("%.3f ", queryMetric.runTime));
-				writer2.write(queryMetric.resultCount);
+				writer2.write(String.format("%d ", queryMetric.resultCount));
 			}
 		}
 		writer1.close();
