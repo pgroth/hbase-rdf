@@ -1,6 +1,6 @@
 Loading RDF in HBase
 ====================
-March 9, 2012
+May 21, 2013
 
 Once you've started up hbase somewhere, you might want to start loading some RDF. Using the current code, we have here's how you do it.
 
@@ -10,12 +10,14 @@ Once you've started up hbase somewhere, you might want to start loading some RDF
          $ git clone git://github.com/pgroth/hbase-rdf.git
          
          # build the program
-         $ make install
+         $ mvn install
+
+	 # edit config.properties
 
          # run the loader
-         mvn exec:java -Dexec.mainClass="nl.vu.datalayer.hbase.NTripleParser" -Dexec.args="./data/tbl-card.ttl"
+         $hadoop jar target/hbase-0.0.1-SNAPSHOT-jar-with-dependencies.jar nl.vu.datalayer.hbase.bulkload.BulkLoad <hdfs_input_dir> <hdfs_input_size_in_MB> <hdfs_output_dir>
 
-Note: Need to check this stuff for hbase configuration and make sure we support arguments properly 
+
           
 
      
