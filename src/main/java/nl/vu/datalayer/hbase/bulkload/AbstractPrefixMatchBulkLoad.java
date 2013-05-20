@@ -137,7 +137,7 @@ public abstract class AbstractPrefixMatchBulkLoad {
 	}
 
 	protected void createSchemaFromCounters(HBPrefixMatchSchema prefMatchSchema) throws IOException {
-		long startPartition = HBPrefixMatchSchema.updateLastCounter(tripleToResourceReduceTasks, con.getConfiguration(), schemaSuffix)+1;
+		long startPartition = 0;//TODO HBPrefixMatchSchema.updateLastCounter(tripleToResourceReduceTasks, con.getConfiguration(), schemaSuffix)+1;
 		//long startPartition = HBPrefixMatchSchema.getLastCounter(con.getConfiguration())+1;
 		//System.out.println(totalStringCount+" : "+numericalCount);
 		
