@@ -10,10 +10,11 @@ May 24, 2013
          $ mvn install -DskipTests=true
 
 4. Edit config.properties :
-* schema_suffix -> string attached at the end of all table names
-* only_triples -> true/false boolean 
-* slave_nodes -> integer specifying number of slave nodes in the HBase/Hadoop cluster
-* engine_caching -> on/off should be on for BSBM ; off for DBPedia
+
+         schema_suffix -> string attached at the end of all table names
+         only_triples -> true/false boolean 
+         slave_nodes -> integer specifying number of slave nodes in the HBase/Hadoop cluster
+         engine_caching -> on/off should be on for BSBM ; off for DBPedia
 
 5. Add the hbase-site.xml config file to the jar
          
