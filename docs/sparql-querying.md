@@ -1,8 +1,15 @@
 Querying HBase Using SPARQL
 ---------------------------
+May 24, 2013
+
+HBase can be queried over a SPARQL endpoint by running the script runHBaseSparqlEngine.sh. This sets up a Jena Fuseki HTTP server using the configuration file fuseki-config-hbase.ttl .
+
+Alternatively, queries can also be issued natively. An example of this is in examples.RunDBPediaBenchmark which reads the queries from a set of input files.
+
+
 September 5, 2012
 
-HBase can be queried using a Sail API that accepts most types of SPARQL queries.
+HBase can also be queried using a Sail API that accepts most types of SPARQL queries.
 
 A set of example queries can be found in the _data/test-queries.rq_ file.
 
