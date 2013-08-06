@@ -9,17 +9,24 @@ public class PolynomialTerm {
 	private int coefficient;
 	private ArrayList<PolynomialFactor> factors = new ArrayList<PolynomialFactor>();
 
+	public PolynomialTerm() {
+		super();
+		coefficient = 1;
+	}
+
 	public PolynomialTerm(PolynomialFactor factor) {
 		this.factors.add(factor);
 		coefficient = 1;
 	}
 
-	public boolean addTerm(PolynomialTerm other) {
+	public PolynomialTerm addTerm(PolynomialTerm other) {
 		if (this.sameFactors(other)) {
-			this.coefficient += other.coefficient;
-			return true;
+			PolynomialTerm ret = new PolynomialTerm();
+			ret.coefficient = this.coefficient + other.coefficient;
+			ret.factors = this.factors;
+			return ret;
 		} else {
-			return false;
+			return null;
 		}
 	}
 
@@ -33,6 +40,50 @@ public class PolynomialTerm {
 		}
 
 		return true;
+	}
+	
+	public Polynomial multiply(Polynomial polynomial) {
+		Polynomial ret = new Polynomial();
+		
+		for (PolynomialTerm term : polynomial.getTerms()) {
+			ret.addTerm(this.multiplyWith(term));
+		}
+		
+		return ret;
+	}
+	
+	public PolynomialTerm multiplyWith(PolynomialTerm other){
+		PolynomialTerm ret = new PolynomialTerm();
+		ret.coefficient = this.coefficient*other.coefficient;
+		
+		ret.setFactors(this.factors);
+		for (PolynomialFactor factor : other.factors) {
+			ret.multiplyWith(factor);
+		}
+		
+		return ret;
+	}
+
+	
+	public int getCoefficient() {
+		return coefficient;
+	}
+
+	public void setCoefficient(int coefficient) {
+		this.coefficient = coefficient;
+	}
+
+	public ArrayList<PolynomialFactor> getFactors() {
+		return factors;
+	}
+
+	public void setFactors(ArrayList<PolynomialFactor> factors) {
+		this.factors = factors;
+	}
+	
+	public void setTerm(PolynomialTerm t){
+		this.factors = t.getFactors();
+		this.coefficient = t.getCoefficient();
 	}
 
 	public void multiplyWith(PolynomialFactor factor) {
