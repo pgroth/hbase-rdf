@@ -5,6 +5,7 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.util.ArrayList;
 
+import net.fortytwo.sesametools.nquads.NQuadsParser;
 import nl.vu.datalayer.hbase.connection.HBaseConnection;
 import nl.vu.datalayer.hbase.connection.NativeJavaConnection;
 import nl.vu.datalayer.hbase.schema.HBPrefixMatchSchema;
@@ -14,7 +15,6 @@ import org.openrdf.rio.RDFHandlerException;
 import org.openrdf.rio.RDFParseException;
 import org.openrdf.rio.RDFParser;
 import org.openrdf.rio.helpers.StatementCollector;
-import org.openrdf.rio.ntriples.NTriplesParser;
 
 
 public class NTripleParser {
@@ -34,7 +34,7 @@ public class NTripleParser {
 			File directory = new File(directoryPath);
 			for (File child : directory.listFiles()) {
 				FileInputStream is = new FileInputStream(child);
-				RDFParser rdfParser = new NTriplesParser();
+				RDFParser rdfParser = new NQuadsParser();
 				
 				ArrayList<Statement> myList = new ArrayList<Statement>();
 				StatementCollector collector = new StatementCollector(myList);
