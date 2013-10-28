@@ -23,7 +23,7 @@ public class HBaseFactory {
 		if (schemaName.equals(HBasePredicateCFSchema.SCHEMA_NAME)){
 			HBasePredicateCFSchema schema = new HBasePredicateCFSchema(con, statements);
 			return new HBaseClientSolution(schema,
-										new HBasePredicateCFOperationManager(con, schema));
+										new HBasePredicateCFOperationManager(con));
 		}
 		else if (schemaName.endsWith(HBPrefixMatchSchema.SCHEMA_NAME)){
 			Properties prop = new Properties();

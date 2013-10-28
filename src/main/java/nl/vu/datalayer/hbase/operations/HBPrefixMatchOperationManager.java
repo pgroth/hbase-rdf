@@ -488,10 +488,6 @@ public class HBPrefixMatchOperationManager implements IHBasePrefixMatchRetrieveO
 		return id;
 	}
 	
-	public ArrayList<ArrayList<String>> getResults(String[] quad){
-		return null;
-	}
-	
 	//===================================== MAPPING FUNCTIONS ===========================================
 	@Override
 	public synchronized void materializeIds(Map<Id, Value> id2ValueMap) throws IOException {

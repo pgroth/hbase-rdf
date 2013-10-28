@@ -21,7 +21,7 @@ public class RetrieveURI {
 		try {
 			HBaseConnection con = HBaseConnection.create(HBaseConnection.NATIVE_JAVA);
 			IHBaseSchema schema  = new HBasePredicateCFSchema(con, null);
-			HBasePredicateCFOperationManager util = new HBasePredicateCFOperationManager(con, schema);
+			HBasePredicateCFOperationManager util = new HBasePredicateCFOperationManager(con);
 			
 			String []triplet = {URI, null, null};
 			ArrayList<ArrayList<String>> triples = util.getResults(triplet);
@@ -59,8 +59,7 @@ public class RetrieveURI {
 	public static void printURIInfo(String URI) {
 		try {
 			HBaseConnection con = HBaseConnection.create(HBaseConnection.NATIVE_JAVA);
-			IHBaseSchema schema  = new HBasePredicateCFSchema(con, null);
-			HBasePredicateCFOperationManager util = new HBasePredicateCFOperationManager(con, schema);
+			HBasePredicateCFOperationManager util = new HBasePredicateCFOperationManager(con);
 			
 			String []triplet = {URI, null, null};
 			ArrayList<ArrayList<String>> triples = util.getResults(triplet);

@@ -19,13 +19,11 @@ import org.openrdf.model.Resource;
 import org.openrdf.model.Statement;
 import org.openrdf.model.Value;
 
-public class HBasePredicateCFOperationManager implements IHBaseOperationManager {
+public class HBasePredicateCFOperationManager implements IHBaseOperationManager<String> {
 
-	private HBasePredicateCFSchema schema;
 	private HBaseConnection con;
 
-	public HBasePredicateCFOperationManager(HBaseConnection con, IHBaseSchema schema) {
-		this.schema = (HBasePredicateCFSchema) schema;
+	public HBasePredicateCFOperationManager(HBaseConnection con) {
 		this.con = con;
 	}
 
@@ -116,12 +114,6 @@ public class HBasePredicateCFOperationManager implements IHBaseOperationManager 
 		return URI;
 	}
 
-	@Override
-	public ArrayList<ArrayList<Value>> getResults(Value[] quad) throws IOException {
-		// TODO Auto-generated method stub
-		return null;
-	}
-
 	/*
 	 * (non-Javadoc)
 	 * 
@@ -130,7 +122,7 @@ public class HBasePredicateCFOperationManager implements IHBaseOperationManager 
 	 * Value[], long)
 	 */
 	@Override
-	public long countResults(Value[] quad, long hardLimit) throws IOException {
+	public long countResults(String[] quad, long hardLimit) throws IOException {
 		// TODO Auto-generated method stub
 		return 0;
 	}

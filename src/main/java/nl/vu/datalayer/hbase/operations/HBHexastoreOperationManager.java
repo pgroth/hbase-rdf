@@ -17,7 +17,7 @@ import org.apache.log4j.Logger;
 import org.openrdf.model.Statement;
 import org.openrdf.model.Value;
 
-public class HBHexastoreOperationManager implements IHBaseOperationManager {
+public class HBHexastoreOperationManager implements IHBaseOperationManager<String> {
 
 	private HBaseConnection con;
 	private HBHexastoreSchema schema;
@@ -285,12 +285,6 @@ public class HBHexastoreOperationManager implements IHBaseOperationManager {
 		 */
 	}
 
-	@Override
-	public ArrayList<ArrayList<Value>> getResults(Value[] quad) throws IOException {
-		// TODO Auto-generated method stub
-		return null;
-	}
-
 	/*
 	 * (non-Javadoc)
 	 * 
@@ -299,7 +293,7 @@ public class HBHexastoreOperationManager implements IHBaseOperationManager {
 	 * Value[], long)
 	 */
 	@Override
-	public long countResults(Value[] quad, long hardLimit) throws IOException {
+	public long countResults(String[] quad, long hardLimit) throws IOException {
 		// TODO Auto-generated method stub
 		return 0;
 	}

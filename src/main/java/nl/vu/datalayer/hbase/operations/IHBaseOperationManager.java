@@ -6,27 +6,18 @@ import java.util.ArrayList;
 import org.openrdf.model.Statement;
 import org.openrdf.model.Value;
 
-public interface IHBaseOperationManager {
-	/**
-	 * Retrieve parsed triple/quad
-	 * 
-	 * @param triple
-	 *            /quad
-	 * @return
-	 * @throws IOException
-	 */
-	public ArrayList<ArrayList<String>> getResults(String[] triple) throws IOException;
+public interface IHBaseOperationManager<T> {
 
 	/**
 	 * Solves a simple query in which un-bound variable are expected to be null
 	 * 
 	 * @param quad
-	 *            - array of Value objects with null elements in un-bound
+	 *            - array of T objects with null elements in un-bound
 	 *            positions
 	 * @return list of results null - in case of errors
 	 * @throws IOException
 	 */
-	public ArrayList<ArrayList<Value>> getResults(Value[] quad) throws IOException;
+	public ArrayList<ArrayList<T>> getResults(T[] quad) throws IOException;
 
 	/**
 	 * Populate the database with the statements
@@ -46,5 +37,5 @@ public interface IHBaseOperationManager {
 	 * @return
 	 * @throws IOException
 	 */
-	public long countResults(Value[] quad, long hardLimit) throws IOException;
+	public long countResults(T[] quad, long hardLimit) throws IOException;
 }

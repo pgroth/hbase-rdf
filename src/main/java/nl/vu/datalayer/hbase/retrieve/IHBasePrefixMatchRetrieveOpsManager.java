@@ -9,7 +9,7 @@ import nl.vu.datalayer.hbase.operations.IHBaseOperationManager;
 
 import org.openrdf.model.Value;
 
-public interface IHBasePrefixMatchRetrieveOpsManager extends IHBaseOperationManager {
+public interface IHBasePrefixMatchRetrieveOpsManager extends IHBaseOperationManager<Value> {
 	
 	public void mapValuesToIds(Map<Value, Id> value2IdMap) throws IOException;
 	
