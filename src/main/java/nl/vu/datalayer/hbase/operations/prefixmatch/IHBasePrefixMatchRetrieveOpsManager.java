@@ -1,10 +1,11 @@
-package nl.vu.datalayer.hbase.operations;
+package nl.vu.datalayer.hbase.operations.prefixmatch;
 
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Map;
 
 import nl.vu.datalayer.hbase.id.Id;
+import nl.vu.datalayer.hbase.operations.IHBaseOperationManager;
 import nl.vu.datalayer.hbase.parameters.RowLimitPair;
 
 import org.openrdf.model.Value;

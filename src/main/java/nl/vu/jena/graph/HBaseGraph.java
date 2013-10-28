@@ -9,7 +9,7 @@ import java.util.Map;
 
 import nl.vu.datalayer.hbase.HBaseClientSolution;
 import nl.vu.datalayer.hbase.id.Id;
-import nl.vu.datalayer.hbase.operations.IHBasePrefixMatchRetrieveOpsManager;
+import nl.vu.datalayer.hbase.operations.prefixmatch.IHBasePrefixMatchRetrieveOpsManager;
 import nl.vu.datalayer.hbase.parameters.RowLimitPair;
 import nl.vu.jena.cache.JenaCache;
 

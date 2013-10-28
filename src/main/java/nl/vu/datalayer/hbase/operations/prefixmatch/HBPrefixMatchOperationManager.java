@@ -1,4 +1,4 @@
-package nl.vu.datalayer.hbase.operations;
+package nl.vu.datalayer.hbase.operations.prefixmatch;
 
 import java.io.DataInputStream;
 import java.io.FileInputStream;

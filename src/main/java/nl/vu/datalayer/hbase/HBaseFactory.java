@@ -7,8 +7,8 @@ import java.util.Properties;
 
 import nl.vu.datalayer.hbase.connection.HBaseConnection;
 import nl.vu.datalayer.hbase.operations.HBHexastoreOperationManager;
-import nl.vu.datalayer.hbase.operations.HBPrefixMatchOperationManager;
 import nl.vu.datalayer.hbase.operations.HBasePredicateCFOperationManager;
+import nl.vu.datalayer.hbase.operations.prefixmatch.HBPrefixMatchOperationManager;
 import nl.vu.datalayer.hbase.schema.HBHexastoreSchema;
 import nl.vu.datalayer.hbase.schema.HBPrefixMatchSchema;
 import nl.vu.datalayer.hbase.schema.HBasePredicateCFSchema;

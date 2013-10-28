@@ -1,4 +1,4 @@
-package nl.vu.datalayer.hbase.operations;
+package nl.vu.datalayer.hbase.operations.prefixmatch;
 
 public class ByteArrayInputStream extends java.io.ByteArrayInputStream {
 	

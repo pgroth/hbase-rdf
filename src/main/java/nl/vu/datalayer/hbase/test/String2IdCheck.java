@@ -3,8 +3,8 @@ package nl.vu.datalayer.hbase.test;
 import nl.vu.datalayer.hbase.HBaseClientSolution;
 import nl.vu.datalayer.hbase.HBaseFactory;
 import nl.vu.datalayer.hbase.connection.HBaseConnection;
-import nl.vu.datalayer.hbase.operations.HBPrefixMatchOperationManager;
-import nl.vu.datalayer.hbase.operations.IHBasePrefixMatchRetrieveOpsManager;
+import nl.vu.datalayer.hbase.operations.prefixmatch.HBPrefixMatchOperationManager;
+import nl.vu.datalayer.hbase.operations.prefixmatch.IHBasePrefixMatchRetrieveOpsManager;
 import nl.vu.datalayer.hbase.schema.HBPrefixMatchSchema;
 
 import org.openrdf.model.Value;
