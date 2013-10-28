@@ -9,8 +9,8 @@ import java.util.Map;
 
 import nl.vu.datalayer.hbase.HBaseClientSolution;
 import nl.vu.datalayer.hbase.id.Id;
-import nl.vu.datalayer.hbase.retrieve.IHBasePrefixMatchRetrieveOpsManager;
-import nl.vu.datalayer.hbase.retrieve.RowLimitPair;
+import nl.vu.datalayer.hbase.operations.IHBasePrefixMatchRetrieveOpsManager;
+import nl.vu.datalayer.hbase.parameters.RowLimitPair;
 import nl.vu.jena.cache.JenaCache;
 
 import com.hp.hpl.jena.graph.Node;

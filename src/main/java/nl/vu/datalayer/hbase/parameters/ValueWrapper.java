@@ -1,4 +1,4 @@
-package nl.vu.datalayer.hbase.retrieve;
+package nl.vu.datalayer.hbase.parameters;
 
 
 import org.openrdf.model.Value;

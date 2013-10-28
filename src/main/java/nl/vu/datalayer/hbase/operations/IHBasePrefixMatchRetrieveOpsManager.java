@@ -1,11 +1,11 @@
-package nl.vu.datalayer.hbase.retrieve;
+package nl.vu.datalayer.hbase.operations;
 
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Map;
 
 import nl.vu.datalayer.hbase.id.Id;
-import nl.vu.datalayer.hbase.operations.IHBaseOperationManager;
+import nl.vu.datalayer.hbase.parameters.RowLimitPair;
 
 import org.openrdf.model.Value;
 

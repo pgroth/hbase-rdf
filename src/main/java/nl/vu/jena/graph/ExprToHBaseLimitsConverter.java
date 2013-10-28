@@ -1,7 +1,7 @@
 package nl.vu.jena.graph;
 
 import nl.vu.datalayer.hbase.id.TypedId;
-import nl.vu.datalayer.hbase.retrieve.RowLimitPair;
+import nl.vu.datalayer.hbase.parameters.RowLimitPair;
 
 import org.apache.hadoop.hbase.util.Bytes;
 import org.openjena.jenasesame.impl.Convert;

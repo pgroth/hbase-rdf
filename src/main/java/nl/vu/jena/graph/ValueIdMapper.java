@@ -6,7 +6,7 @@ import java.util.Map;
 
 import nl.vu.datalayer.hbase.HBaseClientSolution;
 import nl.vu.datalayer.hbase.id.Id;
-import nl.vu.datalayer.hbase.retrieve.IHBasePrefixMatchRetrieveOpsManager;
+import nl.vu.datalayer.hbase.operations.IHBasePrefixMatchRetrieveOpsManager;
 
 import org.openjena.jenasesame.impl.Convert;
 import org.openrdf.model.Value;

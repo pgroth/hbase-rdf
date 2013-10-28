@@ -4,7 +4,7 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
-import nl.vu.datalayer.hbase.retrieve.HBaseTripleElement;
+import nl.vu.datalayer.hbase.parameters.HBaseTripleElement;
 
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.WritableComparable;

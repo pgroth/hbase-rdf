@@ -23,9 +23,8 @@ import nl.vu.datalayer.hbase.id.HBaseValue;
 import nl.vu.datalayer.hbase.id.Id;
 import nl.vu.datalayer.hbase.id.TypedId;
 import nl.vu.datalayer.hbase.loader.HBaseLoader;
-import nl.vu.datalayer.hbase.retrieve.HBaseTripleElement;
-import nl.vu.datalayer.hbase.retrieve.IHBasePrefixMatchRetrieveOpsManager;
-import nl.vu.datalayer.hbase.retrieve.RowLimitPair;
+import nl.vu.datalayer.hbase.parameters.HBaseTripleElement;
+import nl.vu.datalayer.hbase.parameters.RowLimitPair;
 import nl.vu.datalayer.hbase.schema.HBPrefixMatchSchema;
 
 import org.apache.hadoop.hbase.client.Get;

@@ -1,4 +1,4 @@
-package nl.vu.datalayer.hbase.retrieve;
+package nl.vu.datalayer.hbase.parameters;
 
 public interface HBaseTripleElement {
 

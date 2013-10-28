@@ -20,7 +20,7 @@ import nl.vu.datalayer.hbase.id.HBaseValue;
 import nl.vu.datalayer.hbase.id.Id;
 import nl.vu.datalayer.hbase.id.TypedId;
 import nl.vu.datalayer.hbase.operations.IHBaseOperationManager;
-import nl.vu.datalayer.hbase.retrieve.IHBasePrefixMatchRetrieveOpsManager;
+import nl.vu.datalayer.hbase.operations.IHBasePrefixMatchRetrieveOpsManager;
 import nl.vu.datalayer.hbase.schema.HBPrefixMatchSchema;
 
 import org.apache.hadoop.conf.Configuration;
