@@ -38,6 +38,8 @@ import org.apache.hadoop.hbase.filter.FirstKeyOnlyFilter;
 import org.apache.hadoop.hbase.filter.PrefixFilter;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hdfs.util.ByteArray;
+import org.hbase.async.HBaseClient;
+import org.hbase.async.ScanFilter;
 import org.openrdf.model.Literal;
 import org.openrdf.model.Statement;
 import org.openrdf.model.Value;
@@ -51,8 +53,12 @@ import org.openrdf.model.impl.ValueFactoryImpl;
 public class HBPrefixMatchOperationManager implements IHBasePrefixMatchRetrieveOpsManager {
 	
 	private static final int OBJECT_POSITION = 2;
+
+	private static final int QUAD_SIZE = 4;
 	
 	private HBaseConnection con;
+	
+	private HBaseClient asyncClient;
 	
 	/**
 	 * Maps the query patterns to the associated tables that resolve those patterns 
@@ -113,6 +119,8 @@ public class HBPrefixMatchOperationManager implements IHBasePrefixMatchRetrieveO
 		batchGets = new ArrayList<Get>();
 		valueFactory = new ValueFactoryImpl();
 		
+		asyncClient = new HBaseClient("localhost");
+		
 		Properties prop = new Properties();
 		try{
 			prop.load(new FileInputStream("config.properties"));
@@ -169,6 +177,54 @@ public class HBPrefixMatchOperationManager implements IHBasePrefixMatchRetrieveO
 	}
 
 	//====================== RETRIEVAL FUNCTIONS =====================
+	
+	@Override
+	public ArrayList<ArrayList<Id>> joinTriplePatterns(ArrayList<ArrayList<Id>> patterns, ArrayList<String> joinPositions) throws IOException{
+		
+		AsyncScannerPool scannerPool = new AsyncScannerPool();
+		Id []toFill = new Id[QUAD_SIZE];
+		
+		//issue all triple patterns in parallel
+		for (int i = 0; i < patterns.size(); i++) {
+			try {
+				ArrayList<Id> quadPattern = patterns.get(i);
+				String joinPosition = joinPositions.get(i);
+
+				toFill = quadPattern.toArray(toFill);
+				byte[] rangeScanKey = buildRangeScanKeyFromQuad(toFill, null);
+				AsyncScanner scanner = new AsyncScanner(asyncClient,
+						HBPrefixMatchSchema.TABLE_NAMES[currentTableIndex]+schemaSuffix,
+						rangeScanKey, HBPrefixMatchSchema.COLUMN_FAMILY,
+						joinPosition.getBytes(),//encode join key as col qualifier -> to be processed by the coprocessor
+						patternInfo.get(currentPattern).scannerCachingSize);
+				
+				ScanFilter prefixFilter = new org.hbase.async.PrefixFilter(rangeScanKey);
+				ScanFilter keyOnlyFilter = new org.hbase.async.FirstKeyOnlyFilter();
+				ArrayList<ScanFilter> filters = new ArrayList<ScanFilter>();
+				filters.add(prefixFilter);
+				filters.add(keyOnlyFilter);
+				ScanFilter filterList = new org.hbase.async.FilterList(filters);
+				scanner.setFilter(filterList);
+				
+				scannerPool.addNewScanner(scanner);
+				
+			} catch (NumericalRangeException e) {
+				throw new IOException("Bound numerical variable not in expected range: " + e.getMessage());
+			} catch (ElementNotFoundException e) {
+				throw new IOException(e.getMessage());
+			}
+		}
+			
+		try {
+			scannerPool.doParallelScan();
+		} catch (InterruptedException e) {
+			throw new IOException("Synchronization problem while doing parallel scan: "+e.getMessage());
+		}
+		
+		//scan results from intermediate table
+		
+		return null;
+	}
 	
 	@Override
 	public ArrayList<ArrayList<Id>> getResults(Id[] quad)
@@ -614,4 +670,5 @@ public class HBPrefixMatchOperationManager implements IHBasePrefixMatchRetrieveO
 		table.close();
 		return results;
 	}
+
 }
