@@ -64,33 +64,6 @@ private final Triple pattern ;
             
             this.graphIter = iter ;
         }
-
-        private Binding mapper(Triple r)
-        {
-            BindingMap results = BindingFactory.create(binding) ;
-
-            if ( ! insert(s, r.getSubject(), results) )
-                return null ; 
-            if ( ! insert(p, r.getPredicate(), results) )
-                return null ;
-            if ( ! insert(o, r.getObject(), results) )
-                return null ;
-            return results ;
-        }
-
-        private static boolean insert(Node inputNode, Node outputNode, BindingMap results)
-        {
-            if ( ! Var.isVar(inputNode) )
-                return true ;
-            
-            Var v = Var.alloc(inputNode) ;
-            Node x = results.get(v) ;
-            if ( x != null )
-                return outputNode.equals(x) ;
-            
-            results.add(v, outputNode) ;
-            return true ;
-        }
         
         @Override
         protected boolean hasNextBinding()
@@ -122,6 +95,33 @@ private final Triple pattern ;
             Binding r = slot ;
             slot = null ;
             return r ;
+        }
+        
+        private Binding mapper(Triple r)
+        {
+            BindingMap results = BindingFactory.create(binding) ;
+
+            if ( ! insert(s, r.getSubject(), results) )
+                return null ; 
+            if ( ! insert(p, r.getPredicate(), results) )
+                return null ;
+            if ( ! insert(o, r.getObject(), results) )
+                return null ;
+            return results ;
+        }
+
+        private static boolean insert(Node inputNode, Node outputNode, BindingMap results)
+        {
+            if ( ! Var.isVar(inputNode) )
+                return true ;
+            
+            Var v = Var.alloc(inputNode) ;
+            Node x = results.get(v) ;
+            if ( x != null )
+                return outputNode.equals(x) ;
+            
+            results.add(v, outputNode) ;
+            return true ;
         }
 
         @Override

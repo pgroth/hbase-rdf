@@ -195,7 +195,7 @@ public class HBPrefixMatchOperationManager implements IHBasePrefixMatchRetrieveO
 				AsyncScanner scanner = new AsyncScanner(asyncClient,
 						HBPrefixMatchSchema.TABLE_NAMES[currentTableIndex]+schemaSuffix,
 						rangeScanKey, HBPrefixMatchSchema.COLUMN_FAMILY,
-						joinPosition.getBytes(),//encode join key as col qualifier -> to be processed by the coprocessor
+						joinPosition.getBytes(),//encode join position as col qualifier -> to be processed by the coprocessor
 						patternInfo.get(currentPattern).scannerCachingSize);
 				
 				ScanFilter prefixFilter = new org.hbase.async.PrefixFilter(rangeScanKey);
@@ -216,7 +216,7 @@ public class HBPrefixMatchOperationManager implements IHBasePrefixMatchRetrieveO
 		}
 			
 		try {
-			scannerPool.doParallelScan();
+			scannerPool.doParallelScan();//blocks until the intermediate table is populated by the coprocessors
 		} catch (InterruptedException e) {
 			throw new IOException("Synchronization problem while doing parallel scan: "+e.getMessage());
 		}

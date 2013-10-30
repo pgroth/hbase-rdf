@@ -22,6 +22,7 @@ public class AsyncScannerPool {
 	}
 	
 	public void doParallelScan() throws InterruptedException{//blocking call which waits for all scans to finish
+		started=true;
 		countDownLatch = new CountDownLatch(scanners.size());
 		
 		for (AsyncScanner scanner : scanners) {
