@@ -2,14 +2,18 @@ package nl.vu.jena.graph;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
 import nl.vu.datalayer.hbase.HBaseClientSolution;
 import nl.vu.datalayer.hbase.id.Id;
 import nl.vu.datalayer.hbase.operations.prefixmatch.IHBasePrefixMatchRetrieveOpsManager;
+import nl.vu.datalayer.hbase.parameters.Quad;
+import nl.vu.datalayer.hbase.parameters.ResultRow;
 import nl.vu.datalayer.hbase.parameters.RowLimitPair;
 import nl.vu.jena.cache.JenaCache;
 
@@ -19,6 +23,7 @@ import com.hp.hpl.jena.graph.Node_NULL;
 import com.hp.hpl.jena.graph.Triple;
 import com.hp.hpl.jena.graph.TripleMatch;
 import com.hp.hpl.jena.graph.impl.GraphBase;
+import com.hp.hpl.jena.sparql.core.BasicPattern;
 import com.hp.hpl.jena.sparql.expr.Expr;
 import com.hp.hpl.jena.sparql.expr.ExprFunction2;
 import com.hp.hpl.jena.util.iterator.ExtendedIterator;
@@ -31,7 +36,7 @@ public class HBaseGraph extends GraphBase {
 	public static final byte CACHING_OFF = 0;
 	
 	private static final int CACHE_SIZE = 1000000;
-	private HBaseClientSolution hbase;
+	//private HBaseClientSolution hbase;
 	ExtendedIterator<Triple> it;
 	ValueIdMapper valIdMapper;
 	private byte caching;
@@ -40,14 +45,38 @@ public class HBaseGraph extends GraphBase {
 	//private int cacheHits = 0;
 	
 	private Map<TripleMatch, List<Triple>> cache = Collections.synchronizedMap(new JenaCache<TripleMatch, List<Triple>>(CACHE_SIZE));
+	private IHBasePrefixMatchRetrieveOpsManager hbaseOpsManager;
 	
 	public HBaseGraph(HBaseClientSolution hbase, byte caching) {
 		super();
-		this.hbase = hbase;
+		
+		hbaseOpsManager = (IHBasePrefixMatchRetrieveOpsManager)hbase.opsManager;
 		valIdMapper = new ValueIdMapper(hbase);
 		this.caching = caching;
 	}
 
+	public Iterator<ResultRow> getJoinResults(BasicPattern pattern, ArrayList<String> varNames){
+		
+		try {
+			List<Triple> triples = pattern.getList();
+
+			ArrayList<Quad> quadPatterns = new ArrayList<Quad>(triples.size());
+			for (Triple triple : triples) {
+				quadPatterns.add(valIdMapper.getIdsFromTriple(triple));
+			}
+
+			List<String> joinPositions = new ArrayList<String>();
+			//TODO implement extraction of join positions
+
+			ArrayList<ResultRow> results = hbaseOpsManager.joinTriplePatterns(quadPatterns, joinPositions, varNames);
+			return results.iterator();
+		} catch (IOException e) {
+			e.printStackTrace();
+			return NullIterator.instance();
+		}
+	}
+	
+	
 	@Override
 	protected ExtendedIterator<Triple> graphBaseFind(TripleMatch m) {	
 		//totalRequests++;
@@ -66,7 +95,7 @@ public class HBaseGraph extends GraphBase {
 				return NullIterator.instance();
 			}
 			
-			Id[] quad = valIdMapper.getIdsFromTriple(m);
+			Quad quad = valIdMapper.getIdsFromTriple(m);
 
 			// retrieve results from HBase
 			ArrayList<ArrayList<Id>> results;
@@ -75,7 +104,7 @@ public class HBaseGraph extends GraphBase {
 				ExprFunction2 simpleFilter = (ExprFunction2) (((FilteredTriple) m).getSimpleFilter());
 				results = getFilteredResults(quad, simpleFilter);
 			} else {
-				results = ((IHBasePrefixMatchRetrieveOpsManager) hbase.opsManager).getResults(quad);
+				results = hbaseOpsManager.getResults(quad);
 			}
 
 			ArrayList<Triple> convertedTriples = new ArrayList<Triple>(results.size());
@@ -111,7 +140,7 @@ public class HBaseGraph extends GraphBase {
 		valIdMapper.mapMaterializedNodesToNodeIds(node2nodeIdMap);
 	}
 
-	private ArrayList<ArrayList<Id>> getFilteredResults(Id[] quad, ExprFunction2 simpleFilter)
+	private ArrayList<ArrayList<Id>> getFilteredResults(Quad quad, ExprFunction2 simpleFilter)
 			throws Exception, IOException {
 		ArrayList<ArrayList<Id>> results;
 		
@@ -121,7 +150,7 @@ public class HBaseGraph extends GraphBase {
 		if (arg1.isConstant() && arg1.getConstant().isNumber() ||
 				arg2.isConstant() && arg2.getConstant().isNumber()){
 			RowLimitPair limitPair = ExprToHBaseLimitsConverter.getRowLimitPair(simpleFilter);
-			results = ((IHBasePrefixMatchRetrieveOpsManager)hbase.opsManager).getResults(quad, limitPair);
+			results = hbaseOpsManager.getResults(quad, limitPair);
 		}
 		/*TODO else if (simpleFilter instanceof E_Equals && 
 				((arg1.isConstant()&&arg1.getConstant().isIRI()) 

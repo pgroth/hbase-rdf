@@ -7,6 +7,7 @@ import java.util.Map;
 import nl.vu.datalayer.hbase.HBaseClientSolution;
 import nl.vu.datalayer.hbase.id.Id;
 import nl.vu.datalayer.hbase.operations.prefixmatch.IHBasePrefixMatchRetrieveOpsManager;
+import nl.vu.datalayer.hbase.parameters.Quad;
 
 import org.openjena.jenasesame.impl.Convert;
 import org.openrdf.model.Value;
@@ -64,7 +65,7 @@ public class ValueIdMapper {
 		}
 	}
 	
-	public Id[] getIdsFromTriple(TripleMatch m) throws IOException{
+	public Quad getIdsFromTriple(TripleMatch m) throws IOException{
 		Node subject = m.getMatchSubject();
 		Node predicate = m.getMatchPredicate();
 		Node object =  m.getMatchObject();
@@ -78,12 +79,12 @@ public class ValueIdMapper {
 			((IHBasePrefixMatchRetrieveOpsManager)hbase.opsManager).mapValuesToIds(toResolve);
 		}
 		
-		Id[] ret = { addNodeToMap(toResolve, subject),
+		Id[] retIds = { addNodeToMap(toResolve, subject),
 	             addNodeToMap(toResolve, predicate),
 	             addNodeToMap(toResolve, object),
 	             null};
 			
-		return ret;
+		return new Quad(retIds);
 	}
 	
 	private void checkNode(Map<Value, Id> toResolve, Node node){

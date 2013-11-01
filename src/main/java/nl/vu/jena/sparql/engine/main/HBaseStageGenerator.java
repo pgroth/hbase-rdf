@@ -1,6 +1,7 @@
 package nl.vu.jena.sparql.engine.main;
 
 import nl.vu.jena.sparql.engine.iterator.QueryIterBlockTriples;
+import nl.vu.jena.sparql.engine.iterator.QueryIterJoinBlock;
 import nl.vu.jena.sparql.engine.optimizer.reorder.ReorderHeuristics;
 
 import org.openjena.atlas.logging.Log;
@@ -16,7 +17,12 @@ import com.hp.hpl.jena.sparql.util.Utils;
 
 public class HBaseStageGenerator implements StageGenerator {
 	
+	public static final byte MERGE_JOIN = 0;
+    public static final byte NESTED_LOOP_JOIN = 1;
+	private int joinStrategy;
+    
 	public HBaseStageGenerator() {
+		joinStrategy = NESTED_LOOP_JOIN;
 	}
 
 	@Override
@@ -35,7 +41,14 @@ public class HBaseStageGenerator implements StageGenerator {
         final StageGenerator executor ;
         
 		reorder = reorderBasicStats(graph);
-		executor = executeInline;
+		switch (joinStrategy){
+		case MERGE_JOIN:{
+			executor = executeWithMergeJoins;
+			break;
+		}
+		default:
+			executor = executeInline;
+		}
 
         return execute(pattern, reorder, executor, input, execCxt) ;
     }
@@ -78,6 +91,15 @@ public class HBaseStageGenerator implements StageGenerator {
     {
         return QueryIterBlockTriples.create(input, pattern, execCxt) ;
     }
+    
+    private static StageGenerator executeWithMergeJoins = new StageGenerator() {
+        @Override
+        public QueryIterator execute(BasicPattern pattern, QueryIterator input, ExecutionContext execCxt)
+        {
+        	//TODO build a plan of join blocks here
+            return new QueryIterJoinBlock(input, pattern, execCxt);
+        }
+    } ;
 
    
 }

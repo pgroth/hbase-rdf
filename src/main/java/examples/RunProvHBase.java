@@ -97,6 +97,7 @@ public class RunProvHBase {
 			QuerySolution solution = results.next();
 			System.out.println(solution.toString());
 		}
+		System.out.println("Finished");
 	}
 
 	public static void printStatements(Model model) {

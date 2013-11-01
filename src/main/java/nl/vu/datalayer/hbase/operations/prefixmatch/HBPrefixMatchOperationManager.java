@@ -10,6 +10,7 @@ import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 
@@ -24,6 +25,8 @@ import nl.vu.datalayer.hbase.id.Id;
 import nl.vu.datalayer.hbase.id.TypedId;
 import nl.vu.datalayer.hbase.loader.HBaseLoader;
 import nl.vu.datalayer.hbase.parameters.HBaseTripleElement;
+import nl.vu.datalayer.hbase.parameters.Quad;
+import nl.vu.datalayer.hbase.parameters.ResultRow;
 import nl.vu.datalayer.hbase.parameters.RowLimitPair;
 import nl.vu.datalayer.hbase.schema.HBPrefixMatchSchema;
 
@@ -179,7 +182,8 @@ public class HBPrefixMatchOperationManager implements IHBasePrefixMatchRetrieveO
 	//====================== RETRIEVAL FUNCTIONS =====================
 	
 	@Override
-	public ArrayList<ArrayList<Id>> joinTriplePatterns(ArrayList<ArrayList<Id>> patterns, ArrayList<String> joinPositions) throws IOException{
+	public ArrayList<ResultRow> joinTriplePatterns(ArrayList<Quad> patterns, List<String> joinPositions,
+														ArrayList<String> qualifierNames) throws IOException{
 		
 		AsyncScannerPool scannerPool = new AsyncScannerPool();
 		Id []toFill = new Id[QUAD_SIZE];
@@ -187,11 +191,10 @@ public class HBPrefixMatchOperationManager implements IHBasePrefixMatchRetrieveO
 		//issue all triple patterns in parallel
 		for (int i = 0; i < patterns.size(); i++) {
 			try {
-				ArrayList<Id> quadPattern = patterns.get(i);
+				Quad quadPattern = patterns.get(i);
 				String joinPosition = joinPositions.get(i);
 
-				toFill = quadPattern.toArray(toFill);
-				byte[] rangeScanKey = buildRangeScanKeyFromQuad(toFill, null);
+				byte[] rangeScanKey = buildRangeScanKeyFromQuad(quadPattern.getElems(), null);
 				AsyncScanner scanner = new AsyncScanner(asyncClient,
 						HBPrefixMatchSchema.TABLE_NAMES[currentTableIndex]+schemaSuffix,
 						rangeScanKey, HBPrefixMatchSchema.COLUMN_FAMILY,
@@ -227,17 +230,17 @@ public class HBPrefixMatchOperationManager implements IHBasePrefixMatchRetrieveO
 	}
 	
 	@Override
-	public ArrayList<ArrayList<Id>> getResults(Id[] quad)
+	public ArrayList<ArrayList<Id>> getResults(Quad quad)
 			throws IOException {		
 		return getResults(quad, null);
 	}
 	
 	@Override
-	public synchronized ArrayList<ArrayList<Id>> getResults(Id[] quad, RowLimitPair limits) throws IOException {
+	public synchronized ArrayList<ArrayList<Id>> getResults(Quad quad, RowLimitPair limits) throws IOException {
 		try {
 			quadResults.clear();
 			boundElements.clear();
-			byte[] keyPrefix = buildRangeScanKeyFromQuad(quad, limits);
+			byte[] keyPrefix = buildRangeScanKeyFromQuad(quad.getElems(), limits);
 			
 			//do the range scan
 			if (limits!=null){
@@ -471,12 +474,12 @@ public class HBPrefixMatchOperationManager implements IHBasePrefixMatchRetrieveO
 		
 		mapValuesToIds(value2IdMap);
 		
-		Id []idBasedQuad = new Id[quad.length];
-		for (int i = 0; i < idBasedQuad.length; i++) {
-			idBasedQuad[i] = value2IdMap.get(quad[i]);
+		Id []idBasedQuadElements = new Id[quad.length];
+		for (int i = 0; i < idBasedQuadElements.length; i++) {
+			idBasedQuadElements[i] = value2IdMap.get(quad[i]);
 		}
 		
-		ArrayList<ArrayList<Id>> idResults = getResults(idBasedQuad);
+		ArrayList<ArrayList<Id>> idResults = getResults(new Quad(idBasedQuadElements));
 		
 		Map<Id, Value> id2ValueMap = new HashMap<Id, Value>();
 		for (ArrayList<Id> arrayList : idResults) {
