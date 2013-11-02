@@ -10,6 +10,7 @@ import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
@@ -182,23 +183,23 @@ public class HBPrefixMatchOperationManager implements IHBasePrefixMatchRetrieveO
 	//====================== RETRIEVAL FUNCTIONS =====================
 	
 	@Override
-	public ArrayList<ResultRow> joinTriplePatterns(ArrayList<Quad> patterns, List<String> joinPositions,
-														ArrayList<String> qualifierNames) throws IOException{
+	public ArrayList<ResultRow> joinTriplePatterns(ArrayList<Quad> patterns, List<Byte> joinPositions,
+														LinkedHashSet<String> qualifierNames) throws IOException{
 		
 		AsyncScannerPool scannerPool = new AsyncScannerPool();
-		Id []toFill = new Id[QUAD_SIZE];
-		
+				
 		//issue all triple patterns in parallel
 		for (int i = 0; i < patterns.size(); i++) {
 			try {
 				Quad quadPattern = patterns.get(i);
-				String joinPosition = joinPositions.get(i);
+				byte []qualifier = new byte[1];
+				Bytes.putByte(qualifier, 0, joinPositions.get(i));
 
 				byte[] rangeScanKey = buildRangeScanKeyFromQuad(quadPattern.getElems(), null);
 				AsyncScanner scanner = new AsyncScanner(asyncClient,
 						HBPrefixMatchSchema.TABLE_NAMES[currentTableIndex]+schemaSuffix,
 						rangeScanKey, HBPrefixMatchSchema.COLUMN_FAMILY,
-						joinPosition.getBytes(),//encode join position as col qualifier -> to be processed by the coprocessor
+						qualifier,//encode join position as col qualifier -> to be processed by the coprocessor
 						patternInfo.get(currentPattern).scannerCachingSize);
 				
 				ScanFilter prefixFilter = new org.hbase.async.PrefixFilter(rangeScanKey);

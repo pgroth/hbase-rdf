@@ -1,8 +1,9 @@
 package nl.vu.jena.sparql.engine.iterator;
 
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.Iterator;
+import java.util.LinkedHashSet;
+import java.util.List;
 
 import nl.vu.datalayer.hbase.id.Id;
 import nl.vu.datalayer.hbase.parameters.ResultRow;
@@ -11,6 +12,7 @@ import nl.vu.jena.sparql.engine.binding.BindingMaterializer;
 
 import com.hp.hpl.jena.graph.Graph;
 import com.hp.hpl.jena.graph.Node;
+import com.hp.hpl.jena.graph.Triple;
 import com.hp.hpl.jena.sparql.core.BasicPattern;
 import com.hp.hpl.jena.sparql.core.Var;
 import com.hp.hpl.jena.sparql.engine.ExecutionContext;
@@ -26,15 +28,16 @@ public class QueryIterJoinBlock extends QueryIter1 {
 	private BasicPattern pattern;
 	private Graph graph ;
 	private Iterator<ResultRow> resultIter;
-	private ArrayList<String> varNames = new ArrayList<String>();
+	private LinkedHashSet<String> varNames;
 	private BindingMaterializer bindingMaterializer;
 	
 	public QueryIterJoinBlock(QueryIterator input, BasicPattern pattern, ExecutionContext execCxt) {
 		super(input, execCxt);
 		this.pattern = pattern;
 		if (graph instanceof HBaseGraph){
-			//TODO extract var names from pattern
-			resultIter = ((HBaseGraph)graph).getJoinResults(pattern, varNames);
+			HBaseGraph hbaseGraph = (HBaseGraph)graph;
+			varNames = hbaseGraph.extractVarNamesFromPattern(pattern);
+			resultIter = hbaseGraph.getJoinResults(pattern);
 			bindingMaterializer = new BindingMaterializer(graph);
 		}
 	}

@@ -2,6 +2,7 @@ package nl.vu.datalayer.hbase.operations.prefixmatch;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 
@@ -23,7 +24,7 @@ public interface IHBasePrefixMatchRetrieveOpsManager extends IHBaseOperationMana
 	
 	public ArrayList<ArrayList<Id>> getResults(Quad quad, RowLimitPair limits) throws IOException;
 	
-	public ArrayList<ResultRow> joinTriplePatterns(ArrayList<Quad> patterns, List<String> joinPositions, ArrayList<String> qualifierNames) throws IOException;
+	public ArrayList<ResultRow> joinTriplePatterns(ArrayList<Quad> patterns, List<Byte> joinPositions, LinkedHashSet<String> qualifierNames) throws IOException;
 	
 	public void materializeIds(Map<Id, Value> id2ValueMap) throws IOException;
 

@@ -6,6 +6,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 
@@ -38,7 +39,7 @@ public class HBaseGraph extends GraphBase {
 	private static final int CACHE_SIZE = 1000000;
 	//private HBaseClientSolution hbase;
 	ExtendedIterator<Triple> it;
-	ValueIdMapper valIdMapper;
+	private ValueIdMapper valIdMapper;
 	private byte caching;
 	
 	//private int totalRequests = 0;
@@ -46,37 +47,25 @@ public class HBaseGraph extends GraphBase {
 	
 	private Map<TripleMatch, List<Triple>> cache = Collections.synchronizedMap(new JenaCache<TripleMatch, List<Triple>>(CACHE_SIZE));
 	private IHBasePrefixMatchRetrieveOpsManager hbaseOpsManager;
+	private HBaseJoinHandler joinHandler;
 	
 	public HBaseGraph(HBaseClientSolution hbase, byte caching) {
 		super();
 		
 		hbaseOpsManager = (IHBasePrefixMatchRetrieveOpsManager)hbase.opsManager;
 		valIdMapper = new ValueIdMapper(hbase);
+		this.joinHandler = new HBaseJoinHandler(hbaseOpsManager, valIdMapper);
 		this.caching = caching;
 	}
-
-	public Iterator<ResultRow> getJoinResults(BasicPattern pattern, ArrayList<String> varNames){
-		
-		try {
-			List<Triple> triples = pattern.getList();
-
-			ArrayList<Quad> quadPatterns = new ArrayList<Quad>(triples.size());
-			for (Triple triple : triples) {
-				quadPatterns.add(valIdMapper.getIdsFromTriple(triple));
-			}
-
-			List<String> joinPositions = new ArrayList<String>();
-			//TODO implement extraction of join positions
-
-			ArrayList<ResultRow> results = hbaseOpsManager.joinTriplePatterns(quadPatterns, joinPositions, varNames);
-			return results.iterator();
-		} catch (IOException e) {
-			e.printStackTrace();
-			return NullIterator.instance();
-		}
+	
+	public LinkedHashSet<String> extractVarNamesFromPattern(BasicPattern pattern){
+		return joinHandler.processPattern(pattern);
 	}
-	
-	
+
+	public Iterator<ResultRow> getJoinResults(BasicPattern pattern){
+		return joinHandler.getJoinResults(pattern);
+	}
+
 	@Override
 	protected ExtendedIterator<Triple> graphBaseFind(TripleMatch m) {	
 		//totalRequests++;
