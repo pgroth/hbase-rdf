@@ -5,6 +5,7 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.math.BigInteger;
+import java.nio.ByteBuffer;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
@@ -183,7 +184,7 @@ public class HBPrefixMatchOperationManager implements IHBasePrefixMatchRetrieveO
 	//====================== RETRIEVAL FUNCTIONS =====================
 	
 	@Override
-	public ArrayList<ResultRow> joinTriplePatterns(ArrayList<Quad> patterns, List<Byte> joinPositions,
+	public ArrayList<ResultRow> joinTriplePatterns(ArrayList<Quad> patterns, List<ByteBuffer> varEncodings,
 														LinkedHashSet<String> qualifierNames) throws IOException{
 		
 		AsyncScannerPool scannerPool = new AsyncScannerPool();
@@ -191,9 +192,10 @@ public class HBPrefixMatchOperationManager implements IHBasePrefixMatchRetrieveO
 		//issue all triple patterns in parallel
 		for (int i = 0; i < patterns.size(); i++) {
 			try {
+				
 				Quad quadPattern = patterns.get(i);
-				byte []qualifier = new byte[1];
-				Bytes.putByte(qualifier, 0, joinPositions.get(i));
+				byte []qualifier = new byte[varEncodings.get(i).remaining()]; 
+				varEncodings.get(i).get(qualifier);
 
 				byte[] rangeScanKey = buildRangeScanKeyFromQuad(quadPattern.getElems(), null);
 				AsyncScanner scanner = new AsyncScanner(asyncClient,

@@ -1,7 +1,9 @@
 package nl.vu.jena.graph;
 
 import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedHashSet;
@@ -17,13 +19,21 @@ import com.hp.hpl.jena.sparql.core.BasicPattern;
 import com.hp.hpl.jena.util.iterator.NullIterator;
 
 public class HBaseJoinHandler {
+	
+	public static final int S = 0x08;
+	public static final int P = 0x04;
+	public static final int O = 0x02;
+	public static final int C = 0x01;
 
 	private ValueIdMapper valIdMapper;
 	private IHBasePrefixMatchRetrieveOpsManager hbaseOpsManager;
-	private List<Byte> joinPositions;
+	private List<ByteBuffer> varEncodings;
 	private LinkedHashSet<String> varNames;
 	private HashSet<String> joinVariableNames;
-
+	
+	private HashMap<Byte, String> nonJoinVarMap;
+	private byte currentNonJoinId;
+	
 	public HBaseJoinHandler(IHBasePrefixMatchRetrieveOpsManager hbaseOpsManager, ValueIdMapper valIdMapper) {
 		super();
 		this.valIdMapper = valIdMapper;
@@ -33,47 +43,121 @@ public class HBaseJoinHandler {
 	public LinkedHashSet<String> processPattern(BasicPattern pattern) {
 		List<Triple> tripleList = pattern.getList();
 		varNames = new LinkedHashSet<String>();
-		joinPositions = new ArrayList<Byte>();
+		varEncodings = new ArrayList<ByteBuffer>();
+		nonJoinVarMap = new HashMap<Byte, String>();
+		currentNonJoinId = 0;
 		
-		for (Triple triple : tripleList) {
-			byte joinPosition = processTriple(triple);
-			joinPositions.add(joinPosition);
+		Iterator<Triple> it = tripleList.iterator();
+		if (it.hasNext()){
+			varEncodings.add(processTriple(it.next(), true));//adds null the first time
 		}
 		
-		byte firstTripleJoinPosition = processTriple(tripleList.get(0));
-		joinPositions.set(0, firstTripleJoinPosition);
+		while (it.hasNext()){
+			ByteBuffer varEncoding = processTriple(it.next(), false);
+			varEncodings.add(varEncoding);
+		}
+		
+		ByteBuffer firstTripleVarEncoding = reProcessFirstTriple(tripleList.get(0));
+		varEncodings.set(0, firstTripleVarEncoding);
 		
 		return varNames;
 	}
-
-	private byte processTriple(Triple triple) {
+	
+	
+	private ByteBuffer processTriple(Triple triple, boolean isFirst) {
 		byte joinPosition = 0x00;
-		if (processNode(triple.getSubject())==true){
-			joinPosition |= 0x08;
+		byte []varEncodingArray = new byte[4];
+		ByteBuffer varEncoding;
+		if (isFirst){
+			varEncoding=null;
+		}else{
+			varEncoding = ByteBuffer.wrap(varEncodingArray);
+			varEncoding.put(joinPosition);
 		}
-		if (processNode(triple.getPredicate())==true){
-			joinPosition |= 0x04;
+		
+		if (processNode(triple.getSubject(), varEncoding)==true){
+			joinPosition |= S;
 		}
-		if (processNode(triple.getObject())==true){
-			joinPosition |= 0x02;
+		if (processNode(triple.getPredicate(), varEncoding)==true){
+			joinPosition |= P;
 		}
-		return joinPosition;
+		if (processNode(triple.getObject(), varEncoding)==true){
+			joinPosition |= O;
+		}
+		
+		if (!isFirst) {
+			varEncodingArray[0] = joinPosition;
+			varEncoding.flip();
+		}
+		
+		return varEncoding;
 	}
 	
 	/**
 	 * @param node
+	 * @param varEncoding 
 	 * @return true - if the currentNode is a join variable
 	 * 			false - if it's not a join variable
 	 */
-	final private boolean processNode(Node node) {
+	final private boolean processNode(Node node, ByteBuffer varEncoding) {
 		if (node.isVariable()){
-			if (varNames.add(node.getName())==false){
+			if (varNames.add(node.getName())==false){//variable appeared before so add it as a join var
 				joinVariableNames.add(node.getName());
 				return true;
+			}
+			else{
+				createNonJoinId(node, varEncoding);
 			}
 		}
 		
 		return false;
+	}
+	
+	private ByteBuffer reProcessFirstTriple(Triple triple) {
+		byte joinPosition = 0x00;
+		byte []varEncodingArray = new byte[4];
+		ByteBuffer varEncoding = ByteBuffer.wrap(varEncodingArray);
+		varEncoding.put(joinPosition);
+		
+		Node subject = triple.getSubject();
+		if (subject.isVariable()) {
+			if (joinVariableNames.contains(subject.getName())) {
+				joinPosition |= S;
+			} else {
+				createNonJoinId(subject, varEncoding);
+			}
+		}
+		
+		Node predicate = triple.getPredicate();
+		if (predicate.isVariable()) {
+			if (joinVariableNames.contains(predicate.getName())) {
+				joinPosition |= P;
+			} else {
+				createNonJoinId(predicate, varEncoding);
+			}
+		}
+		
+		Node object = triple.getObject();
+		if (object.isVariable()) {
+			if (joinVariableNames.contains(object.getName())) {
+				joinPosition |= O;
+			} else {
+				createNonJoinId(object, varEncoding);
+			}
+		}
+		varEncodingArray[0] = joinPosition;
+		varEncoding.flip();
+		
+		return varEncoding;
+	}
+
+
+	private void createNonJoinId(Node node, ByteBuffer varEncoding) {
+		if (varEncoding != null) {
+			varEncoding.put(currentNonJoinId);
+			nonJoinVarMap.put(currentNonJoinId, node.getName());
+			currentNonJoinId++;
+		}
 	}
 
 	public Iterator<ResultRow> getJoinResults(BasicPattern pattern) {
@@ -85,7 +169,7 @@ public class HBaseJoinHandler {
 				quadPatterns.add(valIdMapper.getIdsFromTriple(triple));
 			}
 
-			ArrayList<ResultRow> results = hbaseOpsManager.joinTriplePatterns(quadPatterns, joinPositions, varNames);
+			ArrayList<ResultRow> results = hbaseOpsManager.joinTriplePatterns(quadPatterns, varEncodings, varNames);
 			return results.iterator();
 		} catch (IOException e) {
 			e.printStackTrace();
