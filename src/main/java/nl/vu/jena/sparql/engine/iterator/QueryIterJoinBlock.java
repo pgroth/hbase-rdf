@@ -36,6 +36,8 @@ public class QueryIterJoinBlock extends QueryIter1 {
 		this.pattern = pattern;
 		if (graph instanceof HBaseGraph){
 			HBaseGraph hbaseGraph = (HBaseGraph)graph;
+			
+			//TODO check assumption: varNames and resultIter have results in the same order
 			varNames = hbaseGraph.extractVarNamesFromPattern(pattern);
 			resultIter = hbaseGraph.getJoinResults(pattern);
 			bindingMaterializer = new BindingMaterializer(graph);

@@ -46,9 +46,15 @@ public class LoadCoprocessor {
 			HBaseAdmin admin = con.getAdmin();
 			admin.disableTable(args[0]);
 			
-			System.out.println("Loading coprocessor from: "+args[1]);
+			//System.out.println("Deleting coprocessor : "+args[1]);
 			HTableDescriptor htd = new HTableDescriptor(admin.getTableDescriptor(args[0].getBytes()));
 			
+			//htd.removeCoprocessor(args[1]);
+			//admin.modifyTable(args[0].getBytes(), htd);
+			//admin.enableTable(args[0].getBytes());
+			
+			System.out.println("Loading coprocessor from: "+args[2]);
+			//admin.disableTable(args[0]);
 			
 			//TODO htd.removeCoprocessor(args[1]);
 			htd.addCoprocessor(args[1], 
