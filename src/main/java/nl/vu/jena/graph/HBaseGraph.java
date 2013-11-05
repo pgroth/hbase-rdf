@@ -58,8 +58,8 @@ public class HBaseGraph extends GraphBase {
 		this.caching = caching;
 	}
 	
-	public LinkedHashSet<String> extractVarNamesFromPattern(BasicPattern pattern){
-		return joinHandler.processPattern(pattern);
+	public LinkedHashSet<String> extractVarNamesFromPattern(BasicPattern pattern, short joinPatternId){
+		return joinHandler.processPattern(pattern, joinPatternId);
 	}
 
 	public Iterator<ResultRow> getJoinResults(BasicPattern pattern){

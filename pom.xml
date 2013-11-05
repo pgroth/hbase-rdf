@@ -1,10 +1,10 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
 	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
 	<modelVersion>4.0.0</modelVersion>
-	<groupId>nl.vu.datalayer.sail</groupId>
+	<groupId>nl.vu.datalayer</groupId>
 	<artifactId>hbase</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
-	<name>HBASE-SAIL</name>
+	<name>HBASE-RDF</name>
 	<repositories>
 		<repository>
 			<id>aduna-opensource.releases</id>
@@ -94,7 +94,7 @@
 			<artifactId>async</artifactId>
 			<version>1.3.1</version>
 		</dependency>
-		<!-- dependency>
+		<dependency>
 			<groupId>org.hbase</groupId>
 			<artifactId>asynchbase</artifactId>
 			<version>1.5.0-SNAPSHOT</version>
@@ -105,7 +105,7 @@
 				<artifactId>log4j-over-slf4j</artifactId>
       		</exclusion>	    
 		</exclusions>
-		</dependency-->
+		</dependency>
 		<dependency>
 			<groupId>org.apache.hbase</groupId>
 			<artifactId>hbase</artifactId>

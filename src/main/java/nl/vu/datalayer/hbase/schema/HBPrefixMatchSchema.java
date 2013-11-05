@@ -59,6 +59,8 @@ public class HBPrefixMatchSchema implements IHBaseSchema {
 	
 	public static final String STRING2ID = "String2Id";
 	public static final String ID2STRING = "Id2String";
+	public static final String JOIN_TABLE = "JOIN";
+	public static final byte [] JOIN_COL_FAMILY = "J".getBytes();
 	
 	//information for the table of Counters
 	public static final String COUNTER_TABLE = "Counters";
@@ -306,7 +308,7 @@ public class HBPrefixMatchSchema implements IHBaseSchema {
 		//distribute the regions over the entire ID space for String2ID
 		byte[][] splits = getString2IdSplits();
 		
-		createSimpleTable(admin, STRING2ID+schemaSuffix, splits, NO_COMPRESSION, RANDOM_ACCESS_PATTERN, ON_DISK);
+		createSimpleTable(admin, STRING2ID+schemaSuffix, splits, RANDOM_ACCESS_PATTERN, NO_COMPRESSION, ON_DISK);
 		
 		splits = getNonNumericalSplits(numberOfRegions, 0);
 		
@@ -314,31 +316,33 @@ public class HBPrefixMatchSchema implements IHBaseSchema {
 		//printSplits(splits);
 		
 		if (numberOfRegions > 0){
-			createSimpleTable(admin, ID2STRING+schemaSuffix, splits, COMPRESSED, RANDOM_ACCESS_PATTERN, IN_MEMORY);
+			createSimpleTable(admin, ID2STRING+schemaSuffix, splits, RANDOM_ACCESS_PATTERN, COMPRESSED, IN_MEMORY);
 		}
 		else{
-			createSimpleTable(admin, ID2STRING+schemaSuffix, splits, NO_COMPRESSION, RANDOM_ACCESS_PATTERN, IN_MEMORY);
+			createSimpleTable(admin, ID2STRING+schemaSuffix, splits, RANDOM_ACCESS_PATTERN, NO_COMPRESSION, IN_MEMORY);
 		}
 		
-		createSimpleTable(admin, TABLE_NAMES[POCS]+schemaSuffix, splits, NO_COMPRESSION, SEQUENTIAL_ACCESS_PATTERN, ON_DISK);
+		createSimpleTable(admin, TABLE_NAMES[POCS]+schemaSuffix, splits, SEQUENTIAL_ACCESS_PATTERN, NO_COMPRESSION, ON_DISK);
 		
 		byte [][] objectSplits = getObjectPrefixSplits(numberOfRegions);
 		//printSplits(objectSplits);
-		createSimpleTable(admin, TABLE_NAMES[OSPC]+schemaSuffix, objectSplits, NO_COMPRESSION, SEQUENTIAL_ACCESS_PATTERN, ON_DISK);
+		createSimpleTable(admin, TABLE_NAMES[OSPC]+schemaSuffix, objectSplits, SEQUENTIAL_ACCESS_PATTERN, NO_COMPRESSION, ON_DISK);
 		
 		if (onlyTriples == false){
-			createSimpleTable(admin, TABLE_NAMES[CSPO]+schemaSuffix, splits, NO_COMPRESSION, SEQUENTIAL_ACCESS_PATTERN, ON_DISK);
-			createSimpleTable(admin, TABLE_NAMES[CPSO]+schemaSuffix, splits, NO_COMPRESSION, SEQUENTIAL_ACCESS_PATTERN, ON_DISK);	
+			createSimpleTable(admin, TABLE_NAMES[CSPO]+schemaSuffix, splits, SEQUENTIAL_ACCESS_PATTERN, NO_COMPRESSION, ON_DISK);
+			createSimpleTable(admin, TABLE_NAMES[CPSO]+schemaSuffix, splits, SEQUENTIAL_ACCESS_PATTERN, NO_COMPRESSION, ON_DISK);	
 			
-			createSimpleTable(admin, TABLE_NAMES[OCSP]+schemaSuffix, objectSplits, NO_COMPRESSION, SEQUENTIAL_ACCESS_PATTERN, ON_DISK);
+			createSimpleTable(admin, TABLE_NAMES[OCSP]+schemaSuffix, objectSplits, SEQUENTIAL_ACCESS_PATTERN, NO_COMPRESSION, ON_DISK);
 		}
 		
 		if (coprocessorFlag == WITH_COPROCESSORS){
 			createTableWithCoprocessor(admin, TABLE_NAMES[SPOC]+schemaSuffix, splits, coprocessorPath);
 		}
 		else{
-			createSimpleTable(admin, TABLE_NAMES[SPOC]+schemaSuffix, splits, NO_COMPRESSION, SEQUENTIAL_ACCESS_PATTERN, ON_DISK);
+			createSimpleTable(admin, TABLE_NAMES[SPOC]+schemaSuffix, splits, SEQUENTIAL_ACCESS_PATTERN, NO_COMPRESSION, ON_DISK);
 		}
+		
+		createSimpleTable(admin, JOIN_TABLE, splits, SEQUENTIAL_ACCESS_PATTERN, NO_COMPRESSION, ON_DISK);
 	}
 	
 	/*public void createTable(HBaseAdmin admin, String tableName, byte [][]splits, 
@@ -371,9 +375,16 @@ public class HBPrefixMatchSchema implements IHBaseSchema {
 	 * @throws IOException
 	 */
 	public static void createSimpleTable(HBaseAdmin admin, String tableName, byte [][]splits, 
-									byte compression, byte accessPattern, byte inMemory) throws IOException{
+									byte accessPattern, byte compression, byte inMemory) throws IOException{
 		if (!admin.tableExists(tableName)){
-			HTableDescriptor desc = createTableDescriptor(tableName, compression, accessPattern, inMemory);
+			HTableDescriptor desc = null;
+			if (tableName.equals(JOIN_TABLE)){
+				desc = createJoinTableDescriptor(tableName, accessPattern);
+			}
+			else{
+				desc = createTableDescriptor(tableName, compression, accessPattern, inMemory);
+			}
+			
 
 			System.out.println("Creating table: " + tableName);
 			admin.createTable(desc, splits);
@@ -425,6 +436,29 @@ public class HBPrefixMatchSchema implements IHBaseSchema {
 		}
 		desc.addFamily(famDesc);
 		
+		return desc;
+	}
+	
+	final private static HTableDescriptor createJoinTableDescriptor(
+			String tableName, byte accessPatternType) {
+		HTableDescriptor desc = new HTableDescriptor(tableName);
+
+		HColumnDescriptor famDesc = new HColumnDescriptor(JOIN_COL_FAMILY);
+
+		famDesc.setBloomFilterType(StoreFile.BloomType.ROW);
+		famDesc.setMaxVersions(1000);
+		
+		if (accessPatternType == RANDOM_ACCESS_PATTERN) {
+			famDesc.setBlocksize(8 * 1024);
+		} else {// SEQUENTIAL ACCESS PATTERN
+		// use the default 64K
+		}
+
+		famDesc.setInMemory(true);
+		famDesc.setBlockCacheEnabled(true);
+		
+		desc.addFamily(famDesc);
+
 		return desc;
 	}
 	

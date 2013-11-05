@@ -32,6 +32,9 @@ public class HBaseJoinHandler {
 	private HashSet<String> joinVariableNames;
 	
 	private HashMap<Byte, String> nonJoinVarMap;
+	
+	private short joinPatternId;
+	private byte triplePatternId = 0;
 	private byte currentNonJoinId;
 	
 	public HBaseJoinHandler(IHBasePrefixMatchRetrieveOpsManager hbaseOpsManager, ValueIdMapper valIdMapper) {
@@ -40,12 +43,15 @@ public class HBaseJoinHandler {
 		this.hbaseOpsManager = hbaseOpsManager;
 	}
 	
-	public LinkedHashSet<String> processPattern(BasicPattern pattern) {
+	public LinkedHashSet<String> processPattern(BasicPattern pattern, short joinPatternId) {
 		List<Triple> tripleList = pattern.getList();
 		varNames = new LinkedHashSet<String>();
 		varEncodings = new ArrayList<ByteBuffer>();
 		nonJoinVarMap = new HashMap<Byte, String>();
+		joinVariableNames = new HashSet<String>();
 		currentNonJoinId = 0;
+		this.joinPatternId = joinPatternId;
+		triplePatternId = 0;
 		
 		Iterator<Triple> it = tripleList.iterator();
 		if (it.hasNext()){
@@ -66,12 +72,14 @@ public class HBaseJoinHandler {
 	
 	private ByteBuffer processTriple(Triple triple, boolean isFirst) {
 		byte joinPosition = 0x00;
-		byte []varEncodingArray = new byte[4];
+		byte []varEncodingArray = new byte[7];
 		ByteBuffer varEncoding;
 		if (isFirst){
 			varEncoding=null;
 		}else{
 			varEncoding = ByteBuffer.wrap(varEncodingArray);
+			varEncoding.putShort(joinPatternId);
+			varEncoding.put(triplePatternId++);
 			varEncoding.put(joinPosition);
 		}
 		
@@ -86,7 +94,7 @@ public class HBaseJoinHandler {
 		}
 		
 		if (!isFirst) {
-			varEncodingArray[0] = joinPosition;
+			varEncodingArray[3] = joinPosition;
 			varEncoding.flip();
 		}
 		
@@ -115,8 +123,10 @@ public class HBaseJoinHandler {
 	
 	private ByteBuffer reProcessFirstTriple(Triple triple) {
 		byte joinPosition = 0x00;
-		byte []varEncodingArray = new byte[4];
+		byte []varEncodingArray = new byte[7];
 		ByteBuffer varEncoding = ByteBuffer.wrap(varEncodingArray);
+		varEncoding.putShort(joinPatternId);
+		varEncoding.put(triplePatternId++);
 		varEncoding.put(joinPosition);
 		
 		Node subject = triple.getSubject();
@@ -145,7 +155,7 @@ public class HBaseJoinHandler {
 				createNonJoinId(object, varEncoding);
 			}
 		}
-		varEncodingArray[0] = joinPosition;
+		varEncodingArray[3] = joinPosition;
 		varEncoding.flip();
 		
 		return varEncoding;
@@ -160,6 +170,7 @@ public class HBaseJoinHandler {
 		}
 	}
 
+	//ASSUMPTION processPattern is called before this function
 	public Iterator<ResultRow> getJoinResults(BasicPattern pattern) {
 		try {
 			List<Triple> triples = pattern.getList();

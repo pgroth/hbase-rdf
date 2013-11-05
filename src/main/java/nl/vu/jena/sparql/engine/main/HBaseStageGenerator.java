@@ -20,9 +20,11 @@ public class HBaseStageGenerator implements StageGenerator {
 	public static final byte MERGE_JOIN = 0;
     public static final byte NESTED_LOOP_JOIN = 1;
 	private int joinStrategy;
+	
+	private static short currentJoinId = 0;//TODO background thread which resets this when JOIN table is reset
     
 	public HBaseStageGenerator() {
-		joinStrategy = NESTED_LOOP_JOIN;
+		joinStrategy = MERGE_JOIN;
 	}
 
 	@Override
@@ -97,7 +99,7 @@ public class HBaseStageGenerator implements StageGenerator {
         public QueryIterator execute(BasicPattern pattern, QueryIterator input, ExecutionContext execCxt)
         {
         	//TODO build a plan of join blocks here
-            return new QueryIterJoinBlock(input, pattern, execCxt);
+            return new QueryIterJoinBlock(input, pattern, execCxt, currentJoinId++);
         }
     } ;
 
