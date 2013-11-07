@@ -9,6 +9,21 @@ public class ResultRow extends ArrayList<Id>{
 	public ResultRow(ArrayList<Id> ids) {
 		super(ids);
 	}
+	
+	public ResultRow(int capacity){
+		super(capacity);
+	}
+	
+	public ResultRow(ResultRow row) {
+		super(row.size());
+		for (Id id : row) {
+			this.add(id);
+		}
+	}
+
+	public ResultRow() {
+		super();
+	}
 
 	/**
 	 * 

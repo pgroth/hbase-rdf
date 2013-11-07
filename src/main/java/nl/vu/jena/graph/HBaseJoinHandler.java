@@ -20,6 +20,8 @@ import com.hp.hpl.jena.util.iterator.NullIterator;
 
 public class HBaseJoinHandler {
 	
+	private static final int SPO_DIR = 0x00;
+	private static final int OPS_DIR = 0x10;
 	public static final int S = 0x08;
 	public static final int P = 0x04;
 	public static final int O = 0x02;
@@ -30,12 +32,14 @@ public class HBaseJoinHandler {
 	private List<ByteBuffer> varEncodings;
 	private LinkedHashSet<String> varNames;
 	private HashSet<String> joinVariableNames;
+	private ArrayList<String> orderedJoinVariableNames;
 	
 	private HashMap<Byte, String> nonJoinVarMap;
 	
 	private short joinPatternId;
 	private byte triplePatternId = 0;
 	private byte currentNonJoinId;
+	private LinkedHashSet<String> finalVarNames;
 	
 	public HBaseJoinHandler(IHBasePrefixMatchRetrieveOpsManager hbaseOpsManager, ValueIdMapper valIdMapper) {
 		super();
@@ -49,6 +53,7 @@ public class HBaseJoinHandler {
 		varEncodings = new ArrayList<ByteBuffer>();
 		nonJoinVarMap = new HashMap<Byte, String>();
 		joinVariableNames = new HashSet<String>();
+		orderedJoinVariableNames = new ArrayList<String>();
 		currentNonJoinId = 0;
 		this.joinPatternId = joinPatternId;
 		triplePatternId = 0;
@@ -66,7 +71,12 @@ public class HBaseJoinHandler {
 		ByteBuffer firstTripleVarEncoding = reProcessFirstTriple(tripleList.get(0));
 		varEncodings.set(0, firstTripleVarEncoding);
 		
-		return varNames;
+		varNames.removeAll(joinVariableNames);
+		finalVarNames = new LinkedHashSet<String>(orderedJoinVariableNames.size()+varNames.size());
+		finalVarNames.addAll(orderedJoinVariableNames);
+		finalVarNames.addAll(varNames);	
+		
+		return finalVarNames;
 	}
 	
 	
@@ -83,18 +93,23 @@ public class HBaseJoinHandler {
 			varEncoding.put(joinPosition);
 		}
 		
-		if (processNode(triple.getSubject(), varEncoding)==true){
+		byte[] directionChange = {SPO_DIR};//TODO doesn't work for join keys with 3 variables in different positions (pretty uncommon)
+		int expectedIndex = 0;
+		if (processNode(triple.getSubject(), varEncoding, expectedIndex, directionChange)==true){
 			joinPosition |= S;
+			expectedIndex++;
 		}
-		if (processNode(triple.getPredicate(), varEncoding)==true){
+		if (processNode(triple.getPredicate(), varEncoding, expectedIndex, directionChange)==true){
 			joinPosition |= P;
+			expectedIndex++;
 		}
-		if (processNode(triple.getObject(), varEncoding)==true){
+		if (processNode(triple.getObject(), varEncoding, expectedIndex, directionChange)==true){
 			joinPosition |= O;
+			expectedIndex++;
 		}
 		
 		if (!isFirst) {
-			varEncodingArray[3] = joinPosition;
+			varEncodingArray[3] = (byte)(joinPosition|directionChange[0]);
 			varEncoding.flip();
 		}
 		
@@ -107,10 +122,18 @@ public class HBaseJoinHandler {
 	 * @return true - if the currentNode is a join variable
 	 * 			false - if it's not a join variable
 	 */
-	final private boolean processNode(Node node, ByteBuffer varEncoding) {
+	final private boolean processNode(Node node, ByteBuffer varEncoding, int expectedIndex, byte[] directionChange) {
 		if (node.isVariable()){
 			if (varNames.add(node.getName())==false){//variable appeared before so add it as a join var
-				joinVariableNames.add(node.getName());
+				if (joinVariableNames.add(node.getName())==true){
+					orderedJoinVariableNames.add(node.getName());
+				}
+				else{
+					String joinVar = orderedJoinVariableNames.get(expectedIndex);
+					if (!node.getName().equals(joinVar)){
+						directionChange[0]=OPS_DIR;
+					}
+				}
 				return true;
 			}
 			else{
@@ -170,7 +193,9 @@ public class HBaseJoinHandler {
 		}
 	}
 
-	//ASSUMPTION processPattern is called before this function
+	//ASSUMPTIONS
+	// - processPattern is called before this function
+ 	// - the join results are retrieved in the order specified by the finalVarNames field
 	public Iterator<ResultRow> getJoinResults(BasicPattern pattern) {
 		try {
 			List<Triple> triples = pattern.getList();

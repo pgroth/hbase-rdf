@@ -111,6 +111,8 @@ public class HBPrefixMatchOperationManager implements IHBasePrefixMatchRetrieveO
 
 	private ArrayList<Get> batchGets;
 	
+	private HashMap<ByteArray, ArrayList<Id>> tempCache;
+	
 	private class PatternInfo{
 		int tableIndex;
 		int scannerCachingSize;
@@ -241,14 +243,14 @@ public class HBPrefixMatchOperationManager implements IHBasePrefixMatchRetrieveO
 		ResultScanner rs = buildJoinTableScanner(joinTableQualifiers, joinId);
 		
 		ArrayList<ResultRow> results = new ArrayList<ResultRow>();
-		Result current=null;	
-	    while ((current=rs.next())!=null){
-	    		
-	    	byte[] joinKey = current.getRow();
+		Result currentResult=null;	
+	    while ((currentResult=rs.next())!=null){	    		
+	    	byte[] joinKey = currentResult.getRow();
 	    	ArrayList<Id> joinIds = parseByteArrayIntoIds(joinKey, 3);//jump bucket id(1byte) and join id(2bytes)
-	    	
-	    	Stack<Pair<ArrayList<Id>, Iterator<Id>>> valueStack = buildJoinRowStack(joinTableQualifiers, current, joinIds);    	
-	    	buildResultsFromValueStack(results, valueStack);
+	    	ResultRow start = new ResultRow(joinIds.size()+joinTableQualifiers.size());
+	    	start.addAll(joinIds);
+	    	tempCache = new HashMap<ByteArray, ArrayList<Id>>();
+	    	buildResultsRecursively(results, joinTableQualifiers, 0, currentResult, start);
 	    }
 		
 		return results;
@@ -258,7 +260,8 @@ public class HBPrefixMatchOperationManager implements IHBasePrefixMatchRetrieveO
 		AsyncScanner scanner = new AsyncScanner(asyncClient,
 				HBPrefixMatchSchema.TABLE_NAMES[currentTableIndex]+schemaSuffix,
 				rangeScanKey, HBPrefixMatchSchema.COLUMN_FAMILY,
-				qualifier,//encode join position as col qualifier -> to be processed by the coprocessor
+				qualifier,//encode (join id, triple id, join position, variable ids)
+							//as col qualifier -> to be processed by the coprocessor
 				patternInfo.get(currentPattern).scannerCachingSize);
 		
 		ScanFilter prefixFilter = new org.hbase.async.PrefixFilter(rangeScanKey);
@@ -324,6 +327,36 @@ public class HBPrefixMatchOperationManager implements IHBasePrefixMatchRetrieveO
 		}
 		return valueStack;
 	}
+	
+	private void buildResultsRecursively(ArrayList<ResultRow> results, 
+							ArrayList<byte[]> joinTableQualifiers, int index, Result current, ResultRow currentRow) {
+		
+		byte[] valuesArray = current.getValue(HBPrefixMatchSchema.JOIN_COL_FAMILY, joinTableQualifiers.get(index));
+		if (valuesArray.length==1 && valuesArray[0]==0x00){
+			if (index<joinTableQualifiers.size()-1){
+				buildResultsRecursively(results, joinTableQualifiers, index+1, current, currentRow);
+			}
+			return;
+		}
+		
+		ArrayList<Id> columnIds = tempCache.get(new ByteArray(valuesArray));
+		if (columnIds==null){
+			columnIds = parseByteArrayIntoIds(valuesArray, 0);
+			tempCache.put(new ByteArray(valuesArray), columnIds);
+		}
+		
+		for (Id id : columnIds) {
+			ResultRow newRow = new ResultRow(currentRow);
+			newRow.add(id);
+			
+			if (index==joinTableQualifiers.size()-1){	
+				results.add(newRow);
+			}
+			else{
+				buildResultsRecursively(results, joinTableQualifiers, index+1, current, newRow);
+			}
+		}
+	}
 
 	private ArrayList<Id> parseByteArrayIntoIds(byte[] byteArray, int offset) {
 		int currentOffset = offset;
@@ -351,13 +384,13 @@ public class HBPrefixMatchOperationManager implements IHBasePrefixMatchRetrieveO
 
 	private void extractJoinTableQualifier(byte[] qualifier, ArrayList<byte[]> joinTableQualifiers) {
 		byte []joinTableQualifier;
-		if (qualifier.length>3){
-			for (int j=3; j<qualifier.length; j++){
+		if (qualifier.length>4){
+			for (int j=4; j<qualifier.length; j++){
 				joinTableQualifier = new byte[]{qualifier[2], qualifier[j]};
 				joinTableQualifiers.add(joinTableQualifier);
 			}
 		}
-		else if (qualifier.length==3){
+		else if (qualifier.length==4){
 			joinTableQualifier = new byte[]{qualifier[2]};
 			joinTableQualifiers.add(joinTableQualifier);
 		}
