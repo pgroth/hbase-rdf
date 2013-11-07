@@ -6,6 +6,10 @@ import nl.vu.datalayer.hbase.id.Id;
 
 public class ResultRow extends ArrayList<Id>{
 
+	public ResultRow(ArrayList<Id> ids) {
+		super(ids);
+	}
+
 	/**
 	 * 
 	 */

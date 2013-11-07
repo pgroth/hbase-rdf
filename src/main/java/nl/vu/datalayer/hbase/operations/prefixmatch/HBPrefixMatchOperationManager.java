@@ -11,10 +11,12 @@ import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
+import java.util.Stack;
 
 import nl.vu.datalayer.hbase.connection.HBaseConnection;
 import nl.vu.datalayer.hbase.connection.NativeJavaConnection;
@@ -37,11 +39,14 @@ import org.apache.hadoop.hbase.client.HTableInterface;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
 import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.filter.FilterList;
 import org.apache.hadoop.hbase.filter.FirstKeyOnlyFilter;
 import org.apache.hadoop.hbase.filter.PrefixFilter;
+import org.apache.hadoop.hbase.filter.SingleColumnValueFilter;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hdfs.util.ByteArray;
 import org.hbase.async.HBaseClient;
 import org.hbase.async.ScanFilter;
@@ -50,6 +55,10 @@ import org.openrdf.model.Statement;
 import org.openrdf.model.Value;
 import org.openrdf.model.ValueFactory;
 import org.openrdf.model.impl.ValueFactoryImpl;
+
+import com.sematext.hbase.wd.AbstractRowKeyDistributor;
+import com.sematext.hbase.wd.DistributedScanner;
+import com.sematext.hbase.wd.RowKeyDistributorByOneBytePrefix;
 
 /**
  * Class that exposes operations with the tables in the PrefixMatch schema
@@ -92,6 +101,7 @@ public class HBPrefixMatchOperationManager implements IHBasePrefixMatchRetrieveO
 	private ValueFactory valueFactory;
 	
 	private String schemaSuffix;
+	private int slaveNodeCount;
 	
 	private MessageDigest mDigest;
 
@@ -129,7 +139,8 @@ public class HBPrefixMatchOperationManager implements IHBasePrefixMatchRetrieveO
 		Properties prop = new Properties();
 		try{
 			prop.load(new FileInputStream("config.properties"));
-			schemaSuffix = prop.getProperty(HBPrefixMatchSchema.SUFFIX_PROPERTY, "");	
+			schemaSuffix = prop.getProperty(HBPrefixMatchSchema.SUFFIX_PROPERTY, "");
+			slaveNodeCount = Integer.parseInt(prop.getProperty(HBPrefixMatchSchema.NUMBER_OF_SLAVE_NODES_PROPERTY, ""));
 			
 			if (con instanceof NativeJavaConnection){
 				initTablePool((NativeJavaConnection)con);
@@ -187,31 +198,30 @@ public class HBPrefixMatchOperationManager implements IHBasePrefixMatchRetrieveO
 	public ArrayList<ResultRow> joinTriplePatterns(ArrayList<Quad> patterns, List<ByteBuffer> varEncodings,
 														LinkedHashSet<String> qualifierNames) throws IOException{
 		
+		if (patterns.size() != varEncodings.size()){
+			throw new IOException("You did not comply with \"THE JOIN PROTOCOL\" !!!");
+		}
+		
+		if (patterns.size() == 0){
+			return new ArrayList<ResultRow>();
+		}
+		
 		AsyncScannerPool scannerPool = new AsyncScannerPool();
+		byte []qualifier=null;
+		
+		ArrayList<byte []> joinTableQualifiers = new ArrayList<byte []>(varEncodings.size());
 				
 		//issue all triple patterns in parallel
 		for (int i = 0; i < patterns.size(); i++) {
-			try {
-				
-				Quad quadPattern = patterns.get(i);
-				byte []qualifier = new byte[varEncodings.get(i).remaining()]; 
-				varEncodings.get(i).get(qualifier);
+			try {		
+				qualifier = new byte[varEncodings.get(i).remaining()];				
+				varEncodings.get(i).get(qualifier);				
+				extractJoinTableQualifier(qualifier, joinTableQualifiers);
 
+				Quad quadPattern = patterns.get(i);
 				byte[] rangeScanKey = buildRangeScanKeyFromQuad(quadPattern.getElems(), null);
-				AsyncScanner scanner = new AsyncScanner(asyncClient,
-						HBPrefixMatchSchema.TABLE_NAMES[currentTableIndex]+schemaSuffix,
-						rangeScanKey, HBPrefixMatchSchema.COLUMN_FAMILY,
-						qualifier,//encode join position as col qualifier -> to be processed by the coprocessor
-						patternInfo.get(currentPattern).scannerCachingSize);
 				
-				ScanFilter prefixFilter = new org.hbase.async.PrefixFilter(rangeScanKey);
-				ScanFilter keyOnlyFilter = new org.hbase.async.FirstKeyOnlyFilter();
-				ArrayList<ScanFilter> filters = new ArrayList<ScanFilter>();
-				filters.add(prefixFilter);
-				filters.add(keyOnlyFilter);
-				ScanFilter filterList = new org.hbase.async.FilterList(filters);
-				scanner.setFilter(filterList);
-				
+				AsyncScanner scanner = buildAsyncScanner(qualifier, rangeScanKey);
 				scannerPool.addNewScanner(scanner);
 				
 			} catch (NumericalRangeException e) {
@@ -219,7 +229,8 @@ public class HBPrefixMatchOperationManager implements IHBasePrefixMatchRetrieveO
 			} catch (ElementNotFoundException e) {
 				throw new IOException(e.getMessage());
 			}
-		}
+		}	
+		short joinId = Bytes.toShort(qualifier);
 			
 		try {
 			scannerPool.doParallelScan();//blocks until the intermediate table is populated by the coprocessors
@@ -227,9 +238,132 @@ public class HBPrefixMatchOperationManager implements IHBasePrefixMatchRetrieveO
 			throw new IOException("Synchronization problem while doing parallel scan: "+e.getMessage());
 		}
 		
-		//scan results from intermediate table
+		ResultScanner rs = buildJoinTableScanner(joinTableQualifiers, joinId);
 		
-		return null;
+		ArrayList<ResultRow> results = new ArrayList<ResultRow>();
+		Result current=null;	
+	    while ((current=rs.next())!=null){
+	    		
+	    	byte[] joinKey = current.getRow();
+	    	ArrayList<Id> joinIds = parseByteArrayIntoIds(joinKey, 3);//jump bucket id(1byte) and join id(2bytes)
+	    	
+	    	Stack<Pair<ArrayList<Id>, Iterator<Id>>> valueStack = buildJoinRowStack(joinTableQualifiers, current, joinIds);    	
+	    	buildResultsFromValueStack(results, valueStack);
+	    }
+		
+		return results;
+	}
+
+	private AsyncScanner buildAsyncScanner(byte[] qualifier, byte[] rangeScanKey) {
+		AsyncScanner scanner = new AsyncScanner(asyncClient,
+				HBPrefixMatchSchema.TABLE_NAMES[currentTableIndex]+schemaSuffix,
+				rangeScanKey, HBPrefixMatchSchema.COLUMN_FAMILY,
+				qualifier,//encode join position as col qualifier -> to be processed by the coprocessor
+				patternInfo.get(currentPattern).scannerCachingSize);
+		
+		ScanFilter prefixFilter = new org.hbase.async.PrefixFilter(rangeScanKey);
+		ScanFilter keyOnlyFilter = new org.hbase.async.FirstKeyOnlyFilter();
+		ArrayList<ScanFilter> filters = new ArrayList<ScanFilter>();
+		filters.add(prefixFilter);
+		filters.add(keyOnlyFilter);
+		ScanFilter filterList = new org.hbase.async.FilterList(filters);
+		scanner.setFilter(filterList);
+		return scanner;
+	}
+
+	private ResultScanner buildJoinTableScanner(ArrayList<byte[]> joinTableQualifiers, short joinId) throws IOException {
+		HTableInterface joinTable = con.getTable(HBPrefixMatchSchema.JOIN_TABLE);
+		
+		byte []dummy=new byte[0];    
+	    FilterList qualifierFilters = new FilterList(FilterList.Operator.MUST_PASS_ALL);
+		for (byte []joinQualifier : joinTableQualifiers) {
+			SingleColumnValueFilter colFilter = new SingleColumnValueFilter(HBPrefixMatchSchema.JOIN_COL_FAMILY, 
+								joinQualifier, CompareOp.NOT_EQUAL, dummy);
+			colFilter.setFilterIfMissing(true);
+			qualifierFilters.addFilter(colFilter);
+		}
+		
+		byte bucketsCount = slaveNodeCount > 256 ? (byte)256 : (byte)slaveNodeCount;
+		AbstractRowKeyDistributor keyDistributor = new RowKeyDistributorByOneBytePrefix(bucketsCount);
+		
+		Scan scan = new Scan(keyDistributor.getDistributedKey(Bytes.toBytes(joinId)),
+						keyDistributor.getDistributedKey(Bytes.toBytes((short)((int)joinId+1))));
+		scan.setFilter(qualifierFilters);
+		
+		
+		ResultScanner rs = DistributedScanner.create(joinTable, scan, keyDistributor);
+		return rs;
+	}
+
+	private void buildResultsFromValueStack(ArrayList<ResultRow> results, Stack<Pair<ArrayList<Id>, Iterator<Id>>> valueStack) {
+		while (!valueStack.empty()){
+			Pair<ArrayList<Id>, Iterator<Id>> top = valueStack.pop();
+			Iterator<Id> it = top.getSecond();
+				
+			while (it.hasNext()){
+				ResultRow resultRow = new ResultRow(top.getFirst());
+				resultRow.add(it.next());
+				results.add(resultRow);
+			}
+		}
+	}
+
+	private Stack<Pair<ArrayList<Id>, Iterator<Id>>> buildJoinRowStack(ArrayList<byte[]> joinTableQualifiers, Result current, ArrayList<Id> joinIds) {
+		ArrayList<Id> parent = joinIds;
+		Stack<Pair<ArrayList<Id>, Iterator<Id>>> valueStack = new Stack<Pair<ArrayList<Id>, Iterator<Id>>>();
+		for (byte[] joinQualifier : joinTableQualifiers) {
+			byte[] valuesArray = current.getValue(HBPrefixMatchSchema.JOIN_COL_FAMILY, joinQualifier);
+			ArrayList<Id> ids = parseByteArrayIntoIds(valuesArray, 0);
+			
+			ArrayList<Id> start = new ArrayList<Id>(parent);
+			if (ids.size()>0){
+				Iterator<Id> it = ids.iterator();
+				valueStack.add(new Pair<ArrayList<Id>, Iterator<Id>>(start, it));
+				parent.add(ids.get(0));
+			}
+		}
+		return valueStack;
+	}
+
+	private ArrayList<Id> parseByteArrayIntoIds(byte[] byteArray, int offset) {
+		int currentOffset = offset;
+		ArrayList<Id> ret = new ArrayList<Id>();
+		
+		while (currentOffset<byteArray.length){
+			if (TypedId.getType(byteArray[currentOffset]) == TypedId.NUMERICAL){
+				byte []idBytes = new byte[TypedId.SIZE];
+				System.arraycopy(byteArray, currentOffset, idBytes, 0, TypedId.SIZE);
+				Id newId = new TypedId(idBytes);
+				ret.add(newId);
+				currentOffset+=TypedId.SIZE;
+			}
+			else{//==TypedId.STRING
+				byte []idBytes = new byte[BaseId.SIZE];
+				System.arraycopy(byteArray, currentOffset, idBytes, 0, BaseId.SIZE);
+				Id newId = new BaseId(idBytes);
+				ret.add(newId);
+				currentOffset+=BaseId.SIZE;
+			}
+		}
+		
+		return ret;
+	}
+
+	private void extractJoinTableQualifier(byte[] qualifier, ArrayList<byte[]> joinTableQualifiers) {
+		byte []joinTableQualifier;
+		if (qualifier.length>3){
+			for (int j=3; j<qualifier.length; j++){
+				joinTableQualifier = new byte[]{qualifier[2], qualifier[j]};
+				joinTableQualifiers.add(joinTableQualifier);
+			}
+		}
+		else if (qualifier.length==3){
+			joinTableQualifier = new byte[]{qualifier[2]};
+			joinTableQualifiers.add(joinTableQualifier);
+		}
+		else{
+			throw new RuntimeException("Qualifier length < 3 in joinTriplePatterns call");
+		}
 	}
 	
 	@Override
