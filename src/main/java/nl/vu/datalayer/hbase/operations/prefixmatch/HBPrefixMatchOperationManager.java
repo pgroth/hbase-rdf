@@ -244,13 +244,27 @@ public class HBPrefixMatchOperationManager implements IHBasePrefixMatchRetrieveO
 		
 		ArrayList<ResultRow> results = new ArrayList<ResultRow>();
 		Result currentResult=null;	
-	    while ((currentResult=rs.next())!=null){	    		
+	    while ((currentResult=rs.next())!=null){
+	    	int resultsSizeBefore = results.size();
+	    	
 	    	byte[] joinKey = currentResult.getRow();
 	    	ArrayList<Id> joinIds = parseByteArrayIntoIds(joinKey, 3);//jump bucket id(1byte) and join id(2bytes)
 	    	ResultRow start = new ResultRow(joinIds.size()+joinTableQualifiers.size());
 	    	start.addAll(joinIds);
 	    	tempCache = new HashMap<ByteArray, ArrayList<Id>>();
 	    	buildResultsRecursively(results, joinTableQualifiers, 0, currentResult, start);
+	    	int resultsSizeAfter = results.size();
+	    	
+	    	byte []multipBytes = currentResult.getValue(HBPrefixMatchSchema.JOIN_COL_FAMILY, 
+	    											HBPrefixMatchSchema.JOIN_MULTIPLIER_QUAL_BYTES);
+			if (multipBytes != null) {
+				int multip = (int) (Bytes.toLong(multipBytes) - 1);
+				for (int i = 0; i < multip*(resultsSizeAfter - resultsSizeBefore); i++) {
+					ResultRow newResult = new ResultRow(results.get(i
+							+ resultsSizeBefore));
+					results.add(newResult);
+				}
+			}
 	    }
 		
 		return results;

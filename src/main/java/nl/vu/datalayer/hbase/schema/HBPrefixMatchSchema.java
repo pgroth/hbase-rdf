@@ -61,6 +61,7 @@ public class HBPrefixMatchSchema implements IHBaseSchema {
 	public static final String ID2STRING = "Id2String";
 	public static final String JOIN_TABLE = "JOIN";
 	public static final byte [] JOIN_COL_FAMILY = "J".getBytes();
+	public static final byte[] JOIN_MULTIPLIER_QUAL_BYTES = "M".getBytes();
 	
 	//information for the table of Counters
 	public static final String COUNTER_TABLE = "Counters";

@@ -25,21 +25,30 @@ public class QueryIterJoinBlock extends QueryIter1 {
 
 	private BasicPattern pattern;
 	private Graph graph ;
+	private Binding parentBinding = null;
 	private Iterator<ResultRow> resultIter;
 	private LinkedHashSet<String> varNames;
 	private BindingMaterializer bindingMaterializer;
 	
 	public QueryIterJoinBlock(QueryIterator input, BasicPattern pattern, ExecutionContext execCxt, short joinId) {
 		super(input, execCxt);
-		this.pattern = pattern;
-		graph = execCxt.getActiveGraph();
-		if (graph instanceof HBaseGraph){
-			HBaseGraph hbaseGraph = (HBaseGraph)graph;
-			
-			//TODO check assumption: varNames and resultIter have results in the same order
-			varNames = hbaseGraph.extractVarNamesFromPattern(pattern, joinId);
-			resultIter = hbaseGraph.getJoinResults(pattern);
-			bindingMaterializer = new BindingMaterializer(graph);
+		
+		if (input.hasNext()) {
+			parentBinding = input.next();
+
+			this.pattern = pattern;
+
+			graph = execCxt.getActiveGraph();
+			if (graph instanceof HBaseGraph) {
+				HBaseGraph hbaseGraph = (HBaseGraph) graph;
+
+				// TODO check assumption: varNames and resultIter have results
+				// in the same order
+				varNames = hbaseGraph.extractVarNamesFromPattern(pattern,
+						joinId);
+				resultIter = hbaseGraph.getJoinResults(pattern);
+				bindingMaterializer = new BindingMaterializer(graph);
+			}
 		}
 	}
 
@@ -47,10 +56,10 @@ public class QueryIterJoinBlock extends QueryIter1 {
 	protected boolean hasNextBinding() {
 		if ( getInput() == null )
             return false ;
-
-        if ( !getInput().hasNext() )
+		
+        if ( parentBinding == null )
         {
-            getInput().close() ;
+            getInput().close();
             return false ; 
         }
         
@@ -61,8 +70,7 @@ public class QueryIterJoinBlock extends QueryIter1 {
 	protected Binding moveToNextBinding() {
 		
 		ResultRow row = resultIter.next();
-		Binding binding = getInput().next();
-		Binding newBinding = BindingFactory.create(binding) ;
+		Binding newBinding = BindingFactory.create(parentBinding) ;
 		
 		Iterator<Id> idIter = row.iterator();
 		Iterator<String> varIter = varNames.iterator();

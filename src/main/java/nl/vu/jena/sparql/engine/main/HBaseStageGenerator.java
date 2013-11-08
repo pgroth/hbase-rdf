@@ -1,5 +1,6 @@
 package nl.vu.jena.sparql.engine.main;
 
+import nl.vu.jena.graph.HBaseGraph;
 import nl.vu.jena.sparql.engine.iterator.QueryIterBlockTriples;
 import nl.vu.jena.sparql.engine.iterator.QueryIterJoinBlock;
 import nl.vu.jena.sparql.engine.optimizer.reorder.ReorderHeuristics;
@@ -43,12 +44,18 @@ public class HBaseStageGenerator implements StageGenerator {
         final StageGenerator executor ;
         
 		reorder = reorderBasicStats(graph);
-		switch (joinStrategy){
-		case MERGE_JOIN:{
-			executor = executeWithMergeJoins;
-			break;
+		
+		if (graph instanceof HBaseGraph) {
+			switch (joinStrategy) {
+			case MERGE_JOIN: {
+				executor = executeWithMergeJoins;
+				break;
+			}
+			default:
+				executor = executeInline;
+			}
 		}
-		default:
+		else{
 			executor = executeInline;
 		}
 
