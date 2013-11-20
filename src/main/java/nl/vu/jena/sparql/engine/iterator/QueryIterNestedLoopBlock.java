@@ -24,7 +24,7 @@ import com.hp.hpl.jena.sparql.engine.iterator.QueryIter1;
 import com.hp.hpl.jena.sparql.serializer.SerializationContext;
 import com.hp.hpl.jena.sparql.util.Utils;
 
-public class QueryIterBlockTriples extends QueryIter1
+public class QueryIterNestedLoopBlock extends QueryIter1
 {
     //TODO private BasicPattern pattern ; check if can be removed; only needed for printing
     private Graph graph ;
@@ -36,10 +36,10 @@ public class QueryIterBlockTriples extends QueryIter1
                                        BasicPattern pattern , 
                                        ExecutionContext execContext)
     {
-        return new QueryIterBlockTriples(input, pattern, execContext) ;
+        return new QueryIterNestedLoopBlock(input, pattern, execContext) ;
     }
     
-    private QueryIterBlockTriples(QueryIterator input,
+    private QueryIterNestedLoopBlock(QueryIterator input,
                                     BasicPattern pattern , 
                                     ExecutionContext execContext)
     {

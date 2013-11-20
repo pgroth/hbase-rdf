@@ -42,8 +42,6 @@ public class QueryIterJoinBlock extends QueryIter1 {
 			if (graph instanceof HBaseGraph) {
 				HBaseGraph hbaseGraph = (HBaseGraph) graph;
 
-				// TODO check assumption: varNames and resultIter have results
-				// in the same order
 				varNames = hbaseGraph.extractVarNamesFromPattern(pattern,
 						joinId);
 				resultIter = hbaseGraph.getJoinResults(pattern);

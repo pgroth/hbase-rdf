@@ -56,12 +56,15 @@ public class BSBMQueries {
 			"SELECT DISTINCT ?product ?productLabel WHERE {          " +
 			"?product rdfs:label ?productLabel .     " +
 			"FILTER (<http://www4.wiwiss.fu-berlin.de/bizer/bsbm/v01/instances/dataFromProducer494/Product24290> != ?product)   " +
-			"<http://www4.wiwiss.fu-berlin.de/bizer/bsbm/v01/instances/dataFromProducer494/Product24290> bsbm:productFeature ?prodFeature .   " +
+			"<http://www4.wiwiss.fu-berlin.de/bizer/bsbm/v01/instances/dataFromProducer494/Product24290> " +
+			"		bsbm:productFeature ?prodFeature .   " +
 			"?product bsbm:productFeature ?prodFeature .   " +
-			"<http://www4.wiwiss.fu-berlin.de/bizer/bsbm/v01/instances/dataFromProducer494/Product24290> bsbm:productPropertyNumeric1 ?origProperty1 .     " +
+			"<http://www4.wiwiss.fu-berlin.de/bizer/bsbm/v01/instances/dataFromProducer494/Product24290> " +
+			"		bsbm:productPropertyNumeric1 ?origProperty1 .     " +
 			"?product bsbm:productPropertyNumeric1 ?simProperty1 .   " +
 			"FILTER (?simProperty1 < (?origProperty1 + 120) && ?simProperty1 > (?origProperty1 - 120))     " +
-			"<http://www4.wiwiss.fu-berlin.de/bizer/bsbm/v01/instances/dataFromProducer494/Product24290> bsbm:productPropertyNumeric2 ?origProperty2 .     " +
+			"<http://www4.wiwiss.fu-berlin.de/bizer/bsbm/v01/instances/dataFromProducer494/Product24290> " +
+			"		bsbm:productPropertyNumeric2 ?origProperty2 .     " +
 			"?product bsbm:productPropertyNumeric2 ?simProperty2 .   " +
 			"FILTER (?simProperty2 < (?origProperty2 + 170) && ?simProperty2 > (?origProperty2 - 170)) " +
 			"} " +

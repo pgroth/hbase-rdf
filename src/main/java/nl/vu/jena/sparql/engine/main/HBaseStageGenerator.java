@@ -1,7 +1,7 @@
 package nl.vu.jena.sparql.engine.main;
 
 import nl.vu.jena.graph.HBaseGraph;
-import nl.vu.jena.sparql.engine.iterator.QueryIterBlockTriples;
+import nl.vu.jena.sparql.engine.iterator.QueryIterNestedLoopBlock;
 import nl.vu.jena.sparql.engine.iterator.QueryIterJoinBlock;
 import nl.vu.jena.sparql.engine.optimizer.reorder.ReorderHeuristics;
 
@@ -84,7 +84,7 @@ public class HBaseStageGenerator implements StageGenerator {
         @Override
         public QueryIterator execute(BasicPattern pattern, QueryIterator input, ExecutionContext execCxt)
         {
-                return QueryIterBlockTriples.create(input, pattern, execCxt) ;
+                return QueryIterNestedLoopBlock.create(input, pattern, execCxt) ;
         }} ;
         
     // ---- Reorder policies 
@@ -98,7 +98,7 @@ public class HBaseStageGenerator implements StageGenerator {
     /** Use the inline BGP matcher */ 
     public static QueryIterator executeInline(BasicPattern pattern, QueryIterator input, ExecutionContext execCxt)
     {
-        return QueryIterBlockTriples.create(input, pattern, execCxt) ;
+        return QueryIterNestedLoopBlock.create(input, pattern, execCxt) ;
     }
     
     private static StageGenerator executeWithMergeJoins = new StageGenerator() {
