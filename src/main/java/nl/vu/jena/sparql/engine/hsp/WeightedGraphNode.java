@@ -1,4 +1,4 @@
-package nl.vu.jena.sparql.engine.iterator;
+package nl.vu.jena.sparql.engine.hsp;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -6,13 +6,13 @@ import java.util.List;
 
 public class WeightedGraphNode implements Comparable<WeightedGraphNode> {
 	
-	private int id;
+	private String id;
 	private int sortedIndex;
 	private int weight;
 	
 	private List<WeightedGraphNode> neighbors;
 
-	public WeightedGraphNode(int id, int weight) {
+	public WeightedGraphNode(String id, int weight) {
 		super();
 		this.id = id;
 		this.weight = weight;
@@ -21,6 +21,10 @@ public class WeightedGraphNode implements Comparable<WeightedGraphNode> {
 
 	public int getWeight() {
 		return weight;
+	}
+	
+	public void incWeight(){
+		weight++;
 	}
 
 	public List<WeightedGraphNode> getNeighbors() {
@@ -35,8 +39,12 @@ public class WeightedGraphNode implements Comparable<WeightedGraphNode> {
 		neighbors.add(newNode);
 	}
 	
-	public int getId(){
+	public String getId(){
 		return id;
+	}
+
+	public void setId(String id) {
+		this.id = id;
 	}
 
 	public int getSortedIndex() {
@@ -64,6 +72,20 @@ public class WeightedGraphNode implements Comparable<WeightedGraphNode> {
 		}
 	}
 	
+	@Override
+	public int hashCode() {
+		return id.hashCode();
+	}
+
+	@Override
+	public boolean equals(Object obj) {
+		if (!(obj instanceof WeightedGraphNode)){
+			throw new RuntimeException("Equals applied on WeightedGraphNode and "+obj.getClass().getName());
+		}
+		WeightedGraphNode other = (WeightedGraphNode)obj;
+		return id.equals(other.getId());
+	}
+
 	public String serializeNeighbors(){
 		StringBuilder sb = new StringBuilder("{");
 		if (neighbors.size()>0){

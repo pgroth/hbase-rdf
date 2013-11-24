@@ -1,8 +1,8 @@
 package nl.vu.jena.sparql.engine.main;
 
 import nl.vu.jena.graph.HBaseGraph;
+import nl.vu.jena.sparql.engine.iterator.QueryIterHSPBlock;
 import nl.vu.jena.sparql.engine.iterator.QueryIterNestedLoopBlock;
-import nl.vu.jena.sparql.engine.iterator.QueryIterJoinBlock;
 import nl.vu.jena.sparql.engine.optimizer.reorder.ReorderHeuristics;
 
 import org.openjena.atlas.logging.Log;
@@ -21,8 +21,6 @@ public class HBaseStageGenerator implements StageGenerator {
 	public static final byte MERGE_JOIN = 0;
     public static final byte NESTED_LOOP_JOIN = 1;
 	private int joinStrategy;
-	
-	private static short currentJoinId = 0;//TODO background thread which resets this when JOIN table is reset
     
 	public HBaseStageGenerator() {
 		joinStrategy = MERGE_JOIN;
@@ -105,8 +103,7 @@ public class HBaseStageGenerator implements StageGenerator {
         @Override
         public QueryIterator execute(BasicPattern pattern, QueryIterator input, ExecutionContext execCxt)
         {
-        	//TODO build a plan of join blocks here
-            return new QueryIterJoinBlock(input, pattern, execCxt, currentJoinId++);
+            return new QueryIterHSPBlock(input, pattern, execCxt);
         }
     } ;
 

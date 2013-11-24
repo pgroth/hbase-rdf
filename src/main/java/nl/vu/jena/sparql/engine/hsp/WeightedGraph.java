@@ -1,7 +1,8 @@
-package nl.vu.jena.sparql.engine.iterator;
+package nl.vu.jena.sparql.engine.hsp;
 
 import java.util.ArrayList;
 import java.util.Collections;
+
 
 public class WeightedGraph {
 
@@ -68,38 +69,50 @@ public class WeightedGraph {
 	}
 	
 	public static void main(String[] args) {
-		WeightedGraphNode n1=null, n2=null, n3=null, n4, n5;
-		n1 = new WeightedGraphNode(0, 8);
-		n2 = new WeightedGraphNode(1, 5);
-		n3 = new WeightedGraphNode(2, 6);
-		n4 = new WeightedGraphNode(3, 9);
-		n5 = new WeightedGraphNode(4, 10);
+		WeightedGraphNode n1=null, n2=null, n3=null, n4, n5, n6, n7;
+		n1 = new WeightedGraphNode("0", 5);
+		n2 = new WeightedGraphNode("1", 6);
+		n3 = new WeightedGraphNode("2", 7);
+		n4 = new WeightedGraphNode("3", 9);
+		n5 = new WeightedGraphNode("4", 10);
+		n6 = new WeightedGraphNode("5", 11);
+		n7 = new WeightedGraphNode("6", 8);
 		
+		n1.addNeighbor(n2);
 		n1.addNeighbor(n3);
-		n1.addNeighbor(n5);
 		
-		n2.addNeighbor(n4);
-		n2.addNeighbor(n5);
+		n2.addNeighbor(n1);
+		n2.addNeighbor(n3);
 		
 		n3.addNeighbor(n1);
+		n3.addNeighbor(n2);
+		n3.addNeighbor(n4);
 		n3.addNeighbor(n5);
+		n3.addNeighbor(n6);
+		n3.addNeighbor(n7);
 		
-		n4.addNeighbor(n2);
+		n4.addNeighbor(n3);
 		n4.addNeighbor(n5);
 		
-		n5.addNeighbor(n1);
-		n5.addNeighbor(n2);
 		n5.addNeighbor(n3);
 		n5.addNeighbor(n4);
 		
-		WeightedGraph graph = new WeightedGraph(5);
+		n6.addNeighbor(n3);
+		n6.addNeighbor(n7);
+		
+		n7.addNeighbor(n3);
+		n7.addNeighbor(n6);
+		
+		WeightedGraph graph = new WeightedGraph(7);
 		graph.addNode(n1);
 		graph.addNode(n2);
 		graph.addNode(n3);
 		graph.addNode(n4);
 		graph.addNode(n5);
+		graph.addNode(n6);
+		graph.addNode(n7);
 		
-		MaximumIndependentSet.getMaximumIndependentSets(graph);
+		MaximumIndependentSet.computeSets(graph);
 	}
 	
 	

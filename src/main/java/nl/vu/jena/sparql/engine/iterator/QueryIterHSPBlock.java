@@ -1,5 +1,7 @@
 package nl.vu.jena.sparql.engine.iterator;
 
+import nl.vu.jena.sparql.engine.hsp.HSPBlockPlanner;
+
 import com.hp.hpl.jena.sparql.core.BasicPattern;
 import com.hp.hpl.jena.sparql.engine.ExecutionContext;
 import com.hp.hpl.jena.sparql.engine.QueryIterator;
