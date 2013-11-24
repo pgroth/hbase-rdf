@@ -41,19 +41,20 @@ public class HBaseStageGenerator implements StageGenerator {
         final ReorderTransformation reorder ;
         final StageGenerator executor ;
         
-		reorder = reorderBasicStats(graph);
-		
 		if (graph instanceof HBaseGraph) {
 			switch (joinStrategy) {
 			case MERGE_JOIN: {
-				executor = executeWithMergeJoins;
+				reorder = null;//uses HSP so no need for reordering 
+				executor = executeWithMergeJoins;				
 				break;
 			}
 			default:
+				reorder = reorderBasicStats(graph);
 				executor = executeInline;
 			}
 		}
 		else{
+			reorder = reorderBasicStats(graph);
 			executor = executeInline;
 		}
 
@@ -65,8 +66,7 @@ public class HBaseStageGenerator implements StageGenerator {
                                     StageGenerator execution, 
                                     QueryIterator input,
                                     ExecutionContext execCxt)
-    {
-        
+    {        
         Explain.explain(pattern, execCxt.getContext()) ;
         
         if ( reorder != null )

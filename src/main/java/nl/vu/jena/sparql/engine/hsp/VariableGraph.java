@@ -53,17 +53,14 @@ public class VariableGraph extends WeightedGraph{
 				tempMap.put(node.getName(), new WeightedGraphNode(node.getName(), 0));
 			}
 			else{
-				existingNode.incWeight();
+				if (!tempMap.containsKey(node.getName())){//if a variable appears multiple times in a triple
+															//in only counts once for the weight
+					existingNode.incWeight();
+					tempMap.put(node.getName(), existingNode);
+				}
 			}
 		}
 	}
 
-	/**
-	 * @param args
-	 */
-	public static void main(String[] args) {
-		// TODO Auto-generated method stub
-
-	}
 
 }

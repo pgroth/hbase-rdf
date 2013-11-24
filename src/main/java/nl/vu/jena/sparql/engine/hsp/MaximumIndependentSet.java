@@ -11,9 +11,9 @@ public class MaximumIndependentSet {
 	public static ArrayList<HashSet<WeightedGraphNode>> computeSets(WeightedGraph graph){
 		
 		graph.sortWeightDescending();
-		//TODO WeightedGraph complement = graph.getComplementGraph();
+		WeightedGraph complement = graph.getComplementGraph();
 		
-		ArrayList<HashSet<WeightedGraphNode>> maximumSets = computeMaximumWeightCliques(graph);
+		ArrayList<HashSet<WeightedGraphNode>> maximumSets = computeMaximumWeightCliques(complement);
 		
 		return maximumSets;
 	}
@@ -31,6 +31,10 @@ public class MaximumIndependentSet {
 		
 		for (int i = cliqueWeights.length-1; i>=0; i--) {
 			WeightedGraphNode node = complement.getNode(i);
+			if (node.getWeight()==0){
+				continue;
+			}
+			
 			max = recursivelyComputeMaxClique(max, node.getNeighbors(), node.getWeight(), false,
 						cliqueWeights, node, maximumCliques);
 			cliqueWeights[i] = max;
