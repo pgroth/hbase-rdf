@@ -3,17 +3,18 @@ package nl.vu.jena.sparql.engine.hsp;
 import java.util.ArrayList;
 import java.util.HashSet;
 
+import nl.vu.jena.sparql.engine.iterator.Joinable;
+import nl.vu.jena.sparql.engine.iterator.QueryIterCartesianProduct;
+import nl.vu.jena.sparql.engine.iterator.QueryIterHashJoin;
 import nl.vu.jena.sparql.engine.iterator.QueryIterJoinBlock;
-import nl.vu.jena.sparql.engine.iterator.QueryIterTriplePattern;
+import nl.vu.jena.sparql.engine.iterator.TripleMapper;
 
 import com.hp.hpl.jena.graph.Triple;
 import com.hp.hpl.jena.sparql.core.BasicPattern;
 import com.hp.hpl.jena.sparql.engine.ExecutionContext;
+import com.hp.hpl.jena.sparql.engine.binding.BindingRoot;
 import com.hp.hpl.jena.sparql.engine.iterator.QueryIter;
 import com.hp.hpl.jena.sparql.engine.iterator.QueryIterNullIterator;
-import com.hp.hpl.jena.sparql.engine.iterator.QueryIterRoot;
-import com.hp.hpl.jena.sparql.engine.main.iterator.QueryIterJoin;
-import com.hp.hpl.jena.sparql.engine.main.iterator.QueryIterLeftJoin;
 
 /**
  * Handles HSP planning at the BGP level
@@ -40,12 +41,32 @@ public class HSPBlockPlanner {
 			root = mergeJoinBlocks.get(0);
 		}
 		else{
-			root = new QueryIterJoin(mergeJoinBlocks.get(0), mergeJoinBlocks.get(1), qCxt);
+			ArrayList<String> commonVars = getCommonVariables((Joinable)mergeJoinBlocks.get(0), (Joinable)mergeJoinBlocks.get(1));
+			if (commonVars.size()>0){
+				root = new QueryIterHashJoin(mergeJoinBlocks.get(0), mergeJoinBlocks.get(1), commonVars, qCxt);
+			}
+			else{
+				root = new QueryIterCartesianProduct(mergeJoinBlocks.get(0), mergeJoinBlocks.get(1), qCxt);
+			}
+			
 			for (int i = 2; i < mergeJoinBlocks.size(); i++) {
-				root = new QueryIterLeftJoin(root, mergeJoinBlocks.get(i), null, qCxt);//TODO these have to become hash joins or merge joins type 2
+				commonVars = getCommonVariables((Joinable)root, (Joinable)mergeJoinBlocks.get(i));
+				if (commonVars.size()>0){
+					root = new QueryIterHashJoin(root, mergeJoinBlocks.get(i), commonVars, qCxt);
+				}
+				else{
+					root = new QueryIterCartesianProduct(mergeJoinBlocks.get(0), mergeJoinBlocks.get(1), qCxt);
+				}
 			}
 		}
 		return root;
+	}
+
+	private static ArrayList<String> getCommonVariables(Joinable left, Joinable right) {
+		ArrayList<String> common = new ArrayList<String>();
+		common.addAll(left.getVarNames());
+		common.retainAll(right.getVarNames());
+		return common;
 	}
 
 	private static ArrayList<QueryIter> getMergeJoinBlocks(BasicPattern pattern, ExecutionContext qCxt) {
@@ -61,7 +82,7 @@ public class HSPBlockPlanner {
 		
 		ArrayList<QueryIter> mergeJoinBlocks = buildMergeJoinBlocksFromMaxIndependentSet(pattern, qCxt, maximumISet);
 		for (Triple triple : pattern) {
-			QueryIter tp = new QueryIterTriplePattern(new QueryIterNullIterator(qCxt), triple, qCxt);
+			QueryIter tp =  new TripleMapper(BindingRoot.create(), triple, qCxt);
 			mergeJoinBlocks.add(tp);
 		}
 		
@@ -72,7 +93,7 @@ public class HSPBlockPlanner {
 		ArrayList<QueryIter> mergeJoinBlocks = new ArrayList<QueryIter>(maximumISet.size());
 
 		for (WeightedGraphNode weightedGraphNode : maximumISet) {
-			BasicPattern newPattern = buildBasicPatternWithVariableNode(pattern, weightedGraphNode);
+			BasicPattern newPattern = buildBasicPatternFromWeightedGraphNode(pattern, weightedGraphNode);
 			
 			if (newPattern.size() > 0) {
 				QueryIter basicBlock;
@@ -80,7 +101,7 @@ public class HSPBlockPlanner {
 					basicBlock = new QueryIterJoinBlock(new QueryIterNullIterator(qCxt), newPattern, qCxt, currentJoinId++);
 				} 
 				else {
-					basicBlock = new QueryIterTriplePattern(QueryIterRoot.create(qCxt), newPattern.get(0), qCxt);
+					basicBlock = new TripleMapper(BindingRoot.create(), newPattern.get(0), qCxt);
 				}
 
 				mergeJoinBlocks.add(basicBlock);
@@ -91,7 +112,7 @@ public class HSPBlockPlanner {
 		return mergeJoinBlocks;
 	}
 
-	private static BasicPattern buildBasicPatternWithVariableNode(BasicPattern pattern, WeightedGraphNode weightedGraphNode) {
+	private static BasicPattern buildBasicPatternFromWeightedGraphNode(BasicPattern pattern, WeightedGraphNode weightedGraphNode) {
 		BasicPattern newPattern = new BasicPattern();
 		
 		for (Triple triple : pattern) {

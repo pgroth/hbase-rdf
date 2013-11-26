@@ -20,19 +20,20 @@ import com.hp.hpl.jena.util.iterator.NullIterator;
 
 public class HBaseJoinHandler {
 	
+	//the bits which are encoded for the JOIN_POSITION byte 
 	private static final int SPO_DIR = 0x00;
-	private static final int OPS_DIR = 0x10;
-	public static final int S = 0x08;
-	public static final int P = 0x04;
-	public static final int O = 0x02;
-	public static final int C = 0x01;
+	private static final int OPS_DIR = 0x10;//5th bit 
+	public static final int S = 0x08;//4th bit
+	public static final int P = 0x04;//3rd bit
+	public static final int O = 0x02;//2nd bit
+	public static final int C = 0x01;//1st bit
 
 	private ValueIdMapper valIdMapper;
 	private IHBasePrefixMatchRetrieveOpsManager hbaseOpsManager;
 	private List<ByteBuffer> varEncodings;
 	private LinkedHashSet<String> varNames;
 	private HashSet<String> joinVariableNames;
-	private ArrayList<String> orderedJoinVariableNames;
+	private ArrayList<String> orderedJoinVariableNames;//the join key is built in the order SPO or OPS
 	
 	private HashMap<Byte, String> nonJoinVarMap;
 	
@@ -128,7 +129,7 @@ public class HBaseJoinHandler {
 				if (joinVariableNames.add(node.getName())==true){
 					orderedJoinVariableNames.add(node.getName());
 				}
-				else{
+				else{//if join variable added before
 					String joinVar = orderedJoinVariableNames.get(expectedIndex);
 					if (!node.getName().equals(joinVar)){
 						directionChange[0]=OPS_DIR;

@@ -98,10 +98,9 @@ public class HBaseGraph extends GraphBase {
 
 			ArrayList<Triple> convertedTriples = new ArrayList<Triple>(results.size());
 			for (ArrayList<Id> arrayList : results) {
-				Triple newTriple = new Triple(Node.createUncachedLiteral(
-						arrayList.get(0), null), Node.createUncachedLiteral(
-						arrayList.get(1), null), Node.createUncachedLiteral(
-						arrayList.get(2), null));
+				Triple newTriple = new Triple(Node.createUncachedLiteral(arrayList.get(0), null), 
+						Node.createUncachedLiteral(arrayList.get(1), null), 
+						Node.createUncachedLiteral(arrayList.get(2), null));
 
 				convertedTriples.add(newTriple);
 			}

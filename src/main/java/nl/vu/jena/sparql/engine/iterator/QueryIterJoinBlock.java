@@ -2,6 +2,7 @@ package nl.vu.jena.sparql.engine.iterator;
 
 import java.util.Iterator;
 import java.util.LinkedHashSet;
+import java.util.Set;
 
 import nl.vu.datalayer.hbase.id.Id;
 import nl.vu.datalayer.hbase.parameters.ResultRow;
@@ -18,7 +19,7 @@ import com.hp.hpl.jena.sparql.engine.binding.BindingFactory;
 import com.hp.hpl.jena.sparql.engine.binding.BindingMap;
 import com.hp.hpl.jena.sparql.engine.iterator.QueryIter1;
 
-public class QueryIterJoinBlock extends QueryIter1 {
+public class QueryIterJoinBlock extends QueryIter1 implements Joinable {
 
 	private Graph graph ;
 	private Iterator<ResultRow> resultIter;
@@ -45,7 +46,7 @@ public class QueryIterJoinBlock extends QueryIter1 {
 	protected Binding moveToNextBinding() {
 		
 		ResultRow row = resultIter.next();
-		Binding newBinding = new MutableBindingHashMap(BindingFactory.root());
+		Binding newBinding = BindingFactory.create(BindingFactory.root());
 		
 		Iterator<Id> idIter = row.iterator();
 		Iterator<String> varIter = varNames.iterator();
@@ -57,6 +58,11 @@ public class QueryIterJoinBlock extends QueryIter1 {
 		return newBinding;
 	}
 	
+	@Override
+	public Set<String> getVarNames() {
+		return varNames;
+	}
+
 	@Override
 	protected void requestSubCancel() {
 		// TODO Auto-generated method stub
