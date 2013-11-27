@@ -245,7 +245,7 @@ public class HBPrefixMatchOperationManager implements IHBasePrefixMatchRetrieveO
 		ArrayList<ResultRow> results = new ArrayList<ResultRow>();
 		Result currentResult=null;	
 	    while ((currentResult=rs.next())!=null){
-	    	int resultsSizeBefore = results.size();
+	    	//int resultsSizeBefore = results.size();
 	    	
 	    	byte[] joinKey = currentResult.getRow();
 	    	ArrayList<Id> joinIds = parseByteArrayIntoIds(joinKey, 3);//jump bucket id(1byte) and join id(2bytes)
@@ -253,6 +253,8 @@ public class HBPrefixMatchOperationManager implements IHBasePrefixMatchRetrieveO
 	    	start.addAll(joinIds);
 	    	tempCache = new HashMap<ByteArray, ArrayList<Id>>();
 	    	buildResultsRecursively(results, joinTableQualifiers, 0, currentResult, start);
+	    	
+	    	/*TODO ASSUMING for now we don't have duplicates in the index tables
 	    	int resultsSizeAfter = results.size();
 	    	
 	    	byte []multipBytes = currentResult.getValue(HBPrefixMatchSchema.JOIN_COL_FAMILY, 
@@ -264,7 +266,7 @@ public class HBPrefixMatchOperationManager implements IHBasePrefixMatchRetrieveO
 							+ resultsSizeBefore));
 					results.add(newResult);
 				}
-			}
+			}*/
 	    }
 		
 		return results;
@@ -349,6 +351,9 @@ public class HBPrefixMatchOperationManager implements IHBasePrefixMatchRetrieveO
 		if (valuesArray.length==1 && valuesArray[0]==0x00){
 			if (index<joinTableQualifiers.size()-1){
 				buildResultsRecursively(results, joinTableQualifiers, index+1, current, currentRow);
+			}
+			else{
+				results.add(currentRow);
 			}
 			return;
 		}

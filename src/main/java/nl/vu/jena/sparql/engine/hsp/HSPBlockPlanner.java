@@ -55,7 +55,7 @@ public class HSPBlockPlanner {
 					root = new QueryIterHashJoin(root, mergeJoinBlocks.get(i), commonVars, qCxt);
 				}
 				else{
-					root = new QueryIterCartesianProduct(mergeJoinBlocks.get(0), mergeJoinBlocks.get(1), qCxt);
+					root = new QueryIterCartesianProduct(root, mergeJoinBlocks.get(i), qCxt);
 				}
 			}
 		}
@@ -75,12 +75,20 @@ public class HSPBlockPlanner {
 		
 		ArrayList<HashSet<WeightedGraphNode>> maximumISets = MaximumIndependentSet.computeSets(varGraph);
 		
-		HashSet<WeightedGraphNode> maximumISet = maximumISets.get(0);
-		if (maximumISets.size()>1){
-			//TODO apply heuristics to select the one which provides the smallest number of intermediate results
+		ArrayList<QueryIter> mergeJoinBlocks;
+		if (maximumISets.size() > 0) {
+			HashSet<WeightedGraphNode> maximumISet = maximumISets.get(0);
+			if (maximumISets.size() > 1) {
+				// TODO apply heuristics to select the one which provides the
+				// smallest number of intermediate results
+			}
+
+			mergeJoinBlocks = buildMergeJoinBlocksFromMaxIndependentSet(pattern, qCxt, maximumISet);
+		}
+		else{
+			mergeJoinBlocks = new ArrayList<QueryIter>();
 		}
 		
-		ArrayList<QueryIter> mergeJoinBlocks = buildMergeJoinBlocksFromMaxIndependentSet(pattern, qCxt, maximumISet);
 		for (Triple triple : pattern) {
 			QueryIter tp =  new TripleMapper(BindingRoot.create(), triple, qCxt);
 			mergeJoinBlocks.add(tp);

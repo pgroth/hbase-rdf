@@ -40,10 +40,10 @@ public class MaximumIndependentSet {
 			cliqueWeights[i] = max;
 		}
 		
-		System.out.println("Maximum weight "+max);
+		/*System.out.println("Maximum weight "+max);
 		for (int i = 0; i < cliqueWeights.length; i++) {
 			System.out.print(cliqueWeights[i]+" ");
-		}
+		}*/
 		
 		return maximumCliques;
 	}

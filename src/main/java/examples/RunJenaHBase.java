@@ -70,7 +70,7 @@ public class RunJenaHBase {
 	}
 
 	public static void runSPARQLQuery(Model model) {
-		String queryString = BSBMQueries.Q08;
+		String queryString = BSBMQueries.Q2;
 
 		System.out.println("Query: \""+queryString+" \"");
 		//Query query = QueryFactory.create(queryString);

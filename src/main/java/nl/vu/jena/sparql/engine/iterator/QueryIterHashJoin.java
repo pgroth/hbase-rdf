@@ -76,6 +76,10 @@ public class QueryIterHashJoin extends QueryIter2 implements Joinable{
 
 	@Override
 	protected boolean hasNextBinding() {		
+		if (leftHashTable.size()==0){
+			return false;
+		}
+		
 		BindingMap newBinding = null;	
 	
 		while (getRight().hasNext()){
