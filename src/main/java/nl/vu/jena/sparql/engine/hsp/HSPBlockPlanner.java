@@ -40,24 +40,43 @@ public class HSPBlockPlanner {
 		if (mergeJoinBlocks.size()==1){
 			root = mergeJoinBlocks.get(0);
 		}
+		else{		
+			root = buildTreeBottomUpRecursively(mergeJoinBlocks, qCxt);
+		}
+		return root;
+	}
+
+	private static QueryIter buildTreeBottomUpRecursively(ArrayList<QueryIter> mergeJoinBlocks, ExecutionContext qCxt) {
+		int listSize = mergeJoinBlocks.size();
+		if (listSize==1){
+			return mergeJoinBlocks.get(0);
+		}
+		
+		ArrayList<QueryIter> levelUp = new ArrayList<QueryIter>();
+		
+		int evenSize = listSize%2==1 ? (listSize-1) : listSize;
+		for (int i = 0; i<evenSize; i+=2) {
+			ArrayList<String> commonVars = getCommonVariables((Joinable)mergeJoinBlocks.get(i), (Joinable)mergeJoinBlocks.get(i+1));
+			QueryIter newNode = buildNewNode(mergeJoinBlocks.get(i), mergeJoinBlocks.get(i+1), qCxt, commonVars);
+			levelUp.add(newNode);
+		}
+		
+		if (listSize%2==1){
+			levelUp.add(mergeJoinBlocks.get(listSize-1));
+		}
+		
+		QueryIter root = buildTreeBottomUpRecursively(levelUp, qCxt);
+		
+		return root;
+	}
+
+	private static QueryIter buildNewNode(QueryIter left, QueryIter right, ExecutionContext qCxt, ArrayList<String> commonVars) {
+		QueryIter root;
+		if (commonVars.size()>0){
+			root = new QueryIterHashJoin(left, right, commonVars, qCxt);
+		}
 		else{
-			ArrayList<String> commonVars = getCommonVariables((Joinable)mergeJoinBlocks.get(0), (Joinable)mergeJoinBlocks.get(1));
-			if (commonVars.size()>0){
-				root = new QueryIterHashJoin(mergeJoinBlocks.get(0), mergeJoinBlocks.get(1), commonVars, qCxt);
-			}
-			else{
-				root = new QueryIterCartesianProduct(mergeJoinBlocks.get(0), mergeJoinBlocks.get(1), qCxt);
-			}
-			
-			for (int i = 2; i < mergeJoinBlocks.size(); i++) {
-				commonVars = getCommonVariables((Joinable)root, (Joinable)mergeJoinBlocks.get(i));
-				if (commonVars.size()>0){
-					root = new QueryIterHashJoin(root, mergeJoinBlocks.get(i), commonVars, qCxt);
-				}
-				else{
-					root = new QueryIterCartesianProduct(root, mergeJoinBlocks.get(i), qCxt);
-				}
-			}
+			root = new QueryIterCartesianProduct(left, right, qCxt);
 		}
 		return root;
 	}
@@ -71,12 +90,13 @@ public class HSPBlockPlanner {
 
 	private static ArrayList<QueryIter> getMergeJoinBlocks(BasicPattern pattern, ExecutionContext qCxt) {
 
-		VariableGraph varGraph = new VariableGraph(pattern);
-		
-		ArrayList<HashSet<WeightedGraphNode>> maximumISets = MaximumIndependentSet.computeSets(varGraph);
-		
 		ArrayList<QueryIter> mergeJoinBlocks;
-		if (maximumISets.size() > 0) {
+		
+		if (pattern.size() > 1) {
+			VariableGraph varGraph = new VariableGraph(pattern);
+
+			ArrayList<HashSet<WeightedGraphNode>> maximumISets = MaximumIndependentSet.computeSets(varGraph);
+
 			HashSet<WeightedGraphNode> maximumISet = maximumISets.get(0);
 			if (maximumISets.size() > 1) {
 				// TODO apply heuristics to select the one which provides the

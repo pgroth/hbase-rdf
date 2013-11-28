@@ -21,6 +21,7 @@ import com.hp.hpl.jena.sparql.engine.binding.BindingFactory;
 import com.hp.hpl.jena.sparql.engine.binding.BindingHashMap;
 import com.hp.hpl.jena.sparql.engine.binding.BindingMap;
 import com.hp.hpl.jena.sparql.engine.binding.BindingRoot;
+import com.hp.hpl.jena.sparql.engine.iterator.QueryIter;
 
 public class BindingMaterializer implements Closeable {
 
@@ -35,11 +36,45 @@ public class BindingMaterializer implements Closeable {
 		this.graph = graph;
 	}
 	
+	public List<Binding> materialize(QueryIter iter) throws IOException{
+		toResolveIdMap.clear();
+		toUpdateVars.clear();
+		
+		List<Binding> bindingList = new ArrayList<Binding>();
+		while (iter.hasNext()) {
+			Binding nextBinding = iter.nextBinding();
+			buildIdMapToResolve(nextBinding, false);
+			bindingList.add(nextBinding);
+		}
+		
+		((HBaseGraph)graph).mapNodeIdsToMaterializedNodes(toResolveIdMap);
+		
+		List<Binding> materializedBindings = new ArrayList<Binding>(bindingList.size());
+		for (Binding binding : bindingList) {
+			Binding newBinding = createBindingWithMaterializedNodes(binding);
+			materializedBindings.add(newBinding);
+		}
+		
+		return materializedBindings;
+	}
+	
+	
+	private Binding createBindingWithMaterializedNodes(Binding binding) {
+		BindingMap materialized = BindingFactory.create(BindingFactory.root());
+		Iterator<Var> it = binding.vars(); 
+		while (it.hasNext()){
+			Var var = it.next();
+			Node_Literal nodeId = (Node_Literal) binding.get(var);
+			materialized.add(var, toResolveIdMap.get(nodeId));
+		}
+		return materialized;
+	}
+
 	public Binding materialize(Binding inputBinding) throws IOException{
 		toResolveIdMap.clear();
 		toUpdateVars.clear();
     	
-    	toResolveIdMap = buildIdMapToResolve(inputBinding);
+    	toResolveIdMap = buildIdMapToResolve(inputBinding, true);
     	        
     	((HBaseGraph)graph).mapNodeIdsToMaterializedNodes(toResolveIdMap);
     	
@@ -90,7 +125,7 @@ public class BindingMaterializer implements Closeable {
 		return b;
 	}
 
-	private Map<Node_Literal, Node> buildIdMapToResolve(Binding binding) {
+	private Map<Node_Literal, Node> buildIdMapToResolve(Binding binding, boolean useCache) {
 		Iterator<Var> it = binding.vars();
 		while (it.hasNext()){
 			//build temp map for NodeIds not found in the cache
@@ -99,7 +134,7 @@ public class BindingMaterializer implements Closeable {
 			if (node instanceof Node_Literal && node.getLiteralValue() instanceof Id) {
 				toUpdateVars.add(currentVar);
 				Node_Literal nodeId = (Node_Literal) node;
-				if (!idToMaterializedNodesCache.containsKey(nodeId)) {
+				if (useCache==false || !idToMaterializedNodesCache.containsKey(nodeId)) {
 					toResolveIdMap.put(nodeId, null);
 				}
 			}

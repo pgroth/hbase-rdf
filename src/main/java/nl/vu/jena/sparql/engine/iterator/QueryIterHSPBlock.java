@@ -1,6 +1,8 @@
 package nl.vu.jena.sparql.engine.iterator;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Iterator;
 
 import nl.vu.jena.graph.HBaseGraph;
 import nl.vu.jena.sparql.engine.binding.BindingMaterializer;
@@ -12,6 +14,8 @@ import com.hp.hpl.jena.sparql.engine.ExecutionContext;
 import com.hp.hpl.jena.sparql.engine.QueryIterator;
 import com.hp.hpl.jena.sparql.engine.binding.Binding;
 import com.hp.hpl.jena.sparql.engine.binding.BindingBase;
+import com.hp.hpl.jena.sparql.engine.binding.BindingFactory;
+import com.hp.hpl.jena.sparql.engine.binding.BindingMap;
 import com.hp.hpl.jena.sparql.engine.iterator.QueryIter;
 import com.hp.hpl.jena.sparql.engine.iterator.QueryIter1;
 
@@ -25,7 +29,7 @@ import com.hp.hpl.jena.sparql.engine.iterator.QueryIter1;
  */
 public class QueryIterHSPBlock extends QueryIter1 {
 
-	private QueryIter joinIter;
+	private Iterator<Binding> materializedJoinIter;
 	private BindingMaterializer bindingMaterializer;
 	private Binding parentBinding = null;
 	private Graph graph ;
@@ -37,13 +41,19 @@ public class QueryIterHSPBlock extends QueryIter1 {
 			parentBinding = input.next();
 		}
 		
-		joinIter = HSPBlockPlanner.buildPlan(pattern, execCxt);
+		QueryIter joinIter = HSPBlockPlanner.buildPlan(pattern, execCxt);
 		
 		//TODO execute plan recursively
 		
 		graph = execCxt.getActiveGraph();
 		if (graph instanceof HBaseGraph) {
 			bindingMaterializer = new BindingMaterializer(graph);
+			try {
+				materializedJoinIter = bindingMaterializer.materialize(joinIter).iterator();
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
+			
 		}
 	}
 
@@ -69,20 +79,13 @@ public class QueryIterHSPBlock extends QueryIter1 {
 			return false;
 		}
 		
-		return joinIter.hasNext();
+		return materializedJoinIter.hasNext();
 	}
 
 	@Override
 	protected Binding moveToNextBinding() {
-		Binding newBinding = joinIter.nextBinding();
-		
-		if (newBinding instanceof BindingBase && graph instanceof HBaseGraph){
-        	try {
-        		newBinding = bindingMaterializer.materialize(newBinding);
-			} catch (IOException e) {
-				return null;
-			}
-        }
+		Binding newBinding = BindingFactory.create(parentBinding);
+		((BindingMap)newBinding).addAll(materializedJoinIter.next());
 		
 		return newBinding;
 	}
