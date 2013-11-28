@@ -4,6 +4,8 @@ import java.util.HashSet;
 import java.util.Set;
 
 import nl.vu.jena.graph.TripleBinder;
+import nl.vu.jena.sparql.engine.joinable.JoinListener;
+import nl.vu.jena.sparql.engine.joinable.Joinable;
 
 import com.hp.hpl.jena.graph.Graph;
 import com.hp.hpl.jena.graph.Node;
@@ -57,6 +59,17 @@ public class TripleMapper extends QueryIter implements Joinable
     }
     
     @Override
+	public void setParent(JoinListener parent) {
+		// TODO Auto-generated method stuff	
+	}
+
+	@Override
+	public void run() {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
     protected boolean hasNextBinding()
     {
         if ( finished ) return false ;

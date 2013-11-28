@@ -3,11 +3,13 @@ package nl.vu.jena.sparql.engine.hsp;
 import java.util.ArrayList;
 import java.util.HashSet;
 
-import nl.vu.jena.sparql.engine.iterator.Joinable;
 import nl.vu.jena.sparql.engine.iterator.QueryIterCartesianProduct;
 import nl.vu.jena.sparql.engine.iterator.QueryIterHashJoin;
 import nl.vu.jena.sparql.engine.iterator.QueryIterJoinBlock;
 import nl.vu.jena.sparql.engine.iterator.TripleMapper;
+import nl.vu.jena.sparql.engine.joinable.JoinListener;
+import nl.vu.jena.sparql.engine.joinable.Joinable;
+import nl.vu.jena.sparql.engine.joinable.TwoWayJoinable;
 
 import com.hp.hpl.jena.graph.Triple;
 import com.hp.hpl.jena.sparql.core.BasicPattern;
@@ -34,7 +36,7 @@ public class HSPBlockPlanner {
 		return queryIter;
 	}
 
-	private static QueryIter buildTreeBottomUp(ArrayList<QueryIter> mergeJoinBlocks, ExecutionContext qCxt) {		
+	public static QueryIter buildTreeBottomUp(ArrayList<QueryIter> mergeJoinBlocks, ExecutionContext qCxt) {		
 		QueryIter root = null;
 		
 		if (mergeJoinBlocks.size()==1){
@@ -65,9 +67,24 @@ public class HSPBlockPlanner {
 			levelUp.add(mergeJoinBlocks.get(listSize-1));
 		}
 		
+		makeConnectionsFromChildrenToParents(levelUp);
+		
 		QueryIter root = buildTreeBottomUpRecursively(levelUp, qCxt);
 		
 		return root;
+	}
+
+	private static void makeConnectionsFromChildrenToParents(
+			ArrayList<QueryIter> levelUp) {
+		for (QueryIter queryIter : levelUp) {
+			if (queryIter instanceof TwoWayJoinable){
+				Joinable left = ((TwoWayJoinable)queryIter).getLeftJ();
+				left.setParent((JoinListener)queryIter);
+				
+				Joinable right = ((TwoWayJoinable)queryIter).getRightJ();
+				right.setParent((JoinListener)queryIter);
+			}
+		}
 	}
 
 	private static QueryIter buildNewNode(QueryIter left, QueryIter right, ExecutionContext qCxt, ArrayList<String> commonVars) {
@@ -88,7 +105,7 @@ public class HSPBlockPlanner {
 		return common;
 	}
 
-	private static ArrayList<QueryIter> getMergeJoinBlocks(BasicPattern pattern, ExecutionContext qCxt) {
+	public static ArrayList<QueryIter> getMergeJoinBlocks(BasicPattern pattern, ExecutionContext qCxt) {
 
 		ArrayList<QueryIter> mergeJoinBlocks;
 		

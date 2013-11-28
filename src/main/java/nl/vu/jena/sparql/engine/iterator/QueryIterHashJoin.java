@@ -5,12 +5,18 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Set;
+import java.util.concurrent.ExecutorService;
 
 import nl.vu.datalayer.hbase.id.Id;
+import nl.vu.jena.sparql.engine.joinable.JoinEventHandler;
+import nl.vu.jena.sparql.engine.joinable.JoinListener;
+import nl.vu.jena.sparql.engine.joinable.Joinable;
+import nl.vu.jena.sparql.engine.main.HBaseSymbols;
 
 import org.apache.hadoop.hbase.util.Bytes;
 
 import com.hp.hpl.jena.graph.Node;
+import com.hp.hpl.jena.query.ARQ;
 import com.hp.hpl.jena.sparql.core.Var;
 import com.hp.hpl.jena.sparql.engine.ExecutionContext;
 import com.hp.hpl.jena.sparql.engine.QueryIterator;
@@ -26,9 +32,15 @@ public class QueryIterHashJoin extends QueryIter2 implements Joinable{
 	private Binding nextBinding;
 	private HashSet<String> varNames;
 	
+	private JoinEventHandler joinEventHandler;//TODO add event handling
+	private ArrayList<Binding> joinedResults;
+	
 	public QueryIterHashJoin(QueryIterator left, QueryIterator right, 
 			ArrayList<String> joinKeyVariables, ExecutionContext execCxt) {
 		super(left, right, execCxt);	
+		
+		joinEventHandler = new JoinEventHandler((ExecutorService)ARQ.getContext().get(HBaseSymbols.EXECUTOR), this);
+		
 		buildVarNames((Joinable)left, (Joinable)right);
 		
 		for (String joinVarName : joinKeyVariables) {
@@ -37,6 +49,19 @@ public class QueryIterHashJoin extends QueryIter2 implements Joinable{
 		
 		this.leftHashTable = new HashMap<Integer, Binding>();
 		buildHashTable(left);
+	}
+
+	@Override
+	public void setParent(JoinListener parent) {
+		if (parent!=null){
+			joinEventHandler.registerListener(parent);
+		}
+	}
+
+	@Override
+	public void run() {
+		// TODO Auto-generated method stub
+		
 	}
 
 	private void buildVarNames(Joinable left, Joinable right) {

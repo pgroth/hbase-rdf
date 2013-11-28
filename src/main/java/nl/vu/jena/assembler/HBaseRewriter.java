@@ -1,6 +1,9 @@
 package nl.vu.jena.assembler;
 
+import java.util.concurrent.Executors;
+
 import nl.vu.jena.sparql.engine.main.HBaseStageGenerator;
+import nl.vu.jena.sparql.engine.main.HBaseSymbols;
 import nl.vu.jena.sparql.engine.optimizer.HBaseOptimize;
 import nl.vu.jena.sparql.engine.optimizer.HBaseTransformFilterPlacement;
 
@@ -15,5 +18,8 @@ static {
 	
 	ARQ.getContext().set(ARQConstants.sysOptimizerFactory, HBaseOptimize.hbaseOptimizationFactory);
 	ARQ.getContext().set(ARQ.optFilterPlacement, new HBaseTransformFilterPlacement());
+	
+	ARQ.getContext().set(HBaseSymbols.EXECUTOR, Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors()));
+	
 }
 }

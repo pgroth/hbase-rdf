@@ -2,6 +2,7 @@ package examples;
 
 import java.io.IOException;
 import java.util.Iterator;
+import java.util.concurrent.Executors;
 
 import org.openjena.atlas.io.IndentedLineBuffer;
 import org.openjena.atlas.io.IndentedWriter;
@@ -12,6 +13,7 @@ import nl.vu.datalayer.hbase.connection.HBaseConnection;
 import nl.vu.datalayer.hbase.schema.HBPrefixMatchSchema;
 import nl.vu.jena.graph.HBaseGraph;
 import nl.vu.jena.sparql.engine.main.HBaseStageGenerator;
+import nl.vu.jena.sparql.engine.main.HBaseSymbols;
 import nl.vu.jena.sparql.engine.optimizer.HBaseOptimize;
 import nl.vu.jena.sparql.engine.optimizer.HBaseTransformFilterPlacement;
 
@@ -38,6 +40,7 @@ import com.hp.hpl.jena.sparql.engine.main.StageBuilder;
 import com.hp.hpl.jena.sparql.serializer.SerializationContext;
 import com.hp.hpl.jena.sparql.sse.WriterSSE;
 import com.hp.hpl.jena.sparql.util.QueryOutputUtils;
+import com.hp.hpl.jena.sparql.util.Symbol;
 
 public class RunJenaHBase {
 
@@ -79,6 +82,7 @@ public class RunJenaHBase {
 		
 		ARQ.getContext().set(ARQConstants.sysOptimizerFactory, HBaseOptimize.hbaseOptimizationFactory);
 		ARQ.getContext().set(ARQ.optFilterPlacement, new HBaseTransformFilterPlacement());
+		ARQ.getContext().set(HBaseSymbols.EXECUTOR, Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors()));
 		
 		QueryExecutionBase qexec = (QueryExecutionBase)QueryExecutionFactory.create(queryString, model);
 		
