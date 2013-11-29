@@ -1,15 +1,22 @@
 package nl.vu.jena.sparql.engine.iterator;
 
+import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.Set;
+import java.util.concurrent.ExecutorService;
 
 import nl.vu.jena.graph.TripleBinder;
+import nl.vu.jena.sparql.engine.joinable.JoinEvent;
+import nl.vu.jena.sparql.engine.joinable.JoinEventHandler;
 import nl.vu.jena.sparql.engine.joinable.JoinListener;
 import nl.vu.jena.sparql.engine.joinable.Joinable;
+import nl.vu.jena.sparql.engine.main.HBaseSymbols;
 
 import com.hp.hpl.jena.graph.Graph;
 import com.hp.hpl.jena.graph.Node;
 import com.hp.hpl.jena.graph.Triple;
+import com.hp.hpl.jena.query.ARQ;
 import com.hp.hpl.jena.sparql.ARQInternalErrorException;
 import com.hp.hpl.jena.sparql.core.Var;
 import com.hp.hpl.jena.sparql.engine.ExecutionContext;
@@ -23,26 +30,33 @@ import com.hp.hpl.jena.util.iterator.NiceIterator;
 
 public class TripleMapper extends QueryIter implements Joinable
 {
+	private JoinEventHandler joinEventHandler;
+	private Iterator<Binding> joinedResultsIter=null;
+	
     private Node s ;
     private Node p ;
     private Node o ;
     private Binding binding ;
-    private ClosableIterator<Triple> graphIter ;
+    private ClosableIterator<Triple> graphIter = null ;
     private Binding slot = null ;
-    private boolean finished = false ;
+    //private boolean finished = false ;
     private volatile boolean cancelled = false ;
     
     private HashSet<String> varNames;
+	private Graph graph;
+	private Triple bindedPattern;
 
     public TripleMapper(Binding binding, Triple pattern, ExecutionContext cxt)
     {
         super(cxt) ;
         
+        joinEventHandler = new JoinEventHandler((ExecutorService)ARQ.getContext().get(HBaseSymbols.EXECUTOR), this);
+        
         this.binding = binding ;
-        Graph graph = cxt.getActiveGraph() ;
+        graph = cxt.getActiveGraph();
         
         varNames = new HashSet<String>();
-        Triple bindedPattern = TripleBinder.bindTriple(pattern, binding);
+        bindedPattern = TripleBinder.bindTriple(pattern, binding);
         this.s = bindedPattern.getSubject();
         if (Var.isVar(s))
             varNames.add(s.getName());
@@ -52,53 +66,43 @@ public class TripleMapper extends QueryIter implements Joinable
         this.o = bindedPattern.getObject();
         if (Var.isVar(o))
             varNames.add(o.getName());
-        
-        ExtendedIterator<Triple> iter = graph.find(bindedPattern) ;
-        
-        this.graphIter = iter ;
     }
     
     @Override
 	public void setParent(JoinListener parent) {
-		// TODO Auto-generated method stuff	
+    	if (parent!=null){
+			joinEventHandler.registerListener(parent);
+		}
 	}
 
 	@Override
 	public void run() {
-		// TODO Auto-generated method stub
+		ExtendedIterator<Triple> iter = graph.find(bindedPattern) ;
+        
+		ArrayList<Binding> joinedResults = new ArrayList<Binding>();
 		
+		while (iter.hasNext()){
+			Triple t = iter.next() ;
+            slot = mapper(t) ;
+            if (slot!=null){
+            	joinedResults.add(slot);
+            }
+		}
+        
+		joinedResultsIter = joinedResults.iterator();
+		joinEventHandler.notifyListeners();
 	}
 
 	@Override
     protected boolean hasNextBinding()
     {
-        if ( finished ) return false ;
-        if ( slot != null ) return true ;
-        if ( cancelled )
-        {
-            graphIter.close() ;
-            finished = true ;
-            return false ;
-        }
-
-        while(graphIter.hasNext() && slot == null )
-        {
-            Triple t = graphIter.next() ;
-            slot = mapper(t) ;
-        }
-        if ( slot == null )
-            finished = true ;
-        return slot != null ;
+        return joinedResultsIter.hasNext();
     }
 
     @Override
     protected Binding moveToNextBinding()
     {
-        if ( ! hasNextBinding() ) 
-            throw new ARQInternalErrorException() ;
-        Binding r = slot ;
-        slot = null ;
-        return r ;
+        return joinedResultsIter.next();
     }
     
     private Binding mapper(Triple r)
@@ -147,4 +151,40 @@ public class TripleMapper extends QueryIter implements Joinable
         // The QueryIteratorBase machinary will do the real work.
         cancelled = true ;
     }
+    
+    /*
+    @Override
+    protected boolean hasNextBinding()
+    {
+        if ( finished ) return false ;
+        if ( slot != null ) return true ;
+        if ( cancelled )
+        {
+            graphIter.close() ;
+            finished = true ;
+            return false ;
+        }
+
+        while(graphIter.hasNext() && slot == null )
+        {
+            Triple t = graphIter.next() ;
+            slot = mapper(t) ;
+        }
+        if ( slot == null )
+            finished = true ;
+        return slot != null ;
+    }
+
+    @Override
+    protected Binding moveToNextBinding()
+    {
+        if ( ! hasNextBinding() ) 
+            throw new ARQInternalErrorException() ;
+        Binding r = slot ;
+        slot = null ;
+        return r ;
+    }
+     * 
+     */
+    
 }

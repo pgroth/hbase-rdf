@@ -40,13 +40,12 @@ public class QueryIterCartesianProduct extends QueryIterJoinBase implements TwoW
 	public QueryIterCartesianProduct(QueryIterator left, QueryIterator right, ExecutionContext execCxt) {
 		super(left, right, null, execCxt);
 		
-		joinEventHandler = new JoinEventHandler((ExecutorService)ARQ.getContext().get(HBaseSymbols.EXECUTOR), this);	
+		joinEventHandler = new JoinEventHandler((ExecutorService)ARQ.getContext().get(HBaseSymbols.EXECUTOR), this);
+		buildVarNames((Joinable)getLeft(), (Joinable)getRight());
 	}
 	
 	@Override
 	public void run() {
-		buildVarNames((Joinable)getLeft(), (Joinable)getRight());
-		
 		ArrayList<Binding> joinedResults = new ArrayList<Binding>();
 		while (super.hasNextBinding()){
 			joinedResults.add(super.nextBinding());
