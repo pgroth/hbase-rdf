@@ -5,9 +5,12 @@ import java.util.HashMap;
 import java.util.Map;
 
 import nl.vu.datalayer.hbase.HBaseClientSolution;
+import nl.vu.datalayer.hbase.HBaseFactory;
+import nl.vu.datalayer.hbase.connection.HBaseConnection;
 import nl.vu.datalayer.hbase.id.Id;
 import nl.vu.datalayer.hbase.operations.prefixmatch.IHBasePrefixMatchRetrieveOpsManager;
 import nl.vu.datalayer.hbase.parameters.Quad;
+import nl.vu.datalayer.hbase.schema.HBPrefixMatchSchema;
 
 import org.openjena.jenasesame.impl.Convert;
 import org.openrdf.model.Value;
@@ -22,10 +25,10 @@ public class ValueIdMapper {
 	
 	private ValueFactory valFactory;
 	
-	private HBaseClientSolution hbase;
+	private HBaseConnection con;
 
-	public ValueIdMapper(HBaseClientSolution hbase) {
-		this.hbase = hbase;
+	public ValueIdMapper(HBaseConnection con) {
+		this.con = con;
 		valFactory = new ValueFactoryImpl();
 	}
 	
@@ -35,7 +38,8 @@ public class ValueIdMapper {
 			toResolve.put((Id)entry.getKey().getLiteralValue(), null);
 		}
 		
-		((IHBasePrefixMatchRetrieveOpsManager)hbase.opsManager).materializeIds(toResolve);
+		IHBasePrefixMatchRetrieveOpsManager hbaseOpsManager = (IHBasePrefixMatchRetrieveOpsManager)HBaseFactory.getHBaseSolution(HBPrefixMatchSchema.SCHEMA_NAME, con, null).opsManager;
+		hbaseOpsManager.materializeIds(toResolve);
 		
 		for (Map.Entry<Node_Literal, Node> entry : tempIdMap.entrySet()) {
 			Id id = (Id)entry.getKey().getLiteralValue();
@@ -54,7 +58,8 @@ public class ValueIdMapper {
 			toResolve.put(value, null);
 		}
 		
-		((IHBasePrefixMatchRetrieveOpsManager)hbase.opsManager).mapValuesToIds(toResolve);
+		IHBasePrefixMatchRetrieveOpsManager hbaseOpsManager = (IHBasePrefixMatchRetrieveOpsManager)HBaseFactory.getHBaseSolution(HBPrefixMatchSchema.SCHEMA_NAME, con, null).opsManager;
+		hbaseOpsManager.mapValuesToIds(toResolve);
 		
 		for (Map.Entry<Node, Node_Literal> mapEntry : node2nodeIdMap.entrySet()) {
 			Value toUpdate = tempMapping.get(mapEntry.getKey());
@@ -76,7 +81,8 @@ public class ValueIdMapper {
 		checkNode(toResolve, object);
 		
 		if (!toResolve.isEmpty()){
-			((IHBasePrefixMatchRetrieveOpsManager)hbase.opsManager).mapValuesToIds(toResolve);
+			IHBasePrefixMatchRetrieveOpsManager hbaseOpsManager = (IHBasePrefixMatchRetrieveOpsManager)HBaseFactory.getHBaseSolution(HBPrefixMatchSchema.SCHEMA_NAME, con, null).opsManager;
+			hbaseOpsManager.mapValuesToIds(toResolve);
 		}
 		
 		Id[] retIds = { addNodeToMap(toResolve, subject),

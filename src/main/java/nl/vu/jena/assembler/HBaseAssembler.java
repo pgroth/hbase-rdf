@@ -63,10 +63,10 @@ public class HBaseAssembler extends AssemblerBase {
 		
 		Graph g;
 		if (caching.equals("on")){
-			g = new HBaseGraph(hbaseSol, HBaseGraph.CACHING_ON);
+			g = new HBaseGraph(con, HBaseGraph.CACHING_ON);
 		}
 		else{
-			g = new HBaseGraph(hbaseSol, HBaseGraph.CACHING_OFF);
+			g = new HBaseGraph(con, HBaseGraph.CACHING_OFF);
 		}
 		
 		return ModelFactory.createModelForGraph(g);

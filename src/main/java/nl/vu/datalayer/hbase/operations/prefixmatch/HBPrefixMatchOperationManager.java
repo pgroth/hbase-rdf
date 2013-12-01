@@ -407,7 +407,7 @@ public class HBPrefixMatchOperationManager implements IHBasePrefixMatchRetrieveO
 	}
 	
 	@Override
-	public synchronized ArrayList<ArrayList<Id>> getResults(Quad quad, RowLimitPair limits) throws IOException {
+	public ArrayList<ArrayList<Id>> getResults(Quad quad, RowLimitPair limits) throws IOException {
 		try {
 			quadResults.clear();
 			boundElements.clear();

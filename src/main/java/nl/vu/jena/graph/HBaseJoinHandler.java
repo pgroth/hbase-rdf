@@ -8,10 +8,14 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.concurrent.ConcurrentHashMap;
 
+import nl.vu.datalayer.hbase.HBaseFactory;
+import nl.vu.datalayer.hbase.connection.HBaseConnection;
 import nl.vu.datalayer.hbase.operations.prefixmatch.IHBasePrefixMatchRetrieveOpsManager;
 import nl.vu.datalayer.hbase.parameters.Quad;
 import nl.vu.datalayer.hbase.parameters.ResultRow;
+import nl.vu.datalayer.hbase.schema.HBPrefixMatchSchema;
 
 import com.hp.hpl.jena.graph.Node;
 import com.hp.hpl.jena.graph.Triple;
@@ -28,8 +32,9 @@ public class HBaseJoinHandler {
 	public static final int O = 0x02;//2nd bit
 	public static final int C = 0x01;//1st bit
 
+	private ConcurrentHashMap<BasicPattern, JoinMetaInfo> joinMetaInfoMap; 
 	private ValueIdMapper valIdMapper;
-	private IHBasePrefixMatchRetrieveOpsManager hbaseOpsManager;
+	private HBaseConnection con;
 	private List<ByteBuffer> varEncodings;
 	private LinkedHashSet<String> varNames;
 	private HashSet<String> joinVariableNames;
@@ -42,13 +47,14 @@ public class HBaseJoinHandler {
 	private byte currentNonJoinId;
 	private LinkedHashSet<String> finalVarNames;
 	
-	public HBaseJoinHandler(IHBasePrefixMatchRetrieveOpsManager hbaseOpsManager, ValueIdMapper valIdMapper) {
+	public HBaseJoinHandler(HBaseConnection con, ValueIdMapper valIdMapper) {
 		super();
 		this.valIdMapper = valIdMapper;
-		this.hbaseOpsManager = hbaseOpsManager;
+		this.con = con;
+		joinMetaInfoMap = new ConcurrentHashMap<BasicPattern, HBaseJoinHandler.JoinMetaInfo>();
 	}
 	
-	public LinkedHashSet<String> processPattern(BasicPattern pattern, short joinPatternId) {
+	public synchronized LinkedHashSet<String> processPattern(BasicPattern pattern, short joinPatternId) {
 		List<Triple> tripleList = pattern.getList();
 		varNames = new LinkedHashSet<String>();
 		varEncodings = new ArrayList<ByteBuffer>();
@@ -77,6 +83,7 @@ public class HBaseJoinHandler {
 		finalVarNames.addAll(orderedJoinVariableNames);
 		finalVarNames.addAll(varNames);	
 		
+		joinMetaInfoMap.put(pattern, new JoinMetaInfo(varEncodings, varNames));
 		return finalVarNames;
 	}
 	
@@ -206,11 +213,28 @@ public class HBaseJoinHandler {
 				quadPatterns.add(valIdMapper.getIdsFromTriple(triple));
 			}
 
-			ArrayList<ResultRow> results = hbaseOpsManager.joinTriplePatterns(quadPatterns, varEncodings, varNames);
+			IHBasePrefixMatchRetrieveOpsManager hbaseOpsManager = (IHBasePrefixMatchRetrieveOpsManager)HBaseFactory.getHBaseSolution(HBPrefixMatchSchema.SCHEMA_NAME, con, null).opsManager;
+			JoinMetaInfo metaInfo = joinMetaInfoMap.get(pattern);
+			ArrayList<ResultRow> results = hbaseOpsManager.joinTriplePatterns(quadPatterns, 
+					metaInfo.varEncodings, metaInfo.varNames);
+			joinMetaInfoMap.remove(pattern);
 			return results.iterator();
 		} catch (IOException e) {
 			e.printStackTrace();
 			return NullIterator.instance();
 		}
+	}
+	
+	
+	private class JoinMetaInfo{
+		private List<ByteBuffer> varEncodings;
+		private LinkedHashSet<String> varNames;
+		
+		public JoinMetaInfo(List<ByteBuffer> varEncodings, LinkedHashSet<String> varNames) {
+			super();
+			this.varEncodings = varEncodings;
+			this.varNames = varNames;
+		}
+		
 	}
 }

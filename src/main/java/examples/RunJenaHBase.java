@@ -45,7 +45,7 @@ public class RunJenaHBase {
 			HBaseClientSolution hbaseSol = HBaseFactory.getHBaseSolution("local-" + HBPrefixMatchSchema.SCHEMA_NAME, con, null);
 			((NativeJavaConnection) con).initTables(hbaseSol.schema.getTableNames());
 
-			Graph g = new HBaseGraph(hbaseSol, HBaseGraph.CACHING_ON);
+			Graph g = new HBaseGraph(con, HBaseGraph.CACHING_ON);
 			Model model = ModelFactory.createModelForGraph(g);
 			//FileManager.get().addLocatorClassLoader(RunJenaHBase.class.getClassLoader());
 			//Model model = FileManager.get().loadModel("data/tbl-card2.ttl", null, "TURTLE");
@@ -76,7 +76,7 @@ public class RunJenaHBase {
 		
 		ARQ.getContext().set(ARQConstants.sysOptimizerFactory, HBaseOptimize.hbaseOptimizationFactory);
 		ARQ.getContext().set(ARQ.optFilterPlacement, new HBaseTransformFilterPlacement());
-		ARQ.getContext().set(HBaseSymbols.EXECUTOR, Executors.newFixedThreadPool(2*Runtime.getRuntime().availableProcessors()));
+		ARQ.getContext().set(HBaseSymbols.EXECUTOR, Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors()));
 		
 		QueryExecutionBase qexec = (QueryExecutionBase)QueryExecutionFactory.create(queryString, model);
 		

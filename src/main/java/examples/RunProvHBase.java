@@ -42,7 +42,7 @@ public class RunProvHBase {
 			HBaseClientSolution hbaseSol = HBaseFactory.getHBaseSolution("local-" + HBPrefixMatchSchema.SCHEMA_NAME, con, null);
 			((NativeJavaConnection) con).initTables(hbaseSol.schema.getTableNames());
 
-			Graph g = new HBaseGraph(hbaseSol, HBaseGraph.CACHING_ON);
+			Graph g = new HBaseGraph(con, HBaseGraph.CACHING_ON);
 			Model model = ModelFactory.createModelForGraph(g);
 			//FileManager.get().addLocatorClassLoader(RunJenaHBase.class.getClassLoader());
 			//Model model = FileManager.get().loadModel("data/tbl-card2.ttl", null, "TURTLE");
