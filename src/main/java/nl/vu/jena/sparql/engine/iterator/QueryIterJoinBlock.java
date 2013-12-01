@@ -28,23 +28,23 @@ import com.hp.hpl.jena.sparql.engine.iterator.QueryIter1;
 
 public class QueryIterJoinBlock extends QueryIter1 implements Joinable {
 
-	private Graph graph ;
 	private Iterator<Binding> joinedResultsIter=null;
 	private Iterator<ResultRow> resultIter;
 	private LinkedHashSet<String> varNames;
 	private BasicPattern pattern;
-	private short joinId;
 	
 	private JoinEventHandler joinEventHandler;
+	private HBaseGraph hbaseGraph;
 	
 	public QueryIterJoinBlock(QueryIterator input, BasicPattern pattern, ExecutionContext execCxt, short joinId) {
 		super(input, execCxt);
 
-		joinEventHandler = new JoinEventHandler((ExecutorService)ARQ.getContext().get(HBaseSymbols.EXECUTOR), this);
+		this.joinEventHandler = new JoinEventHandler((ExecutorService)ARQ.getContext().get(HBaseSymbols.EXECUTOR), this);
 		
-		graph = execCxt.getActiveGraph();
+		this.hbaseGraph = (HBaseGraph) execCxt.getActiveGraph();
+		this.varNames = hbaseGraph.extractVarNamesFromPattern(pattern, joinId);
+		
 		this.pattern = pattern;
-		this.joinId = joinId;
 		
 	}
 
@@ -57,9 +57,7 @@ public class QueryIterJoinBlock extends QueryIter1 implements Joinable {
 
 	@Override
 	public void run() {
-		HBaseGraph hbaseGraph = (HBaseGraph) graph;
-
-		varNames = hbaseGraph.extractVarNamesFromPattern(pattern, joinId);
+			
 		resultIter = hbaseGraph.getJoinResults(pattern);
 		
 		ArrayList<Binding> results = new ArrayList<Binding>();

@@ -21,7 +21,9 @@ private final Triple pattern ;
     @Override
     protected QueryIterator nextStage(Binding binding)
     {
-        return new TripleMapper(binding, pattern, getExecContext()) ;
+        QueryIterator iter= new TripleMapper(binding, pattern, getExecContext()) ;
+        ((Runnable)iter).run();
+        return iter;
     }
     
     static int countMapper = 0 ; 

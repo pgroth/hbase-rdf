@@ -16,29 +16,32 @@ import nl.vu.jena.sparql.engine.main.HBaseSymbols;
 
 import com.hp.hpl.jena.graph.Node;
 import com.hp.hpl.jena.query.ARQ;
+import com.hp.hpl.jena.sparql.algebra.Table;
+import com.hp.hpl.jena.sparql.algebra.TableFactory;
 import com.hp.hpl.jena.sparql.core.Var;
 import com.hp.hpl.jena.sparql.engine.ExecutionContext;
 import com.hp.hpl.jena.sparql.engine.QueryIterator;
 import com.hp.hpl.jena.sparql.engine.binding.Binding;
 import com.hp.hpl.jena.sparql.engine.binding.BindingFactory;
 import com.hp.hpl.jena.sparql.engine.binding.BindingMap;
+import com.hp.hpl.jena.sparql.engine.iterator.QueryIter2;
 import com.hp.hpl.jena.sparql.engine.iterator.QueryIterNullIterator;
 import com.hp.hpl.jena.sparql.engine.iterator.QueryIterPlainWrapper;
-import com.hp.hpl.jena.sparql.engine.main.iterator.QueryIterJoinBase;
 
 /**
  * Used when we know there are no intersecting columns between left and right
  *
  */
-public class QueryIterCartesianProduct extends QueryIterJoinBase implements TwoWayJoinable, JoinListener {
+public class QueryIterCartesianProduct extends QueryIter2 implements TwoWayJoinable, JoinListener {
 	
 	private Iterator<Binding> joinedResultsIter=null;
+	private QueryIterator current = null ;
 	private HashSet<String> varNames;
-	
+	private Table tableRight ;          // Materialized iterator
 	private JoinEventHandler joinEventHandler;
 	
 	public QueryIterCartesianProduct(QueryIterator left, QueryIterator right, ExecutionContext execCxt) {
-		super(left, right, null, execCxt);
+		super(left, right, execCxt);
 		
 		joinEventHandler = new JoinEventHandler((ExecutorService)ARQ.getContext().get(HBaseSymbols.EXECUTOR), this);
 		buildVarNames((Joinable)getLeft(), (Joinable)getRight());
@@ -46,15 +49,51 @@ public class QueryIterCartesianProduct extends QueryIterJoinBase implements TwoW
 	
 	@Override
 	public void run() {
+		tableRight = TableFactory.create(getRight()) ;
+		getRight().close();
+		
 		ArrayList<Binding> joinedResults = new ArrayList<Binding>();
-		while (super.hasNextBinding()){
-			joinedResults.add(super.nextBinding());
+		while (true){
+			if (isFinished())
+	            break;
+	        
+	        // No nextBinding - only call to moveToNext
+	        Binding nextBinding = moveToNext() ;
+	        if ( nextBinding != null ){
+	        	joinedResults.add(nextBinding);
+	        }
+	        else{
+	        	break;
+	        }
 		}
 		
 		joinedResultsIter = joinedResults.iterator();
 		
 		joinEventHandler.notifyListeners();
 	}
+	
+	// Move on regardless.
+    private Binding moveToNext()
+    {
+        while(true)
+        {
+            if ( current != null )
+            {
+                if (current.hasNext()){
+                    return current.nextBinding() ;
+                }
+                // curent ends.
+                current.close();
+                current = null ;
+            }
+            
+            // Move to next worker
+            current = joinWorker() ;
+            if (current == null)
+                // No next worker. 
+                return null ;
+        }
+    }
 
 	private void buildVarNames(Joinable left, Joinable right) {
 		varNames = new HashSet<String>();
@@ -66,12 +105,11 @@ public class QueryIterCartesianProduct extends QueryIterJoinBase implements TwoW
 		}
 	}
 
-	@Override
 	protected QueryIterator joinWorker() {
 		if ( !getLeft().hasNext() )
             return null ;
 		
-		QueryIterator rightIterator = super.tableRight.iterator(null);
+		QueryIterator rightIterator = tableRight.iterator(null);
 		
 		List<Binding> out = new ArrayList<Binding>() ;
 		Binding leftBinding = getLeft().nextBinding();
@@ -131,6 +169,19 @@ public class QueryIterCartesianProduct extends QueryIterJoinBase implements TwoW
 	@Override
 	public void joinFinished(JoinEvent e) {
 		joinEventHandler.joinFinished(e);
+	}
+
+	@Override
+	protected void requestSubCancel() {
+		closeSubIterator();
+	}
+
+	@Override
+	protected void closeSubIterator() {
+		performClose(current) ;
+        if ( tableRight != null ) tableRight.close() ;
+        tableRight = null ;
+		
 	}	
 
 }
