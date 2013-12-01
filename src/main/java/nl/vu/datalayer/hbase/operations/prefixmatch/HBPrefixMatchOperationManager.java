@@ -287,8 +287,7 @@ public class HBPrefixMatchOperationManager implements IHBasePrefixMatchRetrieveO
 		byte bucketsCount = slaveNodeCount > 256 ? (byte)256 : (byte)slaveNodeCount;
 		AbstractRowKeyDistributor keyDistributor = new RowKeyDistributorByOneBytePrefix(bucketsCount);
 		
-		Scan scan = new Scan(keyDistributor.getDistributedKey(Bytes.toBytes(joinId)),
-						keyDistributor.getDistributedKey(Bytes.toBytes((short)((int)joinId+1))));
+		Scan scan = new Scan(Bytes.toBytes(joinId), Bytes.toBytes((short)((int)joinId+1)));
 		scan.setFilter(qualifierFilters);
 		
 		

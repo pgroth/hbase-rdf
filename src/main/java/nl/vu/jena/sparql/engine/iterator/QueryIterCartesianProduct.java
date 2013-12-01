@@ -53,18 +53,21 @@ public class QueryIterCartesianProduct extends QueryIter2 implements TwoWayJoina
 		getRight().close();
 		
 		ArrayList<Binding> joinedResults = new ArrayList<Binding>();
-		while (true){
+		QueryIterator left = getLeft();
+
+		while (left.hasNext()){
 			if (isFinished())
 	            break;
 	        
+			Binding leftBinding = left.nextBinding();
+			
 	        // No nextBinding - only call to moveToNext
-	        Binding nextBinding = moveToNext() ;
-	        if ( nextBinding != null ){
-	        	joinedResults.add(nextBinding);
-	        }
-	        else{
-	        	break;
-	        }
+			QueryIterator rightIterator = tableRight.iterator(null);
+			while (rightIterator.hasNext()){
+				Binding nextBinding = mergeBindings(leftBinding, rightIterator.nextBinding()) ;
+				joinedResults.add(nextBinding);
+				
+			}     
 		}
 		
 		joinedResultsIter = joinedResults.iterator();
@@ -72,28 +75,16 @@ public class QueryIterCartesianProduct extends QueryIter2 implements TwoWayJoina
 		joinEventHandler.notifyListeners();
 	}
 	
-	// Move on regardless.
-    private Binding moveToNext()
-    {
-        while(true)
+	private Binding mergeBindings(Binding leftBinding, Binding rightBinding) {
+		BindingMap newBinding = BindingFactory.create(leftBinding) ;
+        for (Iterator<Var> vIter = rightBinding.vars() ; vIter.hasNext() ;)
         {
-            if ( current != null )
-            {
-                if (current.hasNext()){
-                    return current.nextBinding() ;
-                }
-                // curent ends.
-                current.close();
-                current = null ;
-            }
-            
-            // Move to next worker
-            current = joinWorker() ;
-            if (current == null)
-                // No next worker. 
-                return null ;
+            Var v = vIter.next();
+            Node n = rightBinding.get(v) ;
+            newBinding.add(v, n) ;
         }
-    }
+		return newBinding;
+	}
 
 	private void buildVarNames(Joinable left, Joinable right) {
 		varNames = new HashSet<String>();
@@ -103,35 +94,6 @@ public class QueryIterCartesianProduct extends QueryIter2 implements TwoWayJoina
 		for (String string : right.getVarNames()) {
 			varNames.add(string);
 		}
-	}
-
-	protected QueryIterator joinWorker() {
-		if ( !getLeft().hasNext() )
-            return null ;
-		
-		QueryIterator rightIterator = tableRight.iterator(null);
-		
-		List<Binding> out = new ArrayList<Binding>() ;
-		Binding leftBinding = getLeft().nextBinding();
-		
-		while (rightIterator.hasNext()){
-			Binding right = rightIterator.next();		
-			BindingMap newBinding = BindingFactory.create(leftBinding) ;
-	        for (Iterator<Var> vIter = right.vars() ; vIter.hasNext() ;)
-	        {
-	            Var v = vIter.next();
-	            Node n = right.get(v) ;
-	            newBinding.add(v, n) ;
-	        }
-	        
-	        out.add(newBinding);
-		}
-		
-		if (out.size() == 0){
-            return new QueryIterNullIterator(getExecContext()) ;
-		}
-		
-        return new QueryIterPlainWrapper(out.iterator(), getExecContext());
 	}
 
 	@Override
