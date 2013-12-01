@@ -9,9 +9,13 @@ public abstract class HBaseConnection {
 
 	public static final byte NATIVE_JAVA = 0;
 	public static final byte REST = 1;
+	public static final byte ASYNC_NATIVE_JAVA = 2;
 	
 	public static HBaseConnection create(byte connectionType) throws IOException{
 		switch (connectionType){
+		case ASYNC_NATIVE_JAVA:{
+			return new AsyncNativeJavaConnection();
+		}
 		case NATIVE_JAVA: {	
 			return new NativeJavaConnection();
 		}

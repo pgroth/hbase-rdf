@@ -18,6 +18,7 @@ import java.util.Map;
 import java.util.Properties;
 import java.util.Stack;
 
+import nl.vu.datalayer.hbase.connection.AsyncNativeJavaConnection;
 import nl.vu.datalayer.hbase.connection.HBaseConnection;
 import nl.vu.datalayer.hbase.connection.NativeJavaConnection;
 import nl.vu.datalayer.hbase.exceptions.ElementNotFoundException;
@@ -72,8 +73,6 @@ public class HBPrefixMatchOperationManager implements IHBasePrefixMatchRetrieveO
 	
 	private HBaseConnection con;
 	
-	private HBaseClient asyncClient;
-	
 	/**
 	 * Maps the query patterns to the associated tables that resolve those patterns 
 	 */
@@ -98,7 +97,7 @@ public class HBPrefixMatchOperationManager implements IHBasePrefixMatchRetrieveO
 	
 	private ArrayList<Id> boundElements;
 	
-	private ValueFactory valueFactory;
+	//private ValueFactory valueFactory;
 	
 	private String schemaSuffix;
 	private int slaveNodeCount;
@@ -134,9 +133,6 @@ public class HBPrefixMatchOperationManager implements IHBasePrefixMatchRetrieveO
 		quadResults = new ArrayList<ArrayList<Id>>();
 		boundElements = new ArrayList<Id>();
 		batchGets = new ArrayList<Get>();
-		valueFactory = new ValueFactoryImpl();
-		
-		asyncClient = new HBaseClient("localhost");
 		
 		Properties prop = new Properties();
 		try{
@@ -144,9 +140,6 @@ public class HBPrefixMatchOperationManager implements IHBasePrefixMatchRetrieveO
 			schemaSuffix = prop.getProperty(HBPrefixMatchSchema.SUFFIX_PROPERTY, "");
 			slaveNodeCount = Integer.parseInt(prop.getProperty(HBPrefixMatchSchema.NUMBER_OF_SLAVE_NODES_PROPERTY, ""));
 			
-			if (con instanceof NativeJavaConnection){
-				initTablePool((NativeJavaConnection)con);
-			}
 		}
 		catch (IOException e) {
 			//continue to use the default properties
@@ -157,17 +150,6 @@ public class HBPrefixMatchOperationManager implements IHBasePrefixMatchRetrieveO
 		} catch (NoSuchAlgorithmException e) {
 			e.printStackTrace();
 		}
-	}
-
-	private void initTablePool(NativeJavaConnection con) throws IOException {
-		String []tableNames = new String[HBPrefixMatchSchema.TABLE_NAMES.length+2];
-		tableNames[0] = HBPrefixMatchSchema.STRING2ID + schemaSuffix;
-		tableNames[1] = HBPrefixMatchSchema.ID2STRING + schemaSuffix;
-		for (int i = 0; i < HBPrefixMatchSchema.TABLE_NAMES.length; i++) {
-			tableNames[i+2] = HBPrefixMatchSchema.TABLE_NAMES[i]+schemaSuffix;
-		}
-		
-		con.initTables(tableNames);
 	}
 	
 	private void buildPattern2TableHashMap(){
@@ -273,7 +255,7 @@ public class HBPrefixMatchOperationManager implements IHBasePrefixMatchRetrieveO
 	}
 
 	private AsyncScanner buildAsyncScanner(byte[] qualifier, byte[] rangeScanKey) {
-		AsyncScanner scanner = new AsyncScanner(asyncClient,
+		AsyncScanner scanner = new AsyncScanner(((AsyncNativeJavaConnection)con).getAsyncClient(),
 				HBPrefixMatchSchema.TABLE_NAMES[currentTableIndex]+schemaSuffix,
 				rangeScanKey, HBPrefixMatchSchema.COLUMN_FAMILY,
 				qualifier,//encode (join id, triple id, join position, variable ids)
@@ -737,7 +719,7 @@ public class HBPrefixMatchOperationManager implements IHBasePrefixMatchRetrieveO
 	
 	//===================================== MAPPING FUNCTIONS ===========================================
 	@Override
-	public synchronized void materializeIds(Map<Id, Value> id2ValueMap) throws IOException {
+	public void materializeIds(Map<Id, Value> id2ValueMap) throws IOException {
 		batchGets.clear();
 		
 		for (Map.Entry<Id, Value> mapEntry : id2ValueMap.entrySet()) {
@@ -796,7 +778,7 @@ public class HBPrefixMatchOperationManager implements IHBasePrefixMatchRetrieveO
 	}
 
 	@Override
-	public synchronized void mapValuesToIds(Map<Value, Id> value2IdMap) throws IOException {
+	public void mapValuesToIds(Map<Value, Id> value2IdMap) throws IOException {
 		hash2ValueMap.clear();
 		batchGets.clear();
 		

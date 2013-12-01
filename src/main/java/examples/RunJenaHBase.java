@@ -4,12 +4,10 @@ import java.io.IOException;
 import java.util.Iterator;
 import java.util.concurrent.Executors;
 
-import org.openjena.atlas.io.IndentedLineBuffer;
-import org.openjena.atlas.io.IndentedWriter;
-
 import nl.vu.datalayer.hbase.HBaseClientSolution;
 import nl.vu.datalayer.hbase.HBaseFactory;
 import nl.vu.datalayer.hbase.connection.HBaseConnection;
+import nl.vu.datalayer.hbase.connection.NativeJavaConnection;
 import nl.vu.datalayer.hbase.schema.HBPrefixMatchSchema;
 import nl.vu.jena.graph.HBaseGraph;
 import nl.vu.jena.sparql.engine.main.HBaseStageGenerator;
@@ -33,14 +31,8 @@ import com.hp.hpl.jena.rdf.model.Resource;
 import com.hp.hpl.jena.rdf.model.Statement;
 import com.hp.hpl.jena.rdf.model.StmtIterator;
 import com.hp.hpl.jena.sparql.ARQConstants;
-import com.hp.hpl.jena.sparql.algebra.Algebra;
-import com.hp.hpl.jena.sparql.algebra.Op;
 import com.hp.hpl.jena.sparql.engine.QueryExecutionBase;
 import com.hp.hpl.jena.sparql.engine.main.StageBuilder;
-import com.hp.hpl.jena.sparql.serializer.SerializationContext;
-import com.hp.hpl.jena.sparql.sse.WriterSSE;
-import com.hp.hpl.jena.sparql.util.QueryOutputUtils;
-import com.hp.hpl.jena.sparql.util.Symbol;
 
 public class RunJenaHBase {
 
@@ -48,28 +40,30 @@ public class RunJenaHBase {
 
 		HBaseConnection con;
 		try {
-			con = HBaseConnection.create(HBaseConnection.NATIVE_JAVA);
+			con = HBaseConnection.create(HBaseConnection.ASYNC_NATIVE_JAVA);
+
+			HBaseClientSolution hbaseSol = HBaseFactory.getHBaseSolution("local-" + HBPrefixMatchSchema.SCHEMA_NAME, con, null);
+			((NativeJavaConnection) con).initTables(hbaseSol.schema.getTableNames());
+
+			Graph g = new HBaseGraph(hbaseSol, HBaseGraph.CACHING_ON);
+			Model model = ModelFactory.createModelForGraph(g);
+			//FileManager.get().addLocatorClassLoader(RunJenaHBase.class.getClassLoader());
+			//Model model = FileManager.get().loadModel("data/tbl-card2.ttl", null, "TURTLE");
+
+			//printStatements(model);
+
+			/*
+			 * model.setNsPrefix("<http://purl.org/dc/elements/1.1>", "dc");
+			 * //model.add(new
+			 * ResourceImpl("<file:///home/tolgam/Documents/Divers/tbl-card.rdf>"
+			 * ), new PropertyImpl("dc:title"), "Tim Berners-Lee's FOAF file");
+			 */
+
+			runSPARQLQuery(model);
 		} catch (IOException e) {
 			e.printStackTrace();
 			return;
 		}
-
-		HBaseClientSolution hbaseSol = HBaseFactory.getHBaseSolution(
-				"local-"+HBPrefixMatchSchema.SCHEMA_NAME, con, null);
-
-		Graph g = new HBaseGraph(hbaseSol, HBaseGraph.CACHING_ON);
-		Model model = ModelFactory.createModelForGraph(g);
-		//FileManager.get().addLocatorClassLoader(RunJenaHBase.class.getClassLoader());
-        //Model model = FileManager.get().loadModel("data/tbl-card2.ttl", null, "TURTLE");
-        
-        //printStatements(model);
-		
-		/*model.setNsPrefix("<http://purl.org/dc/elements/1.1>", "dc");
-		//model.add(new ResourceImpl("<file:///home/tolgam/Documents/Divers/tbl-card.rdf>"), 
-				 new PropertyImpl("dc:title"), 
-				"Tim Berners-Lee's FOAF file");*/
-
-		runSPARQLQuery(model);
 	}
 
 	public static void runSPARQLQuery(Model model) {
@@ -82,7 +76,7 @@ public class RunJenaHBase {
 		
 		ARQ.getContext().set(ARQConstants.sysOptimizerFactory, HBaseOptimize.hbaseOptimizationFactory);
 		ARQ.getContext().set(ARQ.optFilterPlacement, new HBaseTransformFilterPlacement());
-		ARQ.getContext().set(HBaseSymbols.EXECUTOR, Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors()));
+		ARQ.getContext().set(HBaseSymbols.EXECUTOR, Executors.newFixedThreadPool(2*Runtime.getRuntime().availableProcessors()));
 		
 		QueryExecutionBase qexec = (QueryExecutionBase)QueryExecutionFactory.create(queryString, model);
 		

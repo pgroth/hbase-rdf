@@ -13,6 +13,7 @@ import java.util.Comparator;
 import nl.vu.datalayer.hbase.HBaseClientSolution;
 import nl.vu.datalayer.hbase.HBaseFactory;
 import nl.vu.datalayer.hbase.connection.HBaseConnection;
+import nl.vu.datalayer.hbase.connection.NativeJavaConnection;
 import nl.vu.datalayer.hbase.schema.HBPrefixMatchSchema;
 import nl.vu.jena.graph.HBaseGraph;
 import nl.vu.jena.sparql.engine.main.HBaseStageGenerator;
@@ -40,22 +41,16 @@ public class RunDBPediaBenchmark {
 	public static void main(String[] args) {
 		HBaseConnection con;
 		try {
-			con = HBaseConnection.create(HBaseConnection.NATIVE_JAVA);
-		} catch (IOException e) {
-			e.printStackTrace();
-			return;
-		}
+			con = HBaseConnection.create(HBaseConnection.ASYNC_NATIVE_JAVA);
 
-		HBaseClientSolution hbaseSol = HBaseFactory.getHBaseSolution(
-				"local-"+HBPrefixMatchSchema.SCHEMA_NAME, con, null);
+			HBaseClientSolution hbaseSol = HBaseFactory.getHBaseSolution("local-" + HBPrefixMatchSchema.SCHEMA_NAME, con, null);
+			((NativeJavaConnection) con).initTables(hbaseSol.schema.getTableNames());
 
-		Graph g = new HBaseGraph(hbaseSol, HBaseGraph.CACHING_OFF);
-		Model model = ModelFactory.createModelForGraph(g);
-		
-		prepareHBaseEngine();
-		
-		try {
-			
+			Graph g = new HBaseGraph(hbaseSol, HBaseGraph.CACHING_OFF);
+			Model model = ModelFactory.createModelForGraph(g);
+
+			prepareHBaseEngine();
+
 			int warmupRuns = Integer.parseInt(args[1]);
 			int runs = Integer.parseInt(args[2]);
 			

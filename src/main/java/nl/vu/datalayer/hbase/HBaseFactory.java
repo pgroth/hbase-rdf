@@ -12,6 +12,7 @@ import nl.vu.datalayer.hbase.operations.prefixmatch.HBPrefixMatchOperationManage
 import nl.vu.datalayer.hbase.schema.HBHexastoreSchema;
 import nl.vu.datalayer.hbase.schema.HBPrefixMatchSchema;
 import nl.vu.datalayer.hbase.schema.HBasePredicateCFSchema;
+import nl.vu.datalayer.hbase.schema.IHBaseSchema;
 
 import org.openrdf.model.Statement;
 
@@ -35,7 +36,7 @@ public class HBaseFactory {
 			}
 			String schemaSuffix = prop.getProperty(HBPrefixMatchSchema.SUFFIX_PROPERTY, "");
 			
-			HBPrefixMatchSchema schema;
+			IHBaseSchema schema;
 			if (schemaName.startsWith("local")){
 				schema = new HBPrefixMatchSchema(con, schemaSuffix, true, 0);//triples and 0 regions
 			}

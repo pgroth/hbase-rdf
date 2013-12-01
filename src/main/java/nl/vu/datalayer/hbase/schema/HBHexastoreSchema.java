@@ -70,4 +70,8 @@ public class HBHexastoreSchema implements IHBaseSchema {
 		logger.debug("Schema created");
 	}
 
+	public String [] getTableNames() {
+		return TABLE_NAMES;
+	}
+
 }

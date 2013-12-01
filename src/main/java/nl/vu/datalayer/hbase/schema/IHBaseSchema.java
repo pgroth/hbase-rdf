@@ -8,4 +8,6 @@ public interface IHBaseSchema {
 	 * @throws Exception
 	 */
 	public void create() throws Exception;
+
+	public String [] getTableNames();
 }

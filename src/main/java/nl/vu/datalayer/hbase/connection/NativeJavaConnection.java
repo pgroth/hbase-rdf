@@ -25,6 +25,7 @@ public class NativeJavaConnection extends HBaseConnection {
 		conf = HBaseConfiguration.create();
 		tablePool = new HTablePool(conf, MAX_POOL_SIZE, PoolMap.PoolType.Reusable);
 		hbase = new HBaseAdmin(conf);
+		
 	}
 	
 	public void initTables(String []tableNames) throws IOException{

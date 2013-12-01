@@ -141,6 +141,18 @@ public class HBPrefixMatchSchema implements IHBaseSchema {
 		this.coprocessorPath = coprocessorPath;
 	}
 	
+	@Override
+	public String [] getTableNames() {
+		String []tableNames = new String[TABLE_NAMES.length+2];
+		tableNames[0] = STRING2ID + schemaSuffix;
+		tableNames[1] = ID2STRING + schemaSuffix;
+		for (int i = 0; i < TABLE_NAMES.length; i++) {
+			tableNames[i+2] = TABLE_NAMES[i]+schemaSuffix;
+		}
+		
+		return tableNames;
+	}
+	
 	
 	
 	/**

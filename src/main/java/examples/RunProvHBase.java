@@ -6,6 +6,7 @@ import java.util.Iterator;
 import nl.vu.datalayer.hbase.HBaseClientSolution;
 import nl.vu.datalayer.hbase.HBaseFactory;
 import nl.vu.datalayer.hbase.connection.HBaseConnection;
+import nl.vu.datalayer.hbase.connection.NativeJavaConnection;
 import nl.vu.datalayer.hbase.schema.HBPrefixMatchSchema;
 import nl.vu.jena.graph.HBaseGraph;
 import nl.vu.jena.sparql.engine.main.HBaseStageGenerator;
@@ -36,28 +37,30 @@ public class RunProvHBase {
 	public static void main(String[] args) {
 		HBaseConnection con;
 		try {
-			con = HBaseConnection.create(HBaseConnection.NATIVE_JAVA);
+			con = HBaseConnection.create(HBaseConnection.ASYNC_NATIVE_JAVA);
+
+			HBaseClientSolution hbaseSol = HBaseFactory.getHBaseSolution("local-" + HBPrefixMatchSchema.SCHEMA_NAME, con, null);
+			((NativeJavaConnection) con).initTables(hbaseSol.schema.getTableNames());
+
+			Graph g = new HBaseGraph(hbaseSol, HBaseGraph.CACHING_ON);
+			Model model = ModelFactory.createModelForGraph(g);
+			//FileManager.get().addLocatorClassLoader(RunJenaHBase.class.getClassLoader());
+			//Model model = FileManager.get().loadModel("data/tbl-card2.ttl", null, "TURTLE");
+
+			//printStatements(model);
+
+			/*
+			 * model.setNsPrefix("<http://purl.org/dc/elements/1.1>", "dc");
+			 * //model.add(new
+			 * ResourceImpl("<file:///home/tolgam/Documents/Divers/tbl-card.rdf>"
+			 * ), new PropertyImpl("dc:title"), "Tim Berners-Lee's FOAF file");
+			 */
+
+			runSPARQLQuery(model);
 		} catch (IOException e) {
 			e.printStackTrace();
 			return;
 		}
-
-		HBaseClientSolution hbaseSol = HBaseFactory.getHBaseSolution(
-				"local-"+HBPrefixMatchSchema.SCHEMA_NAME, con, null);
-
-		Graph g = new HBaseGraph(hbaseSol, HBaseGraph.CACHING_ON);
-		Model model = ModelFactory.createModelForGraph(g);
-		//FileManager.get().addLocatorClassLoader(RunJenaHBase.class.getClassLoader());
-        //Model model = FileManager.get().loadModel("data/tbl-card2.ttl", null, "TURTLE");
-        
-        //printStatements(model);
-		
-		/*model.setNsPrefix("<http://purl.org/dc/elements/1.1>", "dc");
-		//model.add(new ResourceImpl("<file:///home/tolgam/Documents/Divers/tbl-card.rdf>"), 
-				 new PropertyImpl("dc:title"), 
-				"Tim Berners-Lee's FOAF file");*/
-
-		runSPARQLQuery(model);
 	}
 	
 	public static void runSPARQLQuery(Model model) {

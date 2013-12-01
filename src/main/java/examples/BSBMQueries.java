@@ -52,9 +52,9 @@ public class BSBMQueries {
 	+"fromProducer1:Product1 bsbm:productPropertyNumeric1 ?propertyNumeric1 ."
 	+"fromProducer1:Product1 bsbm:productPropertyNumeric2 ?propertyNumeric2 ."
 	//+"FILTER( 831 = ?propertyNumeric1 )"	
-	+"OPTIONAL { fromProducer1:Product1 bsbm:productPropertyTextual4 ?propertyTextual4 }"
- +"OPTIONAL { fromProducer1:Product1 bsbm:productPropertyTextual5 ?propertyTextual5 }"
- +"OPTIONAL { fromProducer1:Product1 bsbm:productPropertyNumeric4 ?propertyNumeric4 }"
+	//+"OPTIONAL { fromProducer1:Product1 bsbm:productPropertyTextual4 ?propertyTextual4 }"
+ //+"OPTIONAL { fromProducer1:Product1 bsbm:productPropertyTextual5 ?propertyTextual5 }"
+ //+"OPTIONAL { fromProducer1:Product1 bsbm:productPropertyNumeric4 ?propertyNumeric4 }"
 +"}";
 	
 	public static final String Q9 = "PREFIX rev: <http://purl.org/stuff/rev#>  " +

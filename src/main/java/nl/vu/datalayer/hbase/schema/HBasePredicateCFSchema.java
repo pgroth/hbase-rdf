@@ -93,5 +93,9 @@ public class HBasePredicateCFSchema implements IHBaseSchema {
 	    if (hbase.tableExists(table) == false) {
 	    	hbase.createTable(desc);
 	    }
+	}
+
+	public String [] getTableNames() {
+		return new String[]{TABLE_NAME};
 	}	
 }
