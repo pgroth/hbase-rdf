@@ -44,6 +44,7 @@ public class QueryIterHashJoin extends QueryIter2 implements TwoWayJoinable, Joi
 		
 		buildVarNames((Joinable)left, (Joinable)right);
 		
+		this.joinKeyVariables = new ArrayList<Var>(joinKeyVariables.size());
 		for (String joinVarName : joinKeyVariables) {
 			this.joinKeyVariables.add(Var.alloc(joinVarName));
 		}		

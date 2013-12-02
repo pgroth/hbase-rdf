@@ -114,11 +114,22 @@ public class HSPBlockPlanner {
 
 			ArrayList<HashSet<WeightedGraphNode>> maximumISets = MaximumIndependentSet.computeSets(varGraph);
 
-			HashSet<WeightedGraphNode> maximumISet = maximumISets.get(0);
+			HashSet<WeightedGraphNode> maximumISet = null;
 			if (maximumISets.size() > 1) {
-				// TODO apply heuristics to select the one which provides the
-				// smallest number of intermediate results
+				
+				maximumISets = applyHeuristicH1H2(pattern, maximumISets, maximumISet, false);
+				
+				if (maximumISets.size()>1){
+					
+					maximumISets = applyHeuristicH1H2(pattern, maximumISets, maximumISet, true);
+					
+					//TODO apply remaining heuristics
+					
+				}					
 			}
+			
+			maximumISet = maximumISets.get(0);
+			
 
 			mergeJoinBlocks = buildMergeJoinBlocksFromMaxIndependentSet(pattern, qCxt, maximumISet);
 		}
@@ -132,6 +143,69 @@ public class HSPBlockPlanner {
 		}
 		
 		return mergeJoinBlocks;
+	}
+
+	/**
+	 * Choose the patterns which have the most number of constants (BNodes, URIs or Literals)
+	 * 
+	 * @param pattern
+	 * @param maximumISets
+	 * @param maximumISet
+	 * @return
+	 */
+	private static ArrayList<HashSet<WeightedGraphNode>> applyHeuristicH1H2(BasicPattern pattern, ArrayList<HashSet<WeightedGraphNode>> maximumISets, HashSet<WeightedGraphNode> maximumISet, boolean onlyLiterals) {
+		int maxConcrete = 0;
+		ArrayList<HashSet<WeightedGraphNode>> newMaxISets = new ArrayList<HashSet<WeightedGraphNode>>();
+		for (HashSet<WeightedGraphNode> maxISet : maximumISets) {
+			
+			int countConcrete = countConcrete(pattern, maximumISet, onlyLiterals);
+			
+			if (countConcrete>maxConcrete){
+				maxConcrete = countConcrete;
+				newMaxISets.clear();
+				newMaxISets.add(maxISet);
+			}
+			else if (countConcrete==maxConcrete){
+				newMaxISets.add(maxISet);
+			}
+		}
+		return newMaxISets;
+	}
+
+	private static int countConcrete(BasicPattern pattern, HashSet<WeightedGraphNode> maximumISet, boolean onlyLiterals) {
+		int count = 0;
+		BasicPattern patternCopy = new BasicPattern(pattern);
+		for (WeightedGraphNode weightedGraphNode : maximumISet) {
+			BasicPattern newPattern = buildBasicPatternFromWeightedGraphNode(patternCopy, weightedGraphNode);
+			
+			if (onlyLiterals == false) {
+				count = countConstants(count, newPattern);
+			}
+			else{
+				count = countLiterals(count, newPattern);
+			}
+			
+			patternCopy.getList().removeAll(newPattern.getList());
+		}
+		return count;
+	}
+
+	private static int countLiterals(int count, BasicPattern newPattern) {
+		for (Triple triple : newPattern) {
+			if (triple.getSubject().isLiteral()) count++;
+			if (triple.getPredicate().isLiteral()) count++;
+			if (triple.getObject().isLiteral()) count++;
+		}
+		return count;
+	}
+
+	private static int countConstants(int count, BasicPattern newPattern) {
+		for (Triple triple : newPattern) {
+			if (triple.getSubject().isConcrete()) count++;
+			if (triple.getPredicate().isConcrete()) count++;
+			if (triple.getObject().isConcrete()) count++;
+		}
+		return count;
 	}
 
 	private static ArrayList<QueryIter> buildMergeJoinBlocksFromMaxIndependentSet(BasicPattern pattern, ExecutionContext qCxt, HashSet<WeightedGraphNode> maximumISet) {
