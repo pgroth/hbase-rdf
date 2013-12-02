@@ -67,7 +67,7 @@ public class RunJenaHBase {
 	}
 
 	public static void runSPARQLQuery(Model model) {
-		String queryString = BSBMQueries.Q2;
+		String queryString = BSBMQueries.Q7;
 
 		System.out.println("Query: \""+queryString+" \"");
 		//Query query = QueryFactory.create(queryString);
@@ -77,11 +77,20 @@ public class RunJenaHBase {
 		ARQ.getContext().set(ARQConstants.sysOptimizerFactory, HBaseOptimize.hbaseOptimizationFactory);
 		ARQ.getContext().set(ARQ.optFilterPlacement, new HBaseTransformFilterPlacement());
 		ARQ.getContext().set(HBaseSymbols.EXECUTOR, Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors()));
-		
 		QueryExecutionBase qexec = (QueryExecutionBase)QueryExecutionFactory.create(queryString, model);
 		
 		try {
+			
+			long start = System.currentTimeMillis();
 			executeSelect(qexec);
+			long end = System.currentTimeMillis();
+			System.out.println("First: "+(end-start));
+			
+			qexec = (QueryExecutionBase)QueryExecutionFactory.create(queryString, model);
+			start = System.currentTimeMillis();
+			executeSelect(qexec);
+			end = System.currentTimeMillis();
+			System.out.println("Second: "+(end-start));
 			//executeDescribe(qexec, model);
 		} finally {
 			qexec.close();
@@ -107,11 +116,15 @@ public class RunJenaHBase {
 		
 		System.out.println(str);*/
 		//ResultSetFormatter.asRDF(result, results);
-		System.out.println("Solutions: "+results.getRowNumber());
+		int count = 0;
+		
 		while (results.hasNext()){
 			QuerySolution solution = results.next();
 			System.out.println(solution.toString());
+			count++;
 		}
+		
+		System.out.println("Solutions: "+count);
 	}
 
 	public static void printStatements(Model model) {
