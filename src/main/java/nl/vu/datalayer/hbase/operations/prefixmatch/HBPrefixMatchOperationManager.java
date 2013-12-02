@@ -67,6 +67,8 @@ import com.sematext.hbase.wd.RowKeyDistributorByOneBytePrefix;
  */
 public class HBPrefixMatchOperationManager implements IHBasePrefixMatchRetrieveOpsManager {
 	
+	private static final int TRIPLE_ID_POS = 2;
+
 	private static final int OBJECT_POSITION = 2;
 
 	private static final int QUAD_SIZE = 4;
@@ -386,12 +388,12 @@ public class HBPrefixMatchOperationManager implements IHBasePrefixMatchRetrieveO
 		byte []joinTableQualifier;
 		if (qualifier.length>4){
 			for (int j=4; j<qualifier.length; j++){
-				joinTableQualifier = new byte[]{qualifier[2], qualifier[j]};
+				joinTableQualifier = new byte[]{qualifier[TRIPLE_ID_POS], qualifier[j]};//1 byte triple id + 1 byte for non-join positions
 				joinTableQualifiers.add(joinTableQualifier);
 			}
 		}
 		else if (qualifier.length==4){
-			joinTableQualifier = new byte[]{qualifier[2]};
+			joinTableQualifier = new byte[]{qualifier[TRIPLE_ID_POS]};
 			joinTableQualifiers.add(joinTableQualifier);
 		}
 		else{
