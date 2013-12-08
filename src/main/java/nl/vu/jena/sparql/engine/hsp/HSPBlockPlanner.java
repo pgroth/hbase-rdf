@@ -18,6 +18,7 @@ import nl.vu.jena.sparql.engine.joinable.JoinListener;
 import nl.vu.jena.sparql.engine.joinable.Joinable;
 import nl.vu.jena.sparql.engine.joinable.TwoWayJoinable;
 
+
 import com.hp.hpl.jena.graph.Node;
 import com.hp.hpl.jena.graph.Triple;
 import com.hp.hpl.jena.sparql.core.BasicPattern;
@@ -128,17 +129,7 @@ public class HSPBlockPlanner {
 
 				ArrayList<HashSet<WeightedGraphNode>> maximumISets = MaximumIndependentSet.computeSets(varGraph);
 
-				if (maximumISets.size() > 1) {
-					maximumISets = applyHeuristicH1H2(patternCopy, maximumISets, false);
-
-					if (maximumISets.size() > 1) {
-
-						maximumISets = applyHeuristicH1H2(patternCopy, maximumISets, true);
-
-						//TODO apply remaining heuristics
-
-					}
-				}
+				maximumISets = applyHeuristics(patternCopy, maximumISets);
 
 				maximumISet = maximumISets.get(0);
 				Iterator<WeightedGraphNode> iterator = maximumISet.iterator();
@@ -174,70 +165,29 @@ public class HSPBlockPlanner {
 		return mergeJoinBlocks;
 	}
 
-	/**
-	 * Choose the patterns which have the most number of constants (BNodes, URIs or Literals)
-	 * 
-	 * @param pattern
-	 * @param maximumISets
-	 * @return
-	 */
-	private static ArrayList<HashSet<WeightedGraphNode>> applyHeuristicH1H2(BasicPattern pattern, ArrayList<HashSet<WeightedGraphNode>> maximumISets, boolean onlyLiterals) {
-		int maxConcrete = 0;
-		ArrayList<HashSet<WeightedGraphNode>> newMaxISets = new ArrayList<HashSet<WeightedGraphNode>>();
-		for (HashSet<WeightedGraphNode> maxISet : maximumISets) {
-			
-			int countConcrete = countConcrete(pattern, maxISet, onlyLiterals);
-			
-			if (countConcrete>maxConcrete){
-				maxConcrete = countConcrete;
-				newMaxISets.clear();
-				newMaxISets.add(maxISet);
-			}
-			else if (countConcrete==maxConcrete){
-				newMaxISets.add(maxISet);
+	private static ArrayList<HashSet<WeightedGraphNode>> applyHeuristics(BasicPattern patternCopy, ArrayList<HashSet<WeightedGraphNode>> maximumISets) {
+		if (maximumISets.size() > 1) {
+			maximumISets = HSPHeuristics.applyHeuristicH1H2(patternCopy, maximumISets, false);
+
+			if (maximumISets.size() > 1) {
+
+				maximumISets = HSPHeuristics.applyHeuristicH1H2(patternCopy, maximumISets, true);
+
+				if (maximumISets.size() > 1) {
+					
+					maximumISets = HSPHeuristics.applyHeuristicH3(patternCopy, maximumISets);
+					
+					if (maximumISets.size() > 1){
+						maximumISets = HSPHeuristics.applyHeuristicH4(patternCopy, maximumISets);
+					}
+				}
+
 			}
 		}
-		return newMaxISets;
+		return maximumISets;
 	}
 
-	private static int countConcrete(BasicPattern pattern, HashSet<WeightedGraphNode> maximumISet, boolean onlyLiterals) {
-		int count = 0;
-		BasicPattern patternCopy = new BasicPattern(pattern);
-		for (WeightedGraphNode weightedGraphNode : maximumISet) {
-			BasicPattern newPattern = buildBasicPatternFromWeightedGraphNode(patternCopy, weightedGraphNode.getId());
-			newPattern = handleCommonVariables(newPattern, weightedGraphNode.getId());
-			
-			if (onlyLiterals == false) {
-				count = countConstants(count, newPattern);
-			}
-			else{
-				count = countLiterals(count, newPattern);
-			}
-			
-			patternCopy.getList().removeAll(newPattern.getList());
-		}
-		return count;
-	}
-
-	private static int countLiterals(int count, BasicPattern newPattern) {
-		for (Triple triple : newPattern) {
-			if (triple.getSubject().isLiteral()) count++;
-			if (triple.getPredicate().isLiteral()) count++;
-			if (triple.getObject().isLiteral()) count++;
-		}
-		return count;
-	}
-
-	private static int countConstants(int count, BasicPattern newPattern) {
-		for (Triple triple : newPattern) {
-			if (triple.getSubject().isConcrete()) count++;
-			if (triple.getPredicate().isConcrete()) count++;
-			if (triple.getObject().isConcrete()) count++;
-		}
-		return count;
-	}
-
-	private static BasicPattern handleCommonVariables(BasicPattern newPattern, String varNodeName) {
+	static BasicPattern handleCommonVariables(BasicPattern newPattern, String varNodeName) {
 		//count how many times each variable appears 
 		//if there are triple patterns which don't have any other variables, or which have variables which appear in only 1 tp,
 		//		build a block from these triple patterns
@@ -325,7 +275,7 @@ public class HSPBlockPlanner {
 		return 0;
 	}
 	
-	private static BasicPattern buildBasicPatternFromWeightedGraphNode(BasicPattern pattern, String varNodeName) {
+	static BasicPattern buildBasicPatternFromWeightedGraphNode(BasicPattern pattern, String varNodeName) {
 		BasicPattern newPattern = new BasicPattern();
 		
 		for (Triple triple : pattern) {
