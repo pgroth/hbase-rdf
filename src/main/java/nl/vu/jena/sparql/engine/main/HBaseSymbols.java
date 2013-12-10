@@ -6,4 +6,6 @@ public class HBaseSymbols {
 	
 	public static final Symbol EXECUTOR = Symbol.create("EXECUTOR");
 	
+	public static final Symbol PROJECTION_VARS = Symbol.create("PROJ_VARS");
+	
 }

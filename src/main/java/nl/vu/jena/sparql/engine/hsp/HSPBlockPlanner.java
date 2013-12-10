@@ -129,7 +129,7 @@ public class HSPBlockPlanner {
 
 				ArrayList<HashSet<WeightedGraphNode>> maximumISets = MaximumIndependentSet.computeSets(varGraph);
 
-				maximumISets = applyHeuristics(patternCopy, maximumISets);
+				maximumISets = applyHeuristics(patternCopy, maximumISets, qCxt);
 
 				maximumISet = maximumISets.get(0);
 				Iterator<WeightedGraphNode> iterator = maximumISet.iterator();
@@ -165,7 +165,7 @@ public class HSPBlockPlanner {
 		return mergeJoinBlocks;
 	}
 
-	private static ArrayList<HashSet<WeightedGraphNode>> applyHeuristics(BasicPattern patternCopy, ArrayList<HashSet<WeightedGraphNode>> maximumISets) {
+	private static ArrayList<HashSet<WeightedGraphNode>> applyHeuristics(BasicPattern patternCopy, ArrayList<HashSet<WeightedGraphNode>> maximumISets, ExecutionContext qCxt) {
 		if (maximumISets.size() > 1) {
 			maximumISets = HSPHeuristics.applyHeuristicH1H2(patternCopy, maximumISets, false);
 
@@ -178,7 +178,7 @@ public class HSPBlockPlanner {
 					maximumISets = HSPHeuristics.applyHeuristicH3(patternCopy, maximumISets);
 					
 					if (maximumISets.size() > 1){
-						maximumISets = HSPHeuristics.applyHeuristicH4(patternCopy, maximumISets);
+						maximumISets = HSPHeuristics.applyHeuristicH4(patternCopy, maximumISets, qCxt);
 					}
 				}
 

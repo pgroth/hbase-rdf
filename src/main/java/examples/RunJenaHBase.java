@@ -2,6 +2,8 @@ package examples;
 
 import java.io.IOException;
 import java.util.Iterator;
+import java.util.List;
+import java.util.Stack;
 import java.util.concurrent.Executors;
 
 import nl.vu.datalayer.hbase.HBaseClientSolution;
@@ -10,6 +12,7 @@ import nl.vu.datalayer.hbase.connection.HBaseConnection;
 import nl.vu.datalayer.hbase.connection.NativeJavaConnection;
 import nl.vu.datalayer.hbase.schema.HBPrefixMatchSchema;
 import nl.vu.jena.graph.HBaseGraph;
+import nl.vu.jena.sparql.engine.main.HBaseOpExecutor;
 import nl.vu.jena.sparql.engine.main.HBaseStageGenerator;
 import nl.vu.jena.sparql.engine.main.HBaseSymbols;
 import nl.vu.jena.sparql.engine.optimizer.HBaseOptimize;
@@ -31,7 +34,9 @@ import com.hp.hpl.jena.rdf.model.Resource;
 import com.hp.hpl.jena.rdf.model.Statement;
 import com.hp.hpl.jena.rdf.model.StmtIterator;
 import com.hp.hpl.jena.sparql.ARQConstants;
+import com.hp.hpl.jena.sparql.core.Var;
 import com.hp.hpl.jena.sparql.engine.QueryExecutionBase;
+import com.hp.hpl.jena.sparql.engine.main.QC;
 import com.hp.hpl.jena.sparql.engine.main.StageBuilder;
 
 public class RunJenaHBase {
@@ -76,7 +81,10 @@ public class RunJenaHBase {
 		
 		ARQ.getContext().set(ARQConstants.sysOptimizerFactory, HBaseOptimize.hbaseOptimizationFactory);
 		ARQ.getContext().set(ARQ.optFilterPlacement, new HBaseTransformFilterPlacement());
-		ARQ.getContext().set(HBaseSymbols.EXECUTOR, Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors()));
+		ARQ.getContext().set(HBaseSymbols.EXECUTOR, Executors.newFixedThreadPool(2*Runtime.getRuntime().availableProcessors()));
+		ARQ.getContext().set(HBaseSymbols.PROJECTION_VARS, new Stack<List<Var>>());
+		
+		QC.setFactory(ARQ.getContext(), HBaseOpExecutor.hbaseOpExecFactory);
 		QueryExecutionBase qexec = (QueryExecutionBase)QueryExecutionFactory.create(queryString, model);
 		
 		try {

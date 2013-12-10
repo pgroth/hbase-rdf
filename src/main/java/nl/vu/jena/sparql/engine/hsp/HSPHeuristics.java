@@ -5,12 +5,20 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
+import java.util.Stack;
+import java.util.Vector;
+
+import nl.vu.jena.sparql.engine.main.HBaseSymbols;
 
 import org.apache.hadoop.hbase.util.Pair;
 
+import com.hp.hpl.jena.graph.Node;
 import com.hp.hpl.jena.graph.Triple;
 import com.hp.hpl.jena.sparql.core.BasicPattern;
+import com.hp.hpl.jena.sparql.core.Var;
+import com.hp.hpl.jena.sparql.engine.ExecutionContext;
 
 public class HSPHeuristics {
 
@@ -137,10 +145,16 @@ public class HSPHeuristics {
 		buildListOfRemainingFromDistinctPositions(distinctPositions, listOfRemaining);
 		
 		if (listOfRemaining.size() == maximumISets.size()){
+			Collections.sort(setWeights, new Comparator<Pair<HashSet<WeightedGraphNode>, Integer>>(){
+				@Override
+				public int compare(Pair<HashSet<WeightedGraphNode>, Integer> o1, Pair<HashSet<WeightedGraphNode>, Integer> o2) {
+					return (o2.getSecond()-o1.getSecond());
+				}
+			});
 			buildListOfRemainingFromSetWeights(setWeights, listOfRemaining);
+			maximumISets.retainAll(listOfRemaining);
 		}
 		
-		maximumISets.retainAll(listOfRemaining);
 		return maximumISets;
 	}
 
@@ -161,14 +175,7 @@ public class HSPHeuristics {
 	private static void buildListOfRemainingFromSetWeights(ArrayList<Pair<HashSet<WeightedGraphNode>, Integer>> setWeights, ArrayList<HashSet<WeightedGraphNode>> listOfRemaining) {
 		//apply the following order p-o, s-p, s-o, o-o, s-s, p-p
 		//assign a weight to each order
-		//for each set compute a total weight
-		Collections.sort(setWeights, new Comparator<Pair<HashSet<WeightedGraphNode>, Integer>>(){
-			@Override
-			public int compare(Pair<HashSet<WeightedGraphNode>, Integer> o1, Pair<HashSet<WeightedGraphNode>, Integer> o2) {
-				return (o2.getSecond()-o1.getSecond());
-			}
-		});
-		
+		//for each set compute a total weight	
 		listOfRemaining.clear();
 		listOfRemaining.add(setWeights.get(0).getFirst());
 		int refWeight = setWeights.get(0).getSecond();
@@ -178,11 +185,62 @@ public class HSPHeuristics {
 		}
 	}
 
-	static ArrayList<HashSet<WeightedGraphNode>> applyHeuristicH4(BasicPattern patternCopy, ArrayList<HashSet<WeightedGraphNode>> maximumISets) {
-		 
-		return null;
+	static ArrayList<HashSet<WeightedGraphNode>> applyHeuristicH4(BasicPattern patternCopy, ArrayList<HashSet<WeightedGraphNode>> maximumISets, ExecutionContext qCxt) {
+		Stack<List<Var>> projectionVarStack = (Stack<List<Var>>)qCxt.getContext().get(HBaseSymbols.PROJECTION_VARS);
+		List<Var> projectionVars = projectionVarStack.peek();
+		HashSet<String> projectionVarSet = new HashSet<String>(projectionVars.size());
+		for (Var v : projectionVars) {
+			projectionVarSet.add(v.getName());
+		}
+		
+		ArrayList<Pair<HashSet<WeightedGraphNode>, Integer>> setWeightList = new ArrayList<Pair<HashSet<WeightedGraphNode>,Integer>>();
+		for (HashSet<WeightedGraphNode> set : maximumISets) {
+			int projectionVarCount = 0;
+			
+			for (WeightedGraphNode weightedGraphNode : set) {
+				HashSet<String> localVarNames = new HashSet<String>();
+				BasicPattern patternWithVar = HSPBlockPlanner.buildBasicPatternFromWeightedGraphNode(patternCopy, weightedGraphNode.getId());
+				
+				buildVariableSetFromPattern(localVarNames, patternWithVar);
+				
+				localVarNames.retainAll(projectionVarSet);
+				projectionVarCount += localVarNames.size();
+			}
+			
+			setWeightList.add(new Pair<HashSet<WeightedGraphNode>, Integer>(set, projectionVarCount));
+		}
+		
+		ArrayList<HashSet<WeightedGraphNode>> listOfRemaining = new ArrayList<HashSet<WeightedGraphNode>>();
+		Collections.sort(setWeightList, new Comparator<Pair<HashSet<WeightedGraphNode>, Integer>>(){
+			@Override
+			public int compare(Pair<HashSet<WeightedGraphNode>, Integer> o1, Pair<HashSet<WeightedGraphNode>, Integer> o2) {
+				return (o1.getSecond()-o2.getSecond());
+			}
+		});
+		if (setWeightList.get(0).getSecond()!=setWeightList.get(setWeightList.size()-1).getSecond()){
+			buildListOfRemainingFromSetWeights(setWeightList, listOfRemaining);
+			maximumISets.retainAll(listOfRemaining);
+		}
+		
+		return maximumISets;
 	}
 
-	
+	private static void buildVariableSetFromPattern(HashSet<String> localVarNames, BasicPattern patternWithVar) {
+		for (Triple triple : patternWithVar) {
+			Node subject = triple.getSubject();
+			if (subject.isVariable()){
+				localVarNames.add(subject.getName());
+			}
+			Node predicate = triple.getPredicate();
+			if (predicate.isVariable()){
+				localVarNames.add(predicate.getName());
+			}
+			
+			Node object = triple.getObject();
+			if (object.isVariable()){
+				localVarNames.add(object.getName());
+			}
+		}
+	}
 	
 }
