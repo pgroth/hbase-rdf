@@ -152,8 +152,9 @@ public class HSPHeuristics {
 				}
 			});
 			buildListOfRemainingFromSetWeights(setWeights, listOfRemaining);
-			maximumISets.retainAll(listOfRemaining);
 		}
+		
+		maximumISets.retainAll(listOfRemaining);
 		
 		return maximumISets;
 	}
