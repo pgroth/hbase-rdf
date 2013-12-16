@@ -75,6 +75,9 @@ public class QueryIterJoinBlock extends QueryIter1 implements Joinable {
 			results.add(newBinding);
 		}
 		
+		resultIter=null;
+		super.closeIterator();
+		
 		joinedResultsIter = results.iterator();
 		
 		joinEventHandler.notifyListeners();

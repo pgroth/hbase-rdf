@@ -77,6 +77,9 @@ public class QueryIterHashJoin extends QueryIter2 implements TwoWayJoinable, Joi
 			iterateOverRight(joinedResults);
 		}
 		
+		leftHashTable=null;
+		super.closeIterator();
+		
 		joinedResultsIter = joinedResults.iterator();
 		joinEventHandler.notifyListeners();
 	}

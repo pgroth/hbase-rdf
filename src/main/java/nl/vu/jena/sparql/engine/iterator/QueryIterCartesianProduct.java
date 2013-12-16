@@ -65,10 +65,11 @@ public class QueryIterCartesianProduct extends QueryIter2 implements TwoWayJoina
 			QueryIterator rightIterator = tableRight.iterator(null);
 			while (rightIterator.hasNext()){
 				Binding nextBinding = mergeBindings(leftBinding, rightIterator.nextBinding()) ;
-				joinedResults.add(nextBinding);
-				
+				joinedResults.add(nextBinding);				
 			}     
 		}
+		
+		super.closeIterator();
 		
 		joinedResultsIter = joinedResults.iterator();
 		
