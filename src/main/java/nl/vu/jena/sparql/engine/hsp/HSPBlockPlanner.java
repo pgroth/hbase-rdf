@@ -130,29 +130,39 @@ public class HSPBlockPlanner {
 				ArrayList<HashSet<WeightedGraphNode>> maximumISets = MaximumIndependentSet.computeSets(varGraph);
 
 				maximumISets = applyHeuristics(patternCopy, maximumISets, qCxt);
-
-				maximumISet = maximumISets.get(0);
-				Iterator<WeightedGraphNode> iterator = maximumISet.iterator();
-				if (!iterator.hasNext()) {
-					break;
-				}
-				WeightedGraphNode weightedGraphNode = iterator.next();
-
-				BasicPattern newPattern = buildBasicPatternFromWeightedGraphNode(patternCopy, weightedGraphNode.getId());
-				newPattern = handleCommonVariables(newPattern, weightedGraphNode.getId());
-
-				if (newPattern.size() > 0) {
-					QueryIter basicBlock;
-					if (newPattern.size() > 1) {
-						basicBlock = new QueryIterJoinBlock(new QueryIterNullIterator(qCxt), newPattern, qCxt, currentJoinId++);
-					} 
-					else {
-						basicBlock = new TripleMapper(BindingRoot.create(), newPattern.get(0), qCxt);
-					}
-					mergeJoinBlocks.add(basicBlock);
-				}
 				
-				patternCopy.getList().removeAll(newPattern.getList());
+				QueryIter basicBlock;
+				if (maximumISets.size() > 0) {
+					maximumISet = maximumISets.get(0);
+					Iterator<WeightedGraphNode> iterator = maximumISet.iterator();
+					if (!iterator.hasNext()) {
+						break;
+					}
+					WeightedGraphNode weightedGraphNode = iterator.next();
+
+					BasicPattern newPattern = buildBasicPatternFromWeightedGraphNode(patternCopy, weightedGraphNode.getId());
+					newPattern = handleCommonVariables(newPattern, weightedGraphNode.getId());
+
+					if (newPattern.size() > 0) {
+						
+						if (newPattern.size() > 1) {
+							basicBlock = new QueryIterJoinBlock(new QueryIterNullIterator(qCxt), newPattern, qCxt, currentJoinId++);
+						} else {
+							basicBlock = new TripleMapper(BindingRoot.create(), newPattern.get(0), qCxt);
+						}
+						mergeJoinBlocks.add(basicBlock);
+					}
+					else{
+						throw new RuntimeException("This shouldn't happen");
+					}
+					patternCopy.getList().removeAll(newPattern.getList());
+				}
+				else{//no element in maximumISets
+					Triple t = patternCopy.get(0);
+					basicBlock = new TripleMapper(BindingRoot.create(), t, qCxt);
+					mergeJoinBlocks.add(basicBlock);
+					patternCopy.getList().remove(t);
+				}				
 			}
 
 			//mergeJoinBlocks = buildMergeJoinBlocksFromMaxIndependentSet(pattern, qCxt, finalSet);
