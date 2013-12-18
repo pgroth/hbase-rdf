@@ -39,8 +39,6 @@ public class TripleMapper extends QueryIter implements Joinable
     private Binding binding ;
     private ClosableIterator<Triple> graphIter = null ;
     private Binding slot = null ;
-
-    private volatile boolean cancelled = false ;
     
     private HashSet<String> varNames;
 	private Graph graph;
@@ -148,8 +146,6 @@ public class TripleMapper extends QueryIter implements Joinable
     @Override
     protected void requestCancel()
     {
-        // The QueryIteratorBase machinary will do the real work.
-        cancelled = true ;
     }
     
     /*
