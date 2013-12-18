@@ -14,7 +14,6 @@ import nl.vu.jena.sparql.engine.joinable.JoinListener;
 import nl.vu.jena.sparql.engine.joinable.Joinable;
 import nl.vu.jena.sparql.engine.main.HBaseSymbols;
 
-import com.hp.hpl.jena.graph.Graph;
 import com.hp.hpl.jena.graph.Node;
 import com.hp.hpl.jena.query.ARQ;
 import com.hp.hpl.jena.sparql.core.BasicPattern;
@@ -45,7 +44,6 @@ public class QueryIterJoinBlock extends QueryIter1 implements Joinable {
 		this.varNames = hbaseGraph.extractVarNamesFromPattern(pattern, joinId);
 		
 		this.pattern = pattern;
-		
 	}
 
 	@Override
@@ -63,13 +61,14 @@ public class QueryIterJoinBlock extends QueryIter1 implements Joinable {
 		ArrayList<Binding> results = new ArrayList<Binding>();
 		while (resultIter.hasNext()){
 			ResultRow row = resultIter.next();
-			Binding newBinding = BindingFactory.create(BindingFactory.root());
+			BindingMap newBinding = BindingFactory.create(BindingFactory.root());
 			
 			Iterator<Id> idIter = row.iterator();
 			Iterator<String> varIter = varNames.iterator();
 			while (idIter.hasNext() && varIter.hasNext()){
-				((BindingMap)newBinding).add(Var.alloc(varIter.next()), 
-						Node.createUncachedLiteral(idIter.next(), null));
+				Var var = Var.alloc(varIter.next());
+				Node node = Node.createUncachedLiteral(idIter.next(), null);
+				newBinding.add(var, node);
 			}
 			
 			results.add(newBinding);
@@ -100,16 +99,10 @@ public class QueryIterJoinBlock extends QueryIter1 implements Joinable {
 
 	@Override
 	protected void requestSubCancel() {
-		// TODO Auto-generated method stub
-
 	}
 
 	@Override
 	protected void closeSubIterator() {
-		// TODO Auto-generated method stub
-
 	}
-
-	
 
 }

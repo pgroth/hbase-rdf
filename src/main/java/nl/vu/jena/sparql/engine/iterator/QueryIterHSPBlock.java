@@ -4,9 +4,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 
-import nl.vu.jena.graph.HBaseGraph;
 import nl.vu.jena.sparql.engine.binding.BindingMaterializer;
 import nl.vu.jena.sparql.engine.hsp.HSPBlockPlanner;
 import nl.vu.jena.sparql.engine.joinable.JoinEvent;
@@ -36,11 +34,12 @@ import com.hp.hpl.jena.sparql.engine.iterator.QueryIter1;
 public class QueryIterHSPBlock extends QueryIter1 implements JoinListener{
 	
 	public static ExecutorService executor = null;
-
-	private Iterator<Binding> materializedJoinIter;
-	private BindingMaterializer bindingMaterializer;
+	
 	private Binding parentBinding = null;
-	private Graph graph ;
+	private BasicPattern pattern;
+	private ExecutionContext execCxt;
+	
+	private Iterator<Binding> materializedJoinIter;
 	private volatile boolean finished = false;
 
 	public QueryIterHSPBlock(QueryIterator input, BasicPattern pattern, ExecutionContext execCxt) {
@@ -49,13 +48,25 @@ public class QueryIterHSPBlock extends QueryIter1 implements JoinListener{
 		if (input.hasNext()) {
 			parentBinding = input.next();
 		}
-		
+		this.pattern = pattern;
+		this.execCxt = execCxt;
+	}
+	
+	public void runJoins() throws IOException{
 		ArrayList<QueryIter> mergeJoinBlocks = HSPBlockPlanner.getMergeJoinBlocks(pattern, execCxt); 
 		QueryIter joinIter = HSPBlockPlanner.buildTreeBottomUp(mergeJoinBlocks, execCxt);	
 		((Joinable)joinIter).setParent((JoinListener)this);
 		
+		waitForJoins(mergeJoinBlocks);
+				
+		Graph graph = execCxt.getActiveGraph();
+		BindingMaterializer bindingMaterializer = new BindingMaterializer(graph);
+		materializedJoinIter = bindingMaterializer.materialize(joinIter).iterator();
+	}
+
+	private void waitForJoins(ArrayList<QueryIter> mergeJoinBlocks) {
 		ExecutorService executorService = (ExecutorService)ARQ.getContext().get(HBaseSymbols.EXECUTOR);
-		for (QueryIter queryIter : mergeJoinBlocks) {//start merge join blocks
+		for (QueryIter queryIter : mergeJoinBlocks) {//start running merge join blocks on separate threads
 			executorService.execute((Runnable)queryIter);
 		}
 		
@@ -68,29 +79,6 @@ public class QueryIterHSPBlock extends QueryIter1 implements JoinListener{
 				}
 			}
 		}
-				
-		graph = execCxt.getActiveGraph();
-		if (graph instanceof HBaseGraph) {
-			bindingMaterializer = new BindingMaterializer(graph);
-			try {
-				materializedJoinIter = bindingMaterializer.materialize(joinIter).iterator();
-			} catch (IOException e) {
-				e.printStackTrace();
-			}
-			
-		}
-	}
-
-	@Override
-	protected void requestSubCancel() {
-		// TODO Auto-generated method stub
-
-	}
-
-	@Override
-	protected void closeSubIterator() {
-		// TODO Auto-generated method stub
-
 	}
 
 	@Override
@@ -108,8 +96,8 @@ public class QueryIterHSPBlock extends QueryIter1 implements JoinListener{
 
 	@Override
 	protected Binding moveToNextBinding() {
-		Binding newBinding = BindingFactory.create(parentBinding);
-		((BindingMap)newBinding).addAll(materializedJoinIter.next());
+		BindingMap newBinding = BindingFactory.create(parentBinding);
+		newBinding.addAll(materializedJoinIter.next());
 		
 		return newBinding;
 	}
@@ -122,4 +110,11 @@ public class QueryIterHSPBlock extends QueryIter1 implements JoinListener{
 		}		
 	}
 
+	@Override
+	protected void requestSubCancel() {
+	}
+
+	@Override
+	protected void closeSubIterator() {
+	}
 }

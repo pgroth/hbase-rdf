@@ -39,7 +39,7 @@ public class TripleMapper extends QueryIter implements Joinable
     private Binding binding ;
     private ClosableIterator<Triple> graphIter = null ;
     private Binding slot = null ;
-    //private boolean finished = false ;
+
     private volatile boolean cancelled = false ;
     
     private HashSet<String> varNames;

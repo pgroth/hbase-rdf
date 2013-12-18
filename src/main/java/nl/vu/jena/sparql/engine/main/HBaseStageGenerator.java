@@ -1,5 +1,7 @@
 package nl.vu.jena.sparql.engine.main;
 
+import java.io.IOException;
+
 import nl.vu.jena.graph.HBaseGraph;
 import nl.vu.jena.sparql.engine.iterator.QueryIterHSPBlock;
 import nl.vu.jena.sparql.engine.iterator.QueryIterNestedLoopBlock;
@@ -8,6 +10,7 @@ import nl.vu.jena.sparql.engine.optimizer.reorder.ReorderHeuristics;
 import org.openjena.atlas.logging.Log;
 
 import com.hp.hpl.jena.graph.Graph;
+import com.hp.hpl.jena.shared.JenaException;
 import com.hp.hpl.jena.sparql.core.BasicPattern;
 import com.hp.hpl.jena.sparql.engine.ExecutionContext;
 import com.hp.hpl.jena.sparql.engine.QueryIterator;
@@ -31,8 +34,9 @@ public class HBaseStageGenerator implements StageGenerator {
                                  QueryIterator input,
                                  ExecutionContext execCxt)
     {
-        if ( input == null )
+        if (input == null){
             Log.fatal(this, "Null input to "+Utils.classShortName(this.getClass())) ;
+        }
 
         Graph graph = execCxt.getActiveGraph() ; 
 
@@ -69,7 +73,7 @@ public class HBaseStageGenerator implements StageGenerator {
     {        
         Explain.explain(pattern, execCxt.getContext()) ;
         
-        if ( reorder != null )
+        if (reorder != null)
         {
             pattern = reorder.reorder(pattern) ;
             Explain.explain("Reorder", pattern, execCxt.getContext()) ;
@@ -78,12 +82,12 @@ public class HBaseStageGenerator implements StageGenerator {
         return execution.execute(pattern, input, execCxt) ; 
     }
     
-    private static StageGenerator executeInline = new StageGenerator() {
-        @Override
-        public QueryIterator execute(BasicPattern pattern, QueryIterator input, ExecutionContext execCxt)
-        {
-                return QueryIterNestedLoopBlock.create(input, pattern, execCxt) ;
-        }} ;
+	private static StageGenerator executeInline = new StageGenerator() {
+		@Override
+		public QueryIterator execute(BasicPattern pattern, QueryIterator input, ExecutionContext execCxt) {
+			return QueryIterNestedLoopBlock.create(input, pattern, execCxt);
+		}
+	};
         
     // ---- Reorder policies 
 
@@ -103,7 +107,14 @@ public class HBaseStageGenerator implements StageGenerator {
         @Override
         public QueryIterator execute(BasicPattern pattern, QueryIterator input, ExecutionContext execCxt)
         {
-            return new QueryIterHSPBlock(input, pattern, execCxt);
+        	QueryIterHSPBlock hspBlock = new QueryIterHSPBlock(input, pattern, execCxt);
+        	try {
+				hspBlock.runJoins();
+			} catch (IOException e) {
+				throw new JenaException(e.getMessage());
+			}
+        	
+        	return hspBlock;
         }
     } ;
 

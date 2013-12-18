@@ -3,7 +3,6 @@ package nl.vu.jena.sparql.engine.iterator;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Iterator;
-import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ExecutorService;
 
@@ -25,8 +24,6 @@ import com.hp.hpl.jena.sparql.engine.binding.Binding;
 import com.hp.hpl.jena.sparql.engine.binding.BindingFactory;
 import com.hp.hpl.jena.sparql.engine.binding.BindingMap;
 import com.hp.hpl.jena.sparql.engine.iterator.QueryIter2;
-import com.hp.hpl.jena.sparql.engine.iterator.QueryIterNullIterator;
-import com.hp.hpl.jena.sparql.engine.iterator.QueryIterPlainWrapper;
 
 /**
  * Used when we know there are no intersecting columns between left and right
@@ -52,6 +49,16 @@ public class QueryIterCartesianProduct extends QueryIter2 implements TwoWayJoina
 		tableRight = TableFactory.create(getRight()) ;
 		getRight().close();
 		
+		ArrayList<Binding> joinedResults = buildJoinedResults();
+		
+		super.closeIterator();
+		
+		joinedResultsIter = joinedResults.iterator();
+		
+		joinEventHandler.notifyListeners();
+	}
+
+	private ArrayList<Binding> buildJoinedResults() {
 		ArrayList<Binding> joinedResults = new ArrayList<Binding>();
 		QueryIterator left = getLeft();
 
@@ -61,19 +68,13 @@ public class QueryIterCartesianProduct extends QueryIter2 implements TwoWayJoina
 	        
 			Binding leftBinding = left.nextBinding();
 			
-	        // No nextBinding - only call to moveToNext
 			QueryIterator rightIterator = tableRight.iterator(null);
 			while (rightIterator.hasNext()){
 				Binding nextBinding = mergeBindings(leftBinding, rightIterator.nextBinding()) ;
 				joinedResults.add(nextBinding);				
 			}     
 		}
-		
-		super.closeIterator();
-		
-		joinedResultsIter = joinedResults.iterator();
-		
-		joinEventHandler.notifyListeners();
+		return joinedResults;
 	}
 	
 	private Binding mergeBindings(Binding leftBinding, Binding rightBinding) {
@@ -136,15 +137,10 @@ public class QueryIterCartesianProduct extends QueryIter2 implements TwoWayJoina
 
 	@Override
 	protected void requestSubCancel() {
-		closeSubIterator();
 	}
 
 	@Override
 	protected void closeSubIterator() {
-		performClose(current) ;
-        if ( tableRight != null ) tableRight.close() ;
-        tableRight = null ;
-		
 	}	
 
 }

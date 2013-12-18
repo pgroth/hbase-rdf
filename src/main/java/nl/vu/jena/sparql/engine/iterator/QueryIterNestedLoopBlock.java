@@ -13,7 +13,6 @@ import org.openjena.atlas.io.IndentedWriter;
 import com.hp.hpl.jena.graph.Graph;
 import com.hp.hpl.jena.graph.Node;
 import com.hp.hpl.jena.graph.Node_Literal;
-import com.hp.hpl.jena.graph.Node_NULL;
 import com.hp.hpl.jena.graph.Triple;
 import com.hp.hpl.jena.sparql.core.BasicPattern;
 import com.hp.hpl.jena.sparql.engine.ExecutionContext;
@@ -26,7 +25,6 @@ import com.hp.hpl.jena.sparql.util.Utils;
 
 public class QueryIterNestedLoopBlock extends QueryIter1
 {
-    //TODO private BasicPattern pattern ; check if can be removed; only needed for printing
     private Graph graph ;
     private QueryIterator output ;
     private BindingMaterializer bindingMaterializer;
@@ -44,7 +42,6 @@ public class QueryIterNestedLoopBlock extends QueryIter1
                                     ExecutionContext execContext)
     {
         super(input, execContext) ;
-        //this.pattern = pattern ;
         graph = execContext.getActiveGraph() ;
 		if (graph instanceof HBaseGraph) {
 			output = buildChainOfIdBasedTriples(pattern, (HBaseGraph)graph, execContext);	        
@@ -57,8 +54,6 @@ public class QueryIterNestedLoopBlock extends QueryIter1
 				chain = new QueryIterTriplePattern(chain, triple, execContext);
 			output = chain;
 		}
-       
-        
     }
 
 	private QueryIterator buildChainOfIdBasedTriples(BasicPattern pattern, HBaseGraph graph, ExecutionContext execContext) {

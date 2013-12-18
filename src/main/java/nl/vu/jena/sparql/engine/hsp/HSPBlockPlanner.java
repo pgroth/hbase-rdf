@@ -35,15 +35,8 @@ import com.hp.hpl.jena.sparql.engine.iterator.QueryIterNullIterator;
  */
 public class HSPBlockPlanner {
 	
+	private final static String SPECIAL = "SPECIAL";
 	private static short currentJoinId = 0;//TODO background thread which resets this when JOIN table is reset
-	
-	public static QueryIter buildPlan(BasicPattern pattern, ExecutionContext qCxt){
-		
-		ArrayList<QueryIter> mergeJoinBlocks = getMergeJoinBlocks(pattern, qCxt); 
-		
-		QueryIter queryIter = buildTreeBottomUp(mergeJoinBlocks, qCxt);	
-		return queryIter;
-	}
 
 	public static QueryIter buildTreeBottomUp(ArrayList<QueryIter> mergeJoinBlocks, ExecutionContext qCxt) {		
 		QueryIter root = null;
@@ -85,8 +78,7 @@ public class HSPBlockPlanner {
 		return root;
 	}
 
-	private static void makeConnectionsFromChildrenToParents(
-			ArrayList<QueryIter> levelUp) {
+	private static void makeConnectionsFromChildrenToParents(ArrayList<QueryIter> levelUp) {
 		for (QueryIter queryIter : levelUp) {
 			if (queryIter instanceof TwoWayJoinable){
 				Joinable left = ((TwoWayJoinable)queryIter).getLeftJ();
@@ -152,9 +144,7 @@ public class HSPBlockPlanner {
 						}
 						mergeJoinBlocks.add(basicBlock);
 					}
-					else{
-						throw new RuntimeException("This shouldn't happen");
-					}
+					
 					patternCopy.getList().removeAll(newPattern.getList());
 				}
 				else{//no element in maximumISets
@@ -164,8 +154,6 @@ public class HSPBlockPlanner {
 					patternCopy.getList().remove(t);
 				}				
 			}
-
-			//mergeJoinBlocks = buildMergeJoinBlocksFromMaxIndependentSet(pattern, qCxt, finalSet);
 		}
 		else{
 			QueryIter tp =  new TripleMapper(BindingRoot.create(), pattern.get(0), qCxt);
@@ -204,7 +192,7 @@ public class HSPBlockPlanner {
 		//if there are multiple common variables, other than the primary one, 
 		//	choose the triple patterns with the least common variable (appears in the least nr of tp)
 		
-		String specialVar = "__DUMMY";
+		
 		LinkedHashMap<String, Integer> varCounts = new LinkedHashMap<String, Integer>();
 		for (Triple triple : newPattern) {
 			byte updated=0;
@@ -213,7 +201,7 @@ public class HSPBlockPlanner {
 			updated += updateVarCountMap(varCounts, varNodeName, triple.getObject());
 			
 			if (updated == 0){
-				varCounts.put(specialVar, 1);
+				varCounts.put(SPECIAL, 1);
 			}
 		}
 		
@@ -338,5 +326,11 @@ public class HSPBlockPlanner {
 		return mergeJoinBlocks;
 	}*/
 	
-
+	public static QueryIter buildPlan(BasicPattern pattern, ExecutionContext qCxt){
+		
+		ArrayList<QueryIter> mergeJoinBlocks = getMergeJoinBlocks(pattern, qCxt); 
+		
+		QueryIter queryIter = buildTreeBottomUp(mergeJoinBlocks, qCxt);	
+		return queryIter;
+	}
 }

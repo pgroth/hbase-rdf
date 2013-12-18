@@ -117,18 +117,6 @@ public class QueryIterHashJoin extends QueryIter2 implements TwoWayJoinable, Joi
 	}
 
 	@Override
-	protected void requestSubCancel() {
-		// TODO Auto-generated method stub
-		
-	}
-
-	@Override
-	protected void closeSubIterator() {
-		// TODO Auto-generated method stub
-		
-	}
-
-	@Override
 	protected boolean hasNextBinding() {		
 		return joinedResultsIter.hasNext();
 	}
@@ -162,6 +150,14 @@ public class QueryIterHashJoin extends QueryIter2 implements TwoWayJoinable, Joi
 		}
 			
 		return Bytes.hashCode(joinKey);
+	}
+	
+	@Override
+	protected void requestSubCancel() {
+	}
+
+	@Override
+	protected void closeSubIterator() {
 	}
 	
 }
