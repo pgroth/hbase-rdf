@@ -59,8 +59,7 @@ public class QueryIterHSPBlock extends QueryIter1 implements JoinListener{
 		
 		waitForJoins(mergeJoinBlocks);
 				
-		Graph graph = execCxt.getActiveGraph();
-		BindingMaterializer bindingMaterializer = new BindingMaterializer(graph);
+		BindingMaterializer bindingMaterializer = new BindingMaterializer(execCxt.getActiveGraph());
 		materializedJoinIter = bindingMaterializer.materialize(joinIter).iterator();
 	}
 
@@ -83,8 +82,9 @@ public class QueryIterHSPBlock extends QueryIter1 implements JoinListener{
 
 	@Override
 	protected boolean hasNextBinding() {
-		if (getInput() == null)
+		if (getInput() == null){
 			return false;
+		}
 
 		if (parentBinding == null) {
 			getInput().close();

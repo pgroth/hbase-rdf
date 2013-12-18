@@ -81,10 +81,10 @@ public class HSPBlockPlanner {
 	private static void makeConnectionsFromChildrenToParents(ArrayList<QueryIter> levelUp) {
 		for (QueryIter queryIter : levelUp) {
 			if (queryIter instanceof TwoWayJoinable){
-				Joinable left = ((TwoWayJoinable)queryIter).getLeftJ();
+				Joinable left = ((TwoWayJoinable)queryIter).getLeftJoinable();
 				left.setParent((JoinListener)queryIter);
 				
-				Joinable right = ((TwoWayJoinable)queryIter).getRightJ();
+				Joinable right = ((TwoWayJoinable)queryIter).getRightJoinable();
 				right.setParent((JoinListener)queryIter);
 			}
 		}

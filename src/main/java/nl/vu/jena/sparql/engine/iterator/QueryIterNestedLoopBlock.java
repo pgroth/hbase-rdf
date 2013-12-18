@@ -14,6 +14,7 @@ import com.hp.hpl.jena.graph.Graph;
 import com.hp.hpl.jena.graph.Node;
 import com.hp.hpl.jena.graph.Node_Literal;
 import com.hp.hpl.jena.graph.Triple;
+import com.hp.hpl.jena.shared.JenaException;
 import com.hp.hpl.jena.sparql.core.BasicPattern;
 import com.hp.hpl.jena.sparql.engine.ExecutionContext;
 import com.hp.hpl.jena.sparql.engine.QueryIterator;
@@ -67,7 +68,7 @@ public class QueryIterNestedLoopBlock extends QueryIter1
 		try {
 			graph.mapMaterializedNodesToNodeIds(node2NodeIdMap);
 		} catch (IOException e) {
-			e.printStackTrace();
+			throw new JenaException(e.getMessage());
 		}
 		
 		// Create a chain of triple iterators.
@@ -145,8 +146,9 @@ public class QueryIterNestedLoopBlock extends QueryIter1
     @Override
     protected void requestSubCancel()
     {
-        if ( output != null )
+        if (output != null){
             output.cancel();
+        }
     }
 
     @Override
@@ -155,7 +157,6 @@ public class QueryIterNestedLoopBlock extends QueryIter1
         out.print(Utils.className(this)) ;
         out.println() ;
         out.incIndent() ;
-        //FmtUtils.formatPattern(out, pattern, sCxt) ;
         out.decIndent() ;
     }
 }

@@ -32,9 +32,7 @@ import com.hp.hpl.jena.sparql.engine.iterator.QueryIter2;
 public class QueryIterCartesianProduct extends QueryIter2 implements TwoWayJoinable, JoinListener {
 	
 	private Iterator<Binding> joinedResultsIter=null;
-	private QueryIterator current = null ;
-	private HashSet<String> varNames;
-	private Table tableRight ;          // Materialized iterator
+	private HashSet<String> varNames;         
 	private JoinEventHandler joinEventHandler;
 	
 	public QueryIterCartesianProduct(QueryIterator left, QueryIterator right, ExecutionContext execCxt) {
@@ -46,10 +44,10 @@ public class QueryIterCartesianProduct extends QueryIter2 implements TwoWayJoina
 	
 	@Override
 	public void run() {
-		tableRight = TableFactory.create(getRight()) ;
+		Table tableRight = TableFactory.create(getRight()) ;
 		getRight().close();
 		
-		ArrayList<Binding> joinedResults = buildJoinedResults();
+		ArrayList<Binding> joinedResults = buildJoinedResults(tableRight);
 		
 		super.closeIterator();
 		
@@ -58,7 +56,7 @@ public class QueryIterCartesianProduct extends QueryIter2 implements TwoWayJoina
 		joinEventHandler.notifyListeners();
 	}
 
-	private ArrayList<Binding> buildJoinedResults() {
+	private ArrayList<Binding> buildJoinedResults(Table tableRight) {
 		ArrayList<Binding> joinedResults = new ArrayList<Binding>();
 		QueryIterator left = getLeft();
 
@@ -81,9 +79,9 @@ public class QueryIterCartesianProduct extends QueryIter2 implements TwoWayJoina
 		BindingMap newBinding = BindingFactory.create(leftBinding) ;
         for (Iterator<Var> vIter = rightBinding.vars() ; vIter.hasNext() ;)
         {
-            Var v = vIter.next();
-            Node n = rightBinding.get(v) ;
-            newBinding.add(v, n) ;
+            Var var = vIter.next();
+            Node n = rightBinding.get(var) ;
+            newBinding.add(var, n) ;
         }
 		return newBinding;
 	}
@@ -121,12 +119,12 @@ public class QueryIterCartesianProduct extends QueryIter2 implements TwoWayJoina
 	}
 
 	@Override
-	public Joinable getLeftJ() {
+	public Joinable getLeftJoinable() {
 		return (Joinable)getLeft();
 	}
 
 	@Override
-	public Joinable getRightJ() {
+	public Joinable getRightJoinable() {
 		return (Joinable)getRight();
 	}
 

@@ -132,12 +132,12 @@ public class QueryIterHashJoin extends QueryIter2 implements TwoWayJoinable, Joi
 	}
 
 	@Override
-	public Joinable getLeftJ() {
+	public Joinable getLeftJoinable() {
 		return (Joinable)getLeft();
 	}
 
 	@Override
-	public Joinable getRightJ() {
+	public Joinable getRightJoinable() {
 		return (Joinable)getRight();
 	}
 

@@ -5,8 +5,9 @@ import java.util.concurrent.ExecutorService;
 
 
 /**
- * Acts as a Join EventSource for the listeners at the upper levels
- * Acts as a listener of JoinEvents from lowever levels
+ * 2 roles:
+ * - Acts as a Join EventSource for the listeners at the upper levels
+ * - Acts as a listener of JoinEvents from lower levels
  */
 public class JoinEventHandler {
 

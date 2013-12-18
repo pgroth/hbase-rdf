@@ -8,7 +8,7 @@ import com.hp.hpl.jena.sparql.engine.iterator.QueryIterRepeatApply;
 
 public class QueryIterTriplePattern extends QueryIterRepeatApply {
 
-private final Triple pattern ;
+	private final Triple pattern ;
     
     public QueryIterTriplePattern( QueryIterator input,
                                    Triple pattern , 

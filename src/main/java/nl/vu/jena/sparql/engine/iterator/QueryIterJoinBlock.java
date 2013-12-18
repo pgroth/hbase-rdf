@@ -28,7 +28,6 @@ import com.hp.hpl.jena.sparql.engine.iterator.QueryIter1;
 public class QueryIterJoinBlock extends QueryIter1 implements Joinable {
 
 	private Iterator<Binding> joinedResultsIter=null;
-	private Iterator<ResultRow> resultIter;
 	private LinkedHashSet<String> varNames;
 	private BasicPattern pattern;
 	
@@ -56,7 +55,7 @@ public class QueryIterJoinBlock extends QueryIter1 implements Joinable {
 	@Override
 	public void run() {
 			
-		resultIter = hbaseGraph.getJoinResults(pattern);
+		Iterator<ResultRow> resultIter = hbaseGraph.getJoinResults(pattern);
 		
 		ArrayList<Binding> results = new ArrayList<Binding>();
 		while (resultIter.hasNext()){
