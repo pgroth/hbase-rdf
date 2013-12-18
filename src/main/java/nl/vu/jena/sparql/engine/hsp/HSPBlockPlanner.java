@@ -12,7 +12,7 @@ import java.util.Map.Entry;
 
 import nl.vu.jena.sparql.engine.iterator.QueryIterCartesianProduct;
 import nl.vu.jena.sparql.engine.iterator.QueryIterHashJoin;
-import nl.vu.jena.sparql.engine.iterator.QueryIterJoinBlock;
+import nl.vu.jena.sparql.engine.iterator.QueryIterMergeJoin;
 import nl.vu.jena.sparql.engine.iterator.TripleMapper;
 import nl.vu.jena.sparql.engine.joinable.JoinListener;
 import nl.vu.jena.sparql.engine.joinable.Joinable;
@@ -138,7 +138,7 @@ public class HSPBlockPlanner {
 					if (newPattern.size() > 0) {
 						
 						if (newPattern.size() > 1) {
-							basicBlock = new QueryIterJoinBlock(new QueryIterNullIterator(qCxt), newPattern, qCxt, currentJoinId++);
+							basicBlock = new QueryIterMergeJoin(new QueryIterNullIterator(qCxt), newPattern, qCxt, currentJoinId++);
 						} else {
 							basicBlock = new TripleMapper(BindingRoot.create(), newPattern.get(0), qCxt);
 						}

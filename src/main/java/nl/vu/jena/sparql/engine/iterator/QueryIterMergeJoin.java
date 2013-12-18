@@ -25,7 +25,7 @@ import com.hp.hpl.jena.sparql.engine.binding.BindingFactory;
 import com.hp.hpl.jena.sparql.engine.binding.BindingMap;
 import com.hp.hpl.jena.sparql.engine.iterator.QueryIter1;
 
-public class QueryIterJoinBlock extends QueryIter1 implements Joinable {
+public class QueryIterMergeJoin extends QueryIter1 implements Joinable {
 
 	private Iterator<Binding> joinedResultsIter=null;
 	private LinkedHashSet<String> varNames;
@@ -34,7 +34,7 @@ public class QueryIterJoinBlock extends QueryIter1 implements Joinable {
 	private JoinEventHandler joinEventHandler;
 	private HBaseGraph hbaseGraph;
 	
-	public QueryIterJoinBlock(QueryIterator input, BasicPattern pattern, ExecutionContext execCxt, short joinId) {
+	public QueryIterMergeJoin(QueryIterator input, BasicPattern pattern, ExecutionContext execCxt, short joinId) {
 		super(input, execCxt);
 
 		this.joinEventHandler = new JoinEventHandler((ExecutorService)ARQ.getContext().get(HBaseSymbols.EXECUTOR), this);
